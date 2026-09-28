@@ -218,3 +218,40 @@ npm run lint                            # ESLint + Prettier
 # Todo el entorno
 docker compose up                       # backend + frontend + PostgreSQL local
 ```
+
+## 11. Decisiones de diseño adoptadas (DD)
+
+Decisiones de fondo que se tomaron durante el desarrollo y que conviene conocer antes de tocar
+el código. Son decisiones de **diseño e implementación**, distintas de las de negocio todavía
+abiertas (ver sección 6). Si una historia nueva las contradice, revisarlas acá antes de parchear.
+
+- **DD-1 — Baja lógica con flag `activo`.** Un cliente dado de baja no se borra de la base: la
+  fila queda con `activo = False` y desaparece del listado y del detalle. La razón social sigue
+  reservada por el `UNIQUE` de `razon_social_key` aunque el cliente esté inactivo (su historial de
+  servicios, cotizaciones y rendiciones queda intacto — SC-007). Cuando el cliente confirme la
+  política de baja real de esta decisión (#DP-01), se cambia apoyándose en este flag.
+- **DD-2 — Dato visual + clave normalizada `razon_social_key`.** La razón social se guarda tal
+  como la escribe el usuario (`razon_social`) *y* en una columna normalizada
+  (`razon_social_key`: minúsculas, sin acentos, sin espacios sobrantes) que alimenta el `UNIQUE`
+  de unicidad (FR-004) y el filtro de búsqueda `q` (FR-008). Así comparar "Distribuidora del Sur"
+  con "distribuidora  del sur" da igual sin tocar el texto que se muestra.
+- **DD-3 — Permisos consumidos por puerto, no por JWT todavía.** `require_rol` en
+  `app/core/dependencias.py` lee el rol del header `X-Rol` como **stub** hasta la historia de
+  autenticación. Las rutas declaran `dependencies=[Depends(require_rol("admin"))]` y no tocan el
+  rol directamente; cuando llegue el JWT solo se cambia el cuerpo de `get_rol_actual` y ninguna
+  ruta se modifica.
+- **DD-4 — Un único teléfono, sin formato único.** Se guarda un solo teléfono como texto y solo
+  se valida que tenga entre 7 y 20 dígitos (FR-005); el signo `+`, los espacios y los guiones son
+  libres. Un teléfono puede repetirse entre clientes (los contactos múltiples quedan para H2).
+- **DD-5 — Modificación por `PUT` completo, no `PATCH`.** El body de edición repite los mismos 4
+  campos obligatorios que el alta, para que el dominio siempre valide un cliente entero y nunca
+  quede un registro a medio modificar por un campo que el cliente olvidó mandar.
+
+**Convenciones de modelo de datos**:
+
+- Las PK son `integer` generadas por identidad (`identity`), expuestas como `id` en la API. No se
+  usan UUID.
+- Las fechas de auditoría usan `TIMESTAMPTZ` con `server_default now()`; `actualizado_en` suma
+  `onupdate`. Ojo: `onupdate` no dispara si el `UPDATE` no ocurre (ver Notas de H1, T047).
+- Las decisiones marcadas `[Supuesto temporal]` en la spec se implementan con tests que respetan
+  la regla supuesta; si el cliente cambia la decisión, primero se actualiza la spec (§5).

@@ -139,15 +139,15 @@ testear y entregar de forma independiente.
 
 ## Phase 7: Polish y Definition of Done
 
-- [ ] **T054** [P] Correr `ruff check` y `ruff format` sobre todo `backend/` y dejar el linter en verde
-- [ ] **T055** [P] Levantar `docker compose up` y verificar los 5 endpoints a mano (persistencia real tras reiniciar el servidor, SC-005)
-- [ ] **T056** [P] Agregar el job de `pytest tests/integration` con servicio PostgreSQL al CI
-- [ ] **T057** Verificar cobertura de los escenarios de aceptación: cada FR-001…FR-020 mapeado a al menos un test (SC-001)
-- [ ] **T058** Revisar que ninguna regla de negocio quedó en `app/api/` ni en `app/infrastructure/` (gate de AGENTS.md §2)
-- [ ] **T059** [P] Actualizar `AGENTS.md`: DD-1 a DD-4, convención de PK `integer` identity, y nota de que el chequeo de roles es un stub hasta la historia de autenticación
-- [ ] **T060** [P] Escribir `specs/H1-gestion-clientes-quickstart.md` con los comandos para levantar el entorno y probar los endpoints
-- [ ] **T061** Correr la checklist completa del DoD de AGENTS.md §9
-- [ ] **T062** Abrir el PR a `main` con Conventional Commits y pedir revisión cruzada (no autoaprobarse)
+- [x] **T054** [P] Correr `ruff check` y `ruff format` sobre todo `backend/` y dejar el linter en verde
+- [x] **T055** [P] Levantar `docker compose up` y verificar los 5 endpoints a mano (persistencia real tras reiniciar el servidor, SC-005)
+- [x] **T056** [P] Agregar el job de `pytest tests/integration` con servicio PostgreSQL al CI
+- [x] **T057** Verificar cobertura de los escenarios de aceptación: cada FR-001…FR-020 mapeado a al menos un test (SC-001)
+- [x] **T058** Revisar que ninguna regla de negocio quedó en `app/api/` ni en `app/infrastructure/` (gate de AGENTS.md §2)
+- [x] **T059** [P] Actualizar `AGENTS.md`: DD-1 a DD-4, convención de PK `integer` identity, y nota de que el chequeo de roles es un stub hasta la historia de autenticación
+- [x] **T060** [P] Escribir `specs/H1-gestion-clientes-quickstart.md` con los comandos para levantar el entorno y probar los endpoints
+- [x] **T061** Correr la checklist completa del DoD de AGENTS.md §9
+- [ ] **T062** Abrir el PR a `main` con Conventional Commits y pedir revisión cruzada (no autoaprobarse) — **bloqueado: `gh` no está instalado en el entorno**
 
 ---
 
@@ -213,3 +213,64 @@ Phase 1 (Setup) ──► Phase 2 (Foundational) ──► US1 ──► US2 ─
   delete (un `GET` de detalle exitoso, un `409` del `POST` posterior). Para que un test pruebe el
   comportamiento hay que asertar primero el status exacto de la operación (204/409) y después los
   efectos colaterales.
+
+## Evidencia de Phase 7
+
+### T057 — Trazabilidad FR → test (SC-001)
+
+Cada requerimiento funcional tiene al menos un test automatizado en verde (179 tests: 81 unit +
+98 integration):
+
+| FR | Cobertura (tests de integración salvo indicación) |
+|---|---|
+| FR-001 | `test_devuelve_201_con_los_cuatro_datos_pedidos`; unit `test_registra_con_los_cuatro_datos_pedidos` |
+| FR-002 | `test_el_indicador_de_cuenta_corriente_por_defecto_es_false`, `test_rechaza_datos_requeridos_ausentes`; unit domain `test_crear_activo_y_sin_cuenta_corriente_por_defecto` |
+| FR-003 | `test_asigna_identificador_y_fechas_del_sistema`, `test_rechaza_que_el_usuario_informe_el_id_o_las_fechas` (alta y modificación) |
+| FR-004 | `test_rechaza_razon_social_ya_registrada`, `..._duplicada_variando_mayusculas_y_espacios`, `..._variando_acentos`, `test_no_persiste_un_segundo_cliente_al_rechazar_el_duplicado`, `test_guarda_la_razon_social_normalizada_para_buscar_y_comparar`, `test_la_base_impide_dos_razones_sociales_iguales_aunque_el_gestor_no_lo_vea` |
+| FR-005 | `test_acepta_telefonos_en_formatos_variantes`; unit domain `test_crear_acepta_telefonos_en_formatos_variantes`, `test_crear_rechaza_telefono_invalido`, `test_crear_acepta_telefono_de_7_digitos` |
+| FR-006 | unit domain `test_crear_acepta_los_extremos_de_largo_validos`, `test_crear_rechaza_razon_social_invalida`, `test_crear_rechaza_direccion_invalida`; integración `test_rechaza_datos_invalidos` |
+| FR-007 | `test_devuelve_los_clientes_cargados_con_el_total`, `test_pagina_por_defecto_en_veinte_y_conserva_el_total_real`, `test_la_segunda_pagina_sigue_a_la_primera_sin_repetir_ni_saltar`, `test_una_pagina_mas_alla_del_total_devuelve_lista_vacia_y_no_un_error`, `test_rechaza_una_paginacion_invalida`, `test_el_orden_es_estable_entre_peticiones` |
+| FR-008 | `test_el_filtro_ignora_las_mayusculas`, `test_el_filtro_coincide_con_parte_de_la_razon_social`, `test_el_total_del_filtro_cuenta_solo_a_los_que_coinciden`, `test_el_filtro_se_combina_con_la_paginacion` |
+| FR-009 | `test_devuelve_los_cuatro_datos_y_las_fechas` |
+| FR-010 | `test_devuelve_200_con_el_telefono_nuevo`, `test_cambia_tambien_la_razon_social_y_el_domicilio`, `test_habilita_la_cuenta_corriente`, `test_guardar_sin_cambios_conserva_el_id_y_la_fecha_de_creacion` |
+| FR-011 | alta: `test_rechaza_datos_requeridos_ausentes`, `test_rechaza_datos_invalidos`, `test_no_persiste_nada_ante_un_dato_invalido`; modificación: `test_rechaza_datos_invalidos`, `test_un_dato_invalido_no_altera_el_cliente_guadado`; unit `test_actualizar_invalido_no_deja_el_cliente_a_medias` |
+| FR-012 | `test_rechaza_tomar_la_razon_social_de_otro_cliente`, `test_rechazar_un_duplicado_deja_intacto_al_cliente_original`, `test_guardar_la_misma_razon_social_no_se_rechaza_a_si_mismo` |
+| FR-013 | `test_rechaza_datos_invalidos`, `test_rechaza_datos_requeridos_ausentes`, `test_rechaza_razon_social_ya_registrada` (mismo mensaje de error asociado al campo responsable) |
+| FR-014 | `test_da_de_baja_un_cliente_sin_historial`, `test_un_cliente_dado_de_baja_deja_de_aparecer_en_el_listado`, `test_un_cliente_dado_de_baja_devuelve_404_en_su_detalle`, `test_un_cliente_dado_de_baja_deja_de_poder_consultarse` (detail) |
+| FR-015 | integración con doble de historial: `test_rechaza_dar_de_baja_un_cliente_con_historial`, `test_un_cliente_rechazado_por_historial_sigue_disponible`; unit `test_no_desactiva_un_cliente_con_historial` y los dos agregados en T049 |
+| FR-016 | `test_un_identificador_inexistente_responde_404`, `test_un_identificador_inexistente_no_crea_ningun_registro` (detail y modificación), `test_responde_404_con_un_id_inexistente` (eliminación, verifica que no quedan registros) |
+| FR-017 | `test_el_cliente_queda_persistido_en_la_base`; verificación manual T055 con reinicio del contenedor backend |
+| FR-018 | `test_el_chofer_no_puede_registrar`, `test_sin_rol_indicado_no_puede_registrar`, `test_un_rol_desconocido_no_puede_registrar`, `test_el_chofer_no_puede_modificar`, `test_el_rol_chofer_no_puede_dar_de_baja`, `test_el_chofer_puede_listar`, `test_el_chofer_puede_ver_el_detalle`, `test_el_chofer_tambien_puede_filtrar` |
+| FR-019 | unit `test_openapi_se_genera`; verificación manual del contrato en Swagger en T037/T042/T048/T053 |
+| FR-020 | `test_la_fecha_de_modificacion_queda_despues_de_la_de_creacion`, `test_guardar_sin_cambios_refresca_la_fecha_de_modificacion`, `test_consultar_el_detalle_no_modifica_la_fecha_de_ultima_modificacion` |
+
+Resultado: **20/20 FR cubiertos**. Los 4 criterios de aceptación de US1, 5 de US2, 6 de US3 y 3 de
+US4 (más los 11 edge cases) quedan cubiertos por estos mismos tests.
+
+### T058 — Gate de AGENTS.md §2
+
+Revisión de `app/api/` y `app/infrastructure/`:
+
+- **`app/api/clientes.py`**: los 5 handlers solo resuelven parámetros del request y delegan en un
+  único método del gestor. El `responses` de cada ruta es documentación, no lógica. ✓
+- **`app/api/schemas/cliente.py`**: los validadores son *formato* de entrada en el límite de la
+  presentación (largo, dígitos). La invariante se re-valida en `app/domain/cliente.py`, que es la
+  fuente de verdad; la unicidad, el historial (FR-015), la baja lógica y las fechas no viven acá. ✓
+- **`app/infrastructure/repositories/cliente_repo.py`**: `desactivar` ejecuta el
+  `UPDATE ... activo=False` que pidió el gestor (mecánica de persistencia de una decisión tomada en
+  `application/`); traducir `IntegrityError`→`RazonSocialDuplicada` es mapeo de errores de
+  infraestructura, no una regla. ✓
+- **`app/infrastructure/models/cliente.py`**: solo el esquema de tabla. ✓
+
+Resultado: **gate PASS** — no quedó ninguna regla de negocio fuera de `app/application/` ni
+`app/domain/`.
+
+### T061 — Definition of Done (AGENTS.md §9)
+
+- [x] Los criterios de aceptación de la spec están cumplidos → ver matriz T057 (SC-001)
+- [x] Hay tests unitarios de la lógica de negocio afectada, pasando → `pytest tests/unit`: 81 en verde
+- [ ] El PR tiene 1 aprobación de otro integrante + CI en verde → *depende de T062 (PR) y de que el CI corra sobre la rama*
+- [x] Si algo cambió respecto a lo que decía la spec original, la spec quedó actualizada → DD-5 (PUT completo) quedó documentado en el schema, la spec se mantuvo estable, y las decisiones adoptadas van a AGENTS.md §11 (T059)
+- [x] El endpoint nuevo (si aplica) aparece documentado en Swagger/OpenAPI → los 5 endpoints con sus códigos de éxito y error (FR-019)
+
+Los dos ítems en gris se cierran con el PR (T062).
