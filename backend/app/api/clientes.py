@@ -7,13 +7,16 @@ Acá no hay ninguna regla de negocio: si hace falta una regla nueva, va en
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, Query, status
 
-from app.api.schemas.cliente import ClienteCreate, ClienteRead
+from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.core.dependencias import ROL_ADMIN, get_gestor_clientes, require_rol
 
 router = APIRouter(prefix="/api/clientes", tags=["clientes"])
+
+TAMANO_DE_PAGINA_POR_DEFECTO = 20
+TAMANO_DE_PAGINA_MAXIMO = 100
 
 RESPUESTAS_ALTA = {
     status.HTTP_403_FORBIDDEN: {
@@ -54,3 +57,59 @@ def registrar_cliente(
         tiene_cuenta_corriente=datos.tiene_cuenta_corriente,
     )
     return ClienteRead.de_cliente(cliente)
+
+
+@router.get(
+    "",
+    response_model=ClienteListado,
+    summary="Listar clientes",
+    description=(
+        "Devuelve una página de clientes dados de alta, con orden estable y la cantidad total de "
+        "los que cumplen el filtro. Un filtro sin coincidencias devuelve la lista vacía con el "
+        "total en cero, no un error."
+    ),
+)
+def listar_clientes(
+    gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+    q: Annotated[
+        str | None,
+        Query(description="Texto a buscar dentro de la razón social. No distingue mayúsculas."),
+    ] = None,
+    page: Annotated[int, Query(ge=1, description="Número de página, empezando en 1.")] = 1,
+    size: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=TAMANO_DE_PAGINA_MAXIMO,
+            description="Cantidad de clientes por página.",
+        ),
+    ] = TAMANO_DE_PAGINA_POR_DEFECTO,
+) -> ClienteListado:
+    clientes, total = gestor.listar(busqueda=q, offset=(page - 1) * size, limit=size)
+    return ClienteListado(
+        items=[ClienteRead.de_cliente(cliente) for cliente in clientes],
+        total=total,
+        page=page,
+        size=size,
+    )
+
+
+@router.get(
+    "/{cliente_id}",
+    response_model=ClienteRead,
+    summary="Ver el detalle de un cliente",
+    description=(
+        "Devuelve razón social, teléfono, dirección habitual, indicador de cuenta corriente y las "
+        "fechas de alta y última modificación. Un cliente dado de baja se trata como inexistente."
+    ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "No existe un cliente activo con ese identificador (FR-016)."
+        }
+    },
+)
+def obtener_cliente(
+    cliente_id: Annotated[int, Path(description="Identificador del cliente.", ge=1)],
+    gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+) -> ClienteRead:
+    return ClienteRead.de_cliente(gestor.obtener(cliente_id))

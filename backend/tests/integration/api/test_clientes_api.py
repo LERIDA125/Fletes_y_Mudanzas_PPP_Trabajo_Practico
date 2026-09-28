@@ -1,6 +1,7 @@
 """Tests de integración de H1 contra PostgreSQL real (AGENTS.md §8, prioridad #2).
 
 US1 — Registrar un cliente nuevo (P1).
+US2 — Consultar clientes: listado con filtro y detalle (P1).
 """
 
 import pytest
@@ -8,6 +9,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.domain.cliente import Cliente
+from app.domain.errores import RazonSocialDuplicada
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 
 REGISTROS = (
@@ -15,9 +18,35 @@ REGISTROS = (
     "tiene_cuenta_corriente, activo FROM clientes"
 )
 
+TELEFONO = "351 555 0100"
+DIRECCION = "Av. Colón 1250, Córdoba"
+
 
 def _total_de_clientes(sesion: Session) -> int:
     return sesion.execute(text("SELECT count(*) FROM clientes")).scalar_one()
+
+
+def _sembrar(repositorio: ClienteRepo, razones_sociales: list[str]) -> list[Cliente]:
+    """Carga clientes por el repositorio, sin pasar por el endpoint de alta.
+
+    Los tests de lectura no necesitan probar el alta —eso es US1—, y sembrar por el repositorio
+    los deja independientes de que el endpoint de escritura cambie.
+    """
+    return [
+        repositorio.crear(
+            Cliente.crear(
+                razon_social=razon_social,
+                telefono=TELEFONO,
+                direccion_habitual=DIRECCION,
+            )
+        )
+        for razon_social in razones_sociales
+    ]
+
+
+def _razones_generadas(cantidad: int) -> list[str]:
+    """Razones sociales distintas y ordenables, para probar el orden estable del listado."""
+    return [f"Empresa Numero {indice:02d} S.A." for indice in range(1, cantidad + 1)]
 
 
 class TestRegistrarCliente:
@@ -329,13 +358,251 @@ class TestUnicidadEnLaBase:
         sesion_test: Session,
     ) -> None:
         """Defensa en profundidad: la restricción UNIQUE de la base es la última línea."""
-        from app.domain.cliente import Cliente
-        from app.domain.errores import RazonSocialDuplicada
-
-        repo_test.crear(Cliente.crear("Almacén Central S.A.", "351 555 0100", "Av. Colón 1250"))
-        segundo = Cliente.crear("almacen central s.a.", "351 555 0100", "Bv. San Juan 450")
+        repo_test.crear(Cliente.crear("Almacén Central S.A.", TELEFONO, DIRECCION))
+        segundo = Cliente.crear("almacen central s.a.", TELEFONO, "Bv. San Juan 450")
 
         with pytest.raises(RazonSocialDuplicada):
             repo_test.crear(segundo)
 
         assert _total_de_clientes(sesion_test) == 1
+
+
+class TestListarClientes:
+    def test_devuelve_los_clientes_cargados_con_el_total(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(3))
+
+        respuesta = cliente.get("/api/clientes", headers=admin)
+
+        assert respuesta.status_code == 200
+        cuerpo = respuesta.json()
+        assert cuerpo["total"] == 3
+        assert len(cuerpo["items"]) == 3
+
+    def test_el_listado_vacio_no_es_un_error(
+        self, cliente: TestClient, admin: dict[str, str]
+    ) -> None:
+        respuesta = cliente.get("/api/clientes", headers=admin)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json() == {"items": [], "total": 0, "page": 1, "size": 20}
+
+    def test_el_orden_es_estable_entre_peticiones(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(25))
+
+        primera = cliente.get("/api/clientes?size=100", headers=admin).json()["items"]
+        segunda = cliente.get("/api/clientes?size=100", headers=admin).json()["items"]
+
+        assert [item["razon_social"] for item in primera] == _razones_generadas(25)
+        assert [item["id"] for item in segunda] == [item["id"] for item in primera]
+
+    def test_pagina_por_defecto_en_veinte_y_conserva_el_total_real(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(25))
+
+        cuerpo = cliente.get("/api/clientes", headers=admin).json()
+
+        assert len(cuerpo["items"]) == 20
+        assert cuerpo["total"] == 25
+        assert cuerpo["page"] == 1
+        assert cuerpo["size"] == 20
+
+    def test_la_segunda_pagina_sigue_a_la_primera_sin_repetir_ni_saltar(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(25))
+
+        primera = cliente.get("/api/clientes", headers=admin).json()
+        segunda = cliente.get("/api/clientes?page=2", headers=admin).json()
+
+        assert [item["razon_social"] for item in primera["items"] + segunda["items"]] == (
+            _razones_generadas(25)
+        )
+        assert segunda["page"] == 2
+        assert segunda["total"] == 25
+
+    def test_una_pagina_mas_alla_del_total_devuelve_lista_vacia_y_no_un_error(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(3))
+
+        respuesta = cliente.get("/api/clientes?page=9", headers=admin)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["items"] == []
+        assert respuesta.json()["total"] == 3
+
+    @pytest.mark.parametrize("consulta", ["size=101", "size=0", "page=0", "page=-1"])
+    def test_rechaza_una_paginacion_invalida(
+        self, cliente: TestClient, admin: dict[str, str], consulta: str
+    ) -> None:
+        respuesta = cliente.get(f"/api/clientes?{consulta}", headers=admin)
+
+        assert respuesta.status_code == 422
+
+
+class TestFiltrarClientes:
+    RAZONES = [
+        "Distribuidora del Sur S.A.",
+        "Distribuidora del Norte S.A.",
+        "Transportes del Sur S.A.",
+        "Muebles del Litoral S.A.",
+    ]
+
+    @pytest.mark.parametrize(
+        "texto",
+        ["Distribuidora", "distribuidora", "DISTRIBUIDORA", "distri", "ibuidora"],
+    )
+    def test_el_filtro_ignora_las_mayusculas(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo, texto: str
+    ) -> None:
+        _sembrar(repo_test, self.RAZONES)
+
+        cuerpo = cliente.get(f"/api/clientes?q={texto}", headers=admin).json()
+
+        assert cuerpo["total"] == 2
+        assert [item["razon_social"] for item in cuerpo["items"]] == self.RAZONES[:2]
+
+    def test_el_filtro_coincide_con_parte_de_la_razon_social(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, self.RAZONES)
+
+        cuerpo = cliente.get("/api/clientes?q=sur", headers=admin).json()
+
+        assert [item["razon_social"] for item in cuerpo["items"]] == [
+            "Distribuidora del Sur S.A.",
+            "Transportes del Sur S.A.",
+        ]
+        assert cuerpo["total"] == 2
+
+    def test_una_busqueda_sin_coincidencias_devuelve_lista_vacia_y_no_un_error(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, self.RAZONES)
+
+        respuesta = cliente.get("/api/clientes?q=zincorp", headers=admin)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["items"] == []
+        assert respuesta.json()["total"] == 0
+
+    def test_el_total_del_filtro_cuenta_solo_a_los_que_coinciden(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(25))
+
+        cuerpo = cliente.get("/api/clientes?q=empresa%20numero%201", headers=admin).json()
+
+        # Solo entran "numero 10" a "numero 19": el "01" no matchea porque el 0 separa al 1.
+        assert cuerpo["total"] == 10
+        assert len(cuerpo["items"]) == 10
+
+    def test_el_filtro_se_combina_con_la_paginacion(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, _razones_generadas(25))
+
+        cuerpo = cliente.get("/api/clientes?q=empresa&size=5&page=2", headers=admin).json()
+
+        assert len(cuerpo["items"]) == 5
+        assert cuerpo["total"] == 25
+        assert cuerpo["page"] == 2
+        assert cuerpo["size"] == 5
+
+
+class TestDetalleDeCliente:
+    def test_devuelve_los_cuatro_datos_y_las_fechas(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = repo_test.crear(
+            Cliente.crear(
+                razon_social="Distribuidora del Sur S.A.",
+                telefono=TELEFONO,
+                direccion_habitual=DIRECCION,
+                tiene_cuenta_corriente=True,
+            )
+        )
+
+        respuesta = cliente.get(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert respuesta.status_code == 200
+        cuerpo = respuesta.json()
+        assert cuerpo["id"] == creado.id
+        assert cuerpo["razon_social"] == "Distribuidora del Sur S.A."
+        assert cuerpo["telefono"] == TELEFONO
+        assert cuerpo["direccion_habitual"] == DIRECCION
+        assert cuerpo["tiene_cuenta_corriente"] is True
+        assert cuerpo["activo"] is True
+        assert cuerpo["creado_en"] is not None
+        assert cuerpo["actualizado_en"] is not None
+
+    def test_consultar_el_detalle_no_modifica_la_fecha_de_ultima_modificacion(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = repo_test.crear(Cliente.crear("Distribuidora del Sur S.A.", TELEFONO, DIRECCION))
+
+        antes = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+        despues = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+
+        assert despues["actualizado_en"] == antes["actualizado_en"]  # FR-020
+
+    def test_un_identificador_inexistente_responde_404(
+        self, cliente: TestClient, admin: dict[str, str]
+    ) -> None:
+        respuesta = cliente.get("/api/clientes/999999", headers=admin)
+
+        assert respuesta.status_code == 404
+        assert "999999" in respuesta.json()["detail"]
+
+    def test_un_identificador_inexistente_no_crea_ningun_registro(
+        self, cliente: TestClient, admin: dict[str, str], sesion_test: Session
+    ) -> None:
+        cliente.get("/api/clientes/999999", headers=admin)
+
+        assert _total_de_clientes(sesion_test) == 0
+
+    def test_un_cliente_dado_de_baja_deja_de_poder_consultarse(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = repo_test.crear(Cliente.crear("Distribuidora del Sur S.A.", TELEFONO, DIRECCION))
+        repo_test.desactivar(creado.id)
+
+        respuesta = cliente.get(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert respuesta.status_code == 404  # FR-014
+
+
+class TestConsultarComoChofer:
+    def test_el_chofer_puede_listar(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, ["Distribuidora del Sur S.A."])
+
+        respuesta = cliente.get("/api/clientes", headers=chofer)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["total"] == 1
+
+    def test_el_chofer_puede_ver_el_detalle(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = repo_test.crear(Cliente.crear("Distribuidora del Sur S.A.", TELEFONO, DIRECCION))
+
+        respuesta = cliente.get(f"/api/clientes/{creado.id}", headers=chofer)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["razon_social"] == "Distribuidora del Sur S.A."
+
+    def test_el_chofer_tambien_puede_filtrar(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _sembrar(repo_test, ["Distribuidora del Sur S.A.", "Transportes del Norte S.A."])
+
+        cuerpo = cliente.get("/api/clientes?q=distribuidora", headers=chofer).json()
+
+        assert cuerpo["total"] == 1

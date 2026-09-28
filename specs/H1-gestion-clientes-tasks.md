@@ -96,11 +96,11 @@ testear y entregar de forma independiente.
 **Goal**: listado con filtro y detalle.
 **Independent Test**: cargar 3 clientes, filtrar por texto, abrir un detalle.
 
-- [ ] **T038** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US2 **primero** (deben fallar): `GET /api/clientes` devuelve items + `total` con orden estable; filtro `q` insensible a mayúsculas; búsqueda sin resultados devuelve lista vacía con `total=0` (no error); `GET /api/clientes/{id}` devuelve los 4 datos + fechas; id inexistente → `404`; `chofer` puede leer (200)
-- [ ] **T039** [P] Agregar en `app/api/schemas/cliente.py` el schema `ClienteListado` si no quedó en T030
-- [ ] **T040** Agregar a `app/api/clientes.py` las rutas `GET /api/clientes` (params `q`, `page` default 1, `size` default 20 con `le=100`) y `GET /api/clientes/{id}`, delegando a `GestorClientes.listar/obtener`
-- [ ] **T041** Correr `pytest tests/unit tests/integration` y dejarlo en verde
-- [ ] **T042** Confirmar en Swagger que las dos rutas de lectura están documentadas
+- [x] **T038** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US2 **primero** (deben fallar): `GET /api/clientes` devuelve items + `total` con orden estable; filtro `q` insensible a mayúsculas; búsqueda sin resultados devuelve lista vacía con `total=0` (no error); `GET /api/clientes/{id}` devuelve los 4 datos + fechas; id inexistente → `404`; `chofer` puede leer (200)
+- [x] **T039** [P] Agregar en `app/api/schemas/cliente.py` el schema `ClienteListado` si no quedó en T030
+- [x] **T040** Agregar a `app/api/clientes.py` las rutas `GET /api/clientes` (params `q`, `page` default 1, `size` default 20 con `le=100`) y `GET /api/clientes/{id}`, delegando a `GestorClientes.listar/obtener`
+- [x] **T041** Correr `pytest tests/unit tests/integration` y dejarlo en verde
+- [x] **T042** Confirmar en Swagger que las dos rutas de lectura están documentadas
 
 **Checkpoint**: US1 + US2 funcionando de forma independiente
 
