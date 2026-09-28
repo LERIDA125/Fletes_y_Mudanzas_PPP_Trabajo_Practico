@@ -2,7 +2,10 @@
 
 US1 — Registrar un cliente nuevo (P1).
 US2 — Consultar clientes: listado con filtro y detalle (P1).
+US3 — Modificar un cliente existente (P2).
 """
+
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -606,3 +609,326 @@ class TestConsultarComoChofer:
         cuerpo = cliente.get("/api/clientes?q=distribuidora", headers=chofer).json()
 
         assert cuerpo["total"] == 1
+
+
+def _cuerpo_de_edicion(razon_social: str = "Distribuidora del Sur S.A.", **cambios) -> dict:
+    """Cuerpo del PUT. DD-5: los mismos cuatro datos requeridos que en el alta."""
+    cuerpo = {
+        "razon_social": razon_social,
+        "telefono": TELEFONO,
+        "direccion_habitual": DIRECCION,
+        "tiene_cuenta_corriente": False,
+    }
+    cuerpo.update(cambios)
+    return cuerpo
+
+
+def _crear_para_editar(repo_test: ClienteRepo, **cambios) -> Cliente:
+    return repo_test.crear(
+        Cliente.crear(
+            razon_social="Distribuidora del Sur S.A.",
+            telefono=TELEFONO,
+            direccion_habitual=DIRECCION,
+            **cambios,
+        )
+    )
+
+
+class TestModificarCliente:
+    def test_devuelve_200_con_el_telefono_nuevo(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199"),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["telefono"] == "351 555 0199"
+
+    def test_el_detalle_refleja_el_telefono_nuevo(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199"),
+            headers=admin,
+        )
+
+        detalle = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+        assert detalle["telefono"] == "351 555 0199"
+
+    def test_la_fecha_de_modificacion_queda_despues_de_la_de_creacion(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cuerpo = cliente.put(
+            f"/api/clientes/{creado.id}", json=_cuerpo_de_edicion(), headers=admin
+        ).json()
+
+        creado_en = datetime.fromisoformat(cuerpo["creado_en"])
+        actualizado_en = datetime.fromisoformat(cuerpo["actualizado_en"])
+        assert actualizado_en > creado_en
+
+    def test_habilita_la_cuenta_corriente(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(tiene_cuenta_corriente=True),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["tiene_cuenta_corriente"] is True
+
+    def test_cambia_tambien_la_razon_social_y_el_domicilio(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(
+                "Distribuidora Del Sur S.A.", direccion_habitual="Bv. San Juan 450"
+            ),
+            headers=admin,
+        )
+
+        cuerpo = respuesta.json()
+        assert respuesta.status_code == 200
+        assert cuerpo["razon_social"] == "Distribuidora Del Sur S.A."
+        assert cuerpo["direccion_habitual"] == "Bv. San Juan 450"
+
+    def test_guardar_sin_cambios_conserva_el_id_y_la_fecha_de_creacion(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test, tiene_cuenta_corriente=True)
+        antes = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+
+        cuerpo = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(tiene_cuenta_corriente=True),
+            headers=admin,
+        ).json()
+
+        assert cuerpo["id"] == creado.id
+        assert cuerpo["creado_en"] == antes["creado_en"]
+        assert cuerpo["razon_social"] == antes["razon_social"]
+        assert cuerpo["telefono"] == antes["telefono"]
+        assert cuerpo["direccion_habitual"] == antes["direccion_habitual"]
+        assert cuerpo["tiene_cuenta_corriente"] is True
+
+    def test_guardar_sin_cambios_refresca_la_fecha_de_modificacion(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+        antes = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+
+        cuerpo = cliente.put(
+            f"/api/clientes/{creado.id}", json=_cuerpo_de_edicion(), headers=admin
+        ).json()
+
+        # FR-020: toda actualización refresca la fecha, aunque no cambie ningún dato.
+        assert cuerpo["actualizado_en"] > antes["actualizado_en"]
+
+    def test_no_se_crea_un_cliente_nuevo_al_modificar(
+        self,
+        cliente: TestClient,
+        admin: dict[str, str],
+        repo_test: ClienteRepo,
+        sesion_test: Session,
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199"),
+            headers=admin,
+        )
+
+        assert _total_de_clientes(sesion_test) == 1
+
+    def test_rechaza_tomar_la_razon_social_de_otro_cliente(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        _crear_para_editar(repo_test)
+        segundo = repo_test.crear(
+            Cliente.crear("Distribuidora del Norte S.A.", TELEFONO, DIRECCION)
+        )
+
+        respuesta = cliente.put(
+            f"/api/clientes/{segundo.id}",
+            json=_cuerpo_de_edicion("Distribuidora del Sur S.A."),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 409
+
+    def test_rechazar_un_duplicado_deja_intacto_al_cliente_original(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        primero = _crear_para_editar(repo_test)
+        segundo = repo_test.crear(
+            Cliente.crear("Distribuidora del Norte S.A.", TELEFONO, DIRECCION)
+        )
+
+        cliente.put(
+            f"/api/clientes/{segundo.id}",
+            json=_cuerpo_de_edicion("DISTRIBUIDORA DEL SUR S.A."),
+            headers=admin,
+        )
+
+        intacto = cliente.get(f"/api/clientes/{primero.id}", headers=admin).json()
+        sin_tocar = cliente.get(f"/api/clientes/{segundo.id}", headers=admin).json()
+        assert intacto["razon_social"] == "Distribuidora del Sur S.A."
+        assert sin_tocar["razon_social"] == "Distribuidora del Norte S.A."
+
+    def test_rechaza_razon_social_duplicada_variando_acentos(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        primero = repo_test.crear(Cliente.crear("Almacén Central S.A.", TELEFONO, DIRECCION))
+        segundo = repo_test.crear(Cliente.crear("Transportes del Sur S.A.", TELEFONO, DIRECCION))
+
+        respuesta = cliente.put(
+            f"/api/clientes/{segundo.id}",
+            json=_cuerpo_de_edicion("Almacen Central S.A."),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 409
+        assert (
+            cliente.get(f"/api/clientes/{primero.id}", headers=admin).json()["razon_social"]
+            == "Almacén Central S.A."
+        )
+
+    def test_guardar_la_misma_razon_social_no_se_rechaza_a_si_mismo(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = repo_test.crear(Cliente.crear("Almacén Central S.A.", TELEFONO, DIRECCION))
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion("  ALMACEN   central S.A.  "),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 200
+        assert respuesta.json()["razon_social"] == "ALMACEN central S.A."
+
+    @pytest.mark.parametrize("campo", ["razon_social", "telefono", "direccion_habitual"])
+    def test_rechaza_datos_requeridos_ausentes(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo, campo: str
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+        cuerpo = {clave: valor for clave, valor in _cuerpo_de_edicion().items() if clave != campo}
+
+        respuesta = cliente.put(f"/api/clientes/{creado.id}", json=cuerpo, headers=admin)
+
+        assert respuesta.status_code == 422
+
+    @pytest.mark.parametrize(
+        ("campo", "valor"),
+        [
+            ("razon_social", "Ab"),
+            ("razon_social", "   "),
+            ("razon_social", "A" * 121),
+            ("telefono", "123"),
+            ("telefono", ""),
+            ("direccion_habitual", "Av 1"),
+            ("direccion_habitual", "C" * 251),
+        ],
+    )
+    def test_rechaza_datos_invalidos(
+        self,
+        cliente: TestClient,
+        admin: dict[str, str],
+        repo_test: ClienteRepo,
+        campo: str,
+        valor: str,
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}", json=_cuerpo_de_edicion(**{campo: valor}), headers=admin
+        )
+
+        assert respuesta.status_code == 422
+
+    def test_un_dato_invalido_no_altera_el_cliente_guadado(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199", direccion_habitual="Av 1"),
+            headers=admin,
+        )
+
+        # FR-011: no hay cambios parciales, ni el teléfono válido ni el domicilio inválido.
+        detalle = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+        assert detalle["telefono"] == TELEFONO
+        assert detalle["direccion_habitual"] == DIRECCION
+
+    def test_un_identificador_inexistente_responde_404(
+        self, cliente: TestClient, admin: dict[str, str]
+    ) -> None:
+        respuesta = cliente.put("/api/clientes/999999", json=_cuerpo_de_edicion(), headers=admin)
+
+        assert respuesta.status_code == 404
+
+    def test_un_identificador_inexistente_no_crea_ningun_registro(
+        self, cliente: TestClient, admin: dict[str, str], sesion_test: Session
+    ) -> None:
+        cliente.put("/api/clientes/999999", json=_cuerpo_de_edicion(), headers=admin)
+
+        assert _total_de_clientes(sesion_test) == 0  # FR-016
+
+    def test_rechaza_que_el_usuario_informe_el_id_o_las_fechas(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json={**_cuerpo_de_edicion(), "id": 99, "creado_en": "2020-01-01T00:00:00Z"},
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 422
+
+    def test_el_chofer_no_puede_modificar(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199"),
+            headers=chofer,
+        )
+
+        assert respuesta.status_code == 403
+
+    def test_el_rechazo_por_permiso_no_altera_el_cliente(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.put(
+            f"/api/clientes/{creado.id}",
+            json=_cuerpo_de_edicion(telefono="351 555 0199"),
+            headers=chofer,
+        )
+
+        detalle = cliente.get(f"/api/clientes/{creado.id}", headers=chofer).json()
+        assert detalle["telefono"] == TELEFONO

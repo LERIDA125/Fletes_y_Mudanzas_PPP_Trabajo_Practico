@@ -286,6 +286,46 @@ class TestActualizar:
 
         assert actualizado.razon_social == "ALMACEN central S.A."
 
+    def test_una_razon_social_que_solo_cambia_de_forma_no_choca_consigo_mismo(
+        self, gestor: GestorClientes
+    ) -> None:
+        """La clave normalizada no cambia, pero el texto guardado sí: no debe rechazarse."""
+        cliente = _registrar(gestor, "Almacén  Central S.A.")
+
+        actualizado = gestor.actualizar(
+            cliente.id,
+            razon_social="  ALMACEN central   S.A. ",
+            telefono=TELEFONO,
+            direccion_habitual=DIRECCION,
+            tiene_cuenta_corriente=False,
+        )
+
+        assert actualizado.razon_social == "ALMACEN central S.A."
+        assert actualizado.razon_social_key == cliente.razon_social_key
+
+    def test_una_razon_social_que_choca_consigo_mismo_no_choca_con_otro_cliente(
+        self, gestor: GestorClientes
+    ) -> None:
+        """Con otro cliente cargado, la comprobación de duplicados tiene que excluirse a sí misma.
+
+        Es el caso que solo se ve con el fake: contra PostgreSQL el UNIQUE de `razon_social_key`
+        taparía el error, pero acá el chequeo es el del gestor.
+        """
+        otro = _registrar(gestor, "Transportes del Norte S.A.")
+        cliente = _registrar(gestor, "Transportes del Sur S.A.")
+
+        actualizado = gestor.actualizar(
+            cliente.id,
+            razon_social="TRANSPORTES DEL SUR S.A.",
+            telefono=TELEFONO,
+            direccion_habitual=DIRECCION,
+            tiene_cuenta_corriente=False,
+        )
+
+        assert actualizado.razon_social == "TRANSPORTES DEL SUR S.A."
+        assert actualizado.razon_social_key == cliente.razon_social_key
+        assert gestor.obtener(otro.id).razon_social == "Transportes del Norte S.A."
+
     @pytest.mark.parametrize(
         ("campo", "valor"),
         [

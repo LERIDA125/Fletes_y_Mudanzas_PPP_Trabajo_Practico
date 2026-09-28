@@ -76,6 +76,11 @@ class ClienteRepo:
         orm.telefono = cliente.telefono
         orm.direccion_habitual = cliente.direccion_habitual
         orm.tiene_cuenta_corriente = cliente.tiene_cuenta_corriente
+        # FR-020: guardar tiene que refrescar la fecha de última modificación aunque el cliente se
+        # guarde idéntico. El `onupdate` de la columna no alcanza para eso, porque si ningún
+        # atributo cambió SQLAlchemy no emite el UPDATE y el `onupdate` nunca llega a evaluarse;
+        # marcar la columna como modificada a mano es lo que fuerza la escritura.
+        orm.actualizado_en = func.now()
         try:
             self._db.commit()
         except IntegrityError as error:

@@ -111,12 +111,12 @@ testear y entregar de forma independiente.
 **Goal**: corregir datos de un cliente existente.
 **Independent Test**: cambiar un teléfono y verificar detalle + fecha de modificación.
 
-- [ ] **T043** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US3 **primero** (deben fallar): `200` al cambiar teléfono; cambiar `tiene_cuenta_corriente` a `true`; guardar sin cambios conserva `id` y `creado_en` y refresca `actualizado_en`; `409` al poner la razón social de otro cliente y verificar que el original queda intacto (re-consultar); `422` con campos vacíos; `404` con id inexistente y **verificar que no se creó ningún registro**; `403` con rol `chofer`
-- [ ] **T044** [P] Agregar a `tests/unit/application/clientes/test_gestor_clientes.py` el caso de borde que solo se ve con fake: razón social que al normalizar colisiona consigo misma (no debe rechazarse)
-- [ ] **T045** Crear `ClienteUpdate` en `app/api/schemas/cliente.py` (mismos 4 campos obligatorios que `ClienteCreate`, DD-5)
-- [ ] **T046** Agregar a `app/api/clientes.py` la ruta `PUT /api/clientes/{id}` (admin), delegando a `GestorClientes.actualizar`
-- [ ] **T047** Correr `pytest tests/unit tests/integration` y dejarlo en verde
-- [ ] **T048** Confirmar en Swagger que `PUT` está documentada con `404` y `409`
+- [x] **T043** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US3 **primero** (deben fallar): `200` al cambiar teléfono; cambiar `tiene_cuenta_corriente` a `true`; guardar sin cambios conserva `id` y `creado_en` y refresca `actualizado_en`; `409` al poner la razón social de otro cliente y verificar que el original queda intacto (re-consultar); `422` con campos vacíos; `404` con id inexistente y **verificar que no se creó ningún registro**; `403` con rol `chofer`
+- [x] **T044** [P] Agregar a `tests/unit/application/clientes/test_gestor_clientes.py` el caso de borde que solo se ve con fake: razón social que al normalizar colisiona consigo misma (no debe rechazarse)
+- [x] **T045** Crear `ClienteUpdate` en `app/api/schemas/cliente.py` (mismos 4 campos obligatorios que `ClienteCreate`, DD-5)
+- [x] **T046** Agregar a `app/api/clientes.py` la ruta `PUT /api/clientes/{id}` (admin), delegando a `GestorClientes.actualizar`
+- [x] **T047** Correr `pytest tests/unit tests/integration` y dejarlo en verde
+- [x] **T048** Confirmar en Swagger que `PUT` está documentada con `404` y `409`
 
 **Checkpoint**: US1–US3 funcionales
 
@@ -193,3 +193,12 @@ Phase 1 (Setup) ──► Phase 2 (Foundational) ──► US1 ──► US2 ─
 - **El stub de roles vive en `app/core/dependencias.py`, no en los routers.** `get_gestor_clientes`
   es el único punto donde se arma el gestor de Aplicación, así que los tests la sobreescriben con
   `app.dependency_overrides` (ver T050) sin tocar `app/api/`.
+- **`onupdate=func.now()` no refresca `actualizado_en` si el cliente se guarda idéntico.** Cuando
+  ningún atributo cambia, SQLAlchemy no emite el `UPDATE` y el `onupdate` de la columna nunca llega
+  a evaluarse, así que la fecha de la última modificación se quedaba congelada (rompía FR-020).
+  `ClienteRepo.actualizar` marca la columna a mano (`orm.actualizado_en = func.now()`) para forzar
+  la escritura. Si se agrega una columna de auditoría con `onupdate`, hay que hacer lo mismo.
+- **T044 ya estaba cubierto a medias.** `test_guardar_los_mismos_datos_no_choca_consigo_mismo` cubría
+  la autocolisión con un solo cliente cargado; se agregaron los dos casos que faltaban: razón social
+  que solo cambia de forma pero no de clave, y autocolisión *con otro cliente cargado* (que es donde
+  una comprobación de duplicados sin `excluir_id` se rompería).

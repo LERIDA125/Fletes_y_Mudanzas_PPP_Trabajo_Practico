@@ -9,7 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, status
 
-from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead
+from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead, ClienteUpdate
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.core.dependencias import ROL_ADMIN, get_gestor_clientes, require_rol
 
@@ -113,3 +113,46 @@ def obtener_cliente(
     gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
 ) -> ClienteRead:
     return ClienteRead.de_cliente(gestor.obtener(cliente_id))
+
+
+@router.put(
+    "/{cliente_id}",
+    response_model=ClienteRead,
+    summary="Modificar un cliente",
+    description=(
+        "Corrige los cuatro datos de un cliente existente. El identificador y la fecha de creación "
+        "no se pueden cambiar, y la razón social no puede quedar igual a la de otro cliente. "
+        "Guardar los mismos datos también refresca la fecha de última modificación."
+    ),
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "description": "El rol del usuario no permite modificar clientes (FR-018)."
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "No existe un cliente activo con ese identificador (FR-016)."
+        },
+        status.HTTP_409_CONFLICT: {
+            "description": "La razón social nueva ya pertenece a otro cliente (FR-012)."
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": (
+                "Alguno de los cuatro datos requeridos falta o no cumple el formato, y no se "
+                "guarda ningún cambio parcial (FR-011)."
+            )
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def actualizar_cliente(
+    cliente_id: Annotated[int, Path(description="Identificador del cliente.", ge=1)],
+    datos: ClienteUpdate,
+    gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+) -> ClienteRead:
+    cliente = gestor.actualizar(
+        cliente_id,
+        razon_social=datos.razon_social,
+        telefono=datos.telefono,
+        direccion_habitual=datos.direccion_habitual,
+        tiene_cuenta_corriente=datos.tiene_cuenta_corriente,
+    )
+    return ClienteRead.de_cliente(cliente)

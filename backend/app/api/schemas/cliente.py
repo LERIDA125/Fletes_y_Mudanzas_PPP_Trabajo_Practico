@@ -76,6 +76,14 @@ class ClienteCreate(BaseModel):
         return telefono
 
 
+class ClienteUpdate(ClienteCreate):
+    """La edición toma los mismos cuatro datos obligatorios que el alta (DD-5).
+
+    No es un `PATCH`: se manda el cliente completo. Así el dominio siempre valida un cliente
+    entero y nunca queda un registro a medio modificar por un campo que se olvidó enviar.
+    """
+
+
 class ClienteRead(BaseModel):
     """Cliente tal como lo devuelve el sistema, con los datos que calcula él (FR-003, FR-009)."""
 
