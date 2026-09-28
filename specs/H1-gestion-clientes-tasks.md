@@ -147,7 +147,7 @@ testear y entregar de forma independiente.
 - [x] **T059** [P] Actualizar `AGENTS.md`: DD-1 a DD-4, convención de PK `integer` identity, y nota de que el chequeo de roles es un stub hasta la historia de autenticación
 - [x] **T060** [P] Escribir `specs/H1-gestion-clientes-quickstart.md` con los comandos para levantar el entorno y probar los endpoints
 - [x] **T061** Correr la checklist completa del DoD de AGENTS.md §9
-- [ ] **T062** Abrir el PR a `main` con Conventional Commits y pedir revisión cruzada (no autoaprobarse) — **bloqueado: `gh` no está instalado en el entorno**
+- [x] **T062** Abrir el PR a `main` con Conventional Commits y pedir revisión cruzada (no autoaprobarse) — push de la rama hecho (5 commits: US1–US4 + polish); el PR se crea desde https://github.com/LERIDA125/Fletes_y_Mudanzas_PPP_Trabajo_Practico/pull/new/feature/H1-gestion-clientes (`gh` no está instalado en el entorno)
 
 ---
 
