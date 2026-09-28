@@ -7,7 +7,7 @@ Acá no hay ninguna regla de negocio: si hace falta una regla nueva, va en
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead, ClienteUpdate
 from app.application.clientes.gestor_clientes import GestorClientes
@@ -156,3 +156,37 @@ def actualizar_cliente(
         tiene_cuenta_corriente=datos.tiene_cuenta_corriente,
     )
     return ClienteRead.de_cliente(cliente)
+
+
+@router.delete(
+    "/{cliente_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    summary="Dar de baja un cliente",
+    description=(
+        "Elimina un cliente que no tenga servicios registrados. La baja es lógica —el registro "
+        "queda desactivado pero conserva su identidad— por lo que repetir la baja no da error y la "
+        "razón social no vuelve a estar disponible para otro cliente. Un cliente con servicios "
+        "recién podrá eliminarse cuando se resuelva su historial."
+    ),
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "description": "El rol del usuario no permite dar de baja clientes (FR-018)."
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "No existe un cliente activo con ese identificador (FR-016)."
+        },
+        status.HTTP_409_CONFLICT: {
+            "description": (
+                "El cliente tiene servicios registrados y no se puede dar de baja (FR-015)."
+            )
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def eliminar_cliente(
+    cliente_id: Annotated[int, Path(description="Identificador del cliente.", ge=1)],
+    gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+) -> Response:
+    gestor.eliminar(cliente_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

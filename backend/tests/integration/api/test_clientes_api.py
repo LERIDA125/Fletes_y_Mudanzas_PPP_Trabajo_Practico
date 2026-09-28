@@ -3,6 +3,7 @@
 US1 — Registrar un cliente nuevo (P1).
 US2 — Consultar clientes: listado con filtro y detalle (P1).
 US3 — Modificar un cliente existente (P2).
+US4 — Eliminar un cliente (P2).
 """
 
 from datetime import datetime
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.domain.cliente import Cliente
 from app.domain.errores import RazonSocialDuplicada
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
+from tests.integration.conftest import HistorialSimulado
 
 REGISTROS = (
     "SELECT razon_social, razon_social_key, telefono, direccion_habitual, "
@@ -932,3 +934,136 @@ class TestModificarCliente:
 
         detalle = cliente.get(f"/api/clientes/{creado.id}", headers=chofer).json()
         assert detalle["telefono"] == TELEFONO
+
+
+class TestEliminarCliente:
+    def test_da_de_baja_un_cliente_sin_historial(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert respuesta.status_code == 204
+        assert respuesta.content == b""
+
+    def test_un_cliente_dado_de_baja_deja_de_aparecer_en_el_listado(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        a_eliminar = _crear_para_editar(repo_test)
+        otro = repo_test.crear(Cliente.crear("Transportes del Norte S.A.", TELEFONO, DIRECCION))
+
+        respuesta = cliente.delete(f"/api/clientes/{a_eliminar.id}", headers=admin)
+
+        assert respuesta.status_code == 204
+        listado = cliente.get("/api/clientes", headers=admin).json()
+        assert [item["id"] for item in listado["items"]] == [otro.id]
+        assert listado["total"] == 1
+
+    def test_un_cliente_dado_de_baja_devuelve_404_en_su_detalle(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert cliente.get(f"/api/clientes/{creado.id}", headers=admin).status_code == 404
+
+    def test_eliminar_dos_veces_no_da_error(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        primera = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+        segunda = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert primera.status_code == 204
+        assert segunda.status_code == 204
+
+    def test_no_borra_fisicamente_el_registro(
+        self,
+        cliente: TestClient,
+        admin: dict[str, str],
+        repo_test: ClienteRepo,
+        sesion_test: Session,
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+
+        # DP-01: la baja es lógica. La fila sigue en la base, desactivada y con sus datos intactos.
+        fila = sesion_test.execute(
+            text("SELECT activo, razon_social FROM clientes WHERE id = :id"), {"id": creado.id}
+        ).one()
+        assert fila[0] is False
+        assert fila[1] == "Distribuidora del Sur S.A."
+
+    def test_no_puede_reusarse_la_razon_social_de_un_cliente_dado_de_baja(
+        self, cliente: TestClient, admin: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+        baja = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+        assert baja.status_code == 204
+
+        # El UNIQUE de razon_social_key sigue vivo (DP-01), así que crear el mismo cliente choca.
+        respuesta = cliente.post(
+            "/api/clientes",
+            json=_cuerpo_de_edicion(),
+            headers=admin,
+        )
+
+        assert respuesta.status_code == 409
+
+    def test_responde_404_con_un_id_inexistente(
+        self, cliente: TestClient, admin: dict[str, str], sesion_test: Session
+    ) -> None:
+        assert cliente.delete("/api/clientes/999999", headers=admin).status_code == 404
+        assert _total_de_clientes(sesion_test) == 0
+
+    def test_el_rol_chofer_no_puede_dar_de_baja(
+        self, cliente: TestClient, chofer: dict[str, str], repo_test: ClienteRepo
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+
+        respuesta = cliente.delete(f"/api/clientes/{creado.id}", headers=chofer)
+
+        assert respuesta.status_code == 403
+        # FR-018: el rechazo es por permiso, el cliente queda intacto.
+        detalle = cliente.get(f"/api/clientes/{creado.id}", headers=chofer).json()
+        assert detalle["id"] == creado.id
+        assert detalle["activo"] is True
+
+    def test_rechaza_dar_de_baja_un_cliente_con_historial(
+        self,
+        cliente: TestClient,
+        admin: dict[str, str],
+        repo_test: ClienteRepo,
+        historial_fake: HistorialSimulado,
+    ) -> None:
+        """FR-015 se prueba a nivel HTTP reemplazando el historial por un doble."""
+        creado = _crear_para_editar(repo_test)
+        historial_fake.marcar_con_historial(creado.id)
+
+        respuesta = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+
+        assert respuesta.status_code == 409
+        # El doble se consultó una sola vez y para el cliente indicado.
+        assert historial_fake.consultas == [creado.id]
+
+    def test_un_cliente_rechazado_por_historial_sigue_disponible(
+        self,
+        cliente: TestClient,
+        admin: dict[str, str],
+        repo_test: ClienteRepo,
+        historial_fake: HistorialSimulado,
+    ) -> None:
+        creado = _crear_para_editar(repo_test)
+        historial_fake.marcar_con_historial(creado.id)
+
+        respuesta = cliente.delete(f"/api/clientes/{creado.id}", headers=admin)
+        assert respuesta.status_code == 409
+
+        detalle = cliente.get(f"/api/clientes/{creado.id}", headers=admin).json()
+        assert detalle["id"] == creado.id
+        assert detalle["activo"] is True
+        assert detalle["razon_social"] == creado.razon_social

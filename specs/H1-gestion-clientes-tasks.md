@@ -127,11 +127,11 @@ testear y entregar de forma independiente.
 **Goal**: dar de baja un cliente.
 **Independent Test**: dar de baja un cliente sin historial y verificar que desaparece del listado.
 
-- [ ] **T049** [P] Agregar a `tests/unit/application/clientes/test_gestor_clientes.py` el test de FR-015 con `FakeHistorial(tiene=True)`: assert `ClienteConHistorial` y que `FakeClienteRepo.desactivar` **nunca fue llamado**
-- [ ] **T050** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US4 **primero** (deben fallar): `204` al dar de baja un cliente sin historial; deja de aparecer en el listado y su detalle da `404`; baja repetida responde `204` sin error; `404` con id inexistente; `403` con rol `chofer`; **test de regresión que sobrescribe la dependencia** con un historial fake para verificar el `409` de FR-015 a nivel HTTP
-- [ ] **T051** Agregar a `app/api/clientes.py` la ruta `DELETE /api/clientes/{id}` (admin, `status_code=204`, `response_class=Response`) delegando a `GestorClientes.eliminar`
-- [ ] **T052** Correr `pytest tests/unit tests/integration` y dejarlo en verde
-- [ ] **T053** Confirmar en Swagger que `DELETE` está documentada
+- [x] **T049** [P] Agregar a `tests/unit/application/clientes/test_gestor_clientes.py` el test de FR-015 con `FakeHistorial(tiene=True)`: assert `ClienteConHistorial` y que `FakeClienteRepo.desactivar` **nunca fue llamado**
+- [x] **T050** [P] Agregar a `tests/integration/api/test_clientes_api.py` los tests de US4 **primero** (deben fallar): `204` al dar de baja un cliente sin historial; deja de aparecer en el listado y su detalle da `404`; baja repetida responde `204` sin error; `404` con id inexistente; `403` con rol `chofer`; **test de regresión que sobrescribe la dependencia** con un historial fake para verificar el `409` de FR-015 a nivel HTTP
+- [x] **T051** Agregar a `app/api/clientes.py` la ruta `DELETE /api/clientes/{id}` (admin, `status_code=204`, `response_class=Response`) delegando a `GestorClientes.eliminar`
+- [x] **T052** Correr `pytest tests/unit tests/integration` y dejarlo en verde
+- [x] **T053** Confirmar en Swagger que `DELETE` está documentada
 
 **Checkpoint**: CRUD completo
 
@@ -202,3 +202,14 @@ Phase 1 (Setup) ──► Phase 2 (Foundational) ──► US1 ──► US2 ─
   la autocolisión con un solo cliente cargado; se agregaron los dos casos que faltaban: razón social
   que solo cambia de forma pero no de clave, y autocolisión *con otro cliente cargado* (que es donde
   una comprobación de duplicados sin `excluir_id` se rompería).
+- **El `409` de FR-015 en un endpoint se prueba con `HistorialSimulado` en la conftest de
+  integración.** `get_gestor_clientes` consulta el historial vía el puerto `get_historial_clientes`,
+  así que los tests sobrescriben **solo esa dependencia** (`app.dependency_overrides`) con un doble
+  y el resto del wiring real queda intacto. La implementación real (`HistorialClienteRepoVacio`)
+  responde "sin historial" siempre hasta que exista la historia de Servicios (H4): sin el doble, el
+  `409` jamás saldría de un endpoint y el test pasaría en falso.
+- **Un test HTTP puede pasar en verde aunque la ruta falte.** Dos tests de `TestEliminarCliente`
+  quedaron verdes con el `DELETE` sin implementar porque solo leían lo que quedaba *después* del
+  delete (un `GET` de detalle exitoso, un `409` del `POST` posterior). Para que un test pruebe el
+  comportamiento hay que asertar primero el status exacto de la operación (204/409) y después los
+  efectos colaterales.

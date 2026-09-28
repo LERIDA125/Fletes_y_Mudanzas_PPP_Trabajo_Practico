@@ -13,6 +13,7 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.core.dependencias import get_historial_clientes
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
@@ -92,6 +93,39 @@ def cliente(sesion_test: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def repo_test(sesion_test: Session) -> ClienteRepo:
     return ClienteRepo(sesion_test)
+
+
+class HistorialSimulado:
+    """Doble del puerto `ConsultaHistorialCliente` para probar FR-015 por HTTP.
+
+    La implementación real (`HistorialClienteRepoVacio`) responde "sin historial" para cualquier
+    cliente, y la historia de Servicios todavía no existe (llega en H4), así que el `409` de
+    FR-015 no se puede alcanzar por un endpoint sin reemplazar esta dependencia.
+    """
+
+    def __init__(self) -> None:
+        self._clientes_con_historial: set[int] = set()
+        self.consultas: list[int] = []
+
+    def tiene_historial(self, cliente_id: int) -> bool:
+        self.consultas.append(cliente_id)
+        return cliente_id in self._clientes_con_historial
+
+    def marcar_con_historial(self, cliente_id: int) -> None:
+        self._clientes_con_historial.add(cliente_id)
+
+
+@pytest.fixture
+def historial_fake(cliente: TestClient) -> Iterator[HistorialSimulado]:
+    """Sobreescribe `get_historial_clientes` con un doble mientras dura el test.
+
+    `get_gestor_clientes` consulta el historial a través de este puerto, así que basta con
+    reemplazar la dependencia más chica (el historial) y el resto del wiring real queda intacto.
+    """
+    historial = HistorialSimulado()
+    app.dependency_overrides[get_historial_clientes] = lambda: historial
+    yield historial
+    app.dependency_overrides.pop(get_historial_clientes, None)
 
 
 @pytest.fixture

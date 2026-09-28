@@ -425,6 +425,32 @@ class TestEliminar:
         assert repo.llamadas_desactivar == []
         assert gestor.obtener(cliente.id).activo is True
 
+    def test_un_cliente_con_historial_sigue_disponible_en_el_sistema(
+        self, gestor: GestorClientes, historial: FakeHistorial
+    ) -> None:
+        cliente = _registrar(gestor)
+        historial.marcar_con_historial(cliente.id)
+
+        with pytest.raises(ClienteConHistorial):
+            gestor.eliminar(cliente.id)
+
+        listado, total = gestor.listar(busqueda=None, offset=0, limit=20)
+        assert [cliente.id for cliente in listado] == [cliente.id]
+        assert total == 1
+
+    def test_consulta_el_historial_una_sola_vez_y_del_cliente_indicado(
+        self, gestor: GestorClientes, historial: FakeHistorial
+    ) -> None:
+        cliente = _registrar(gestor)
+        otro = _registrar(gestor, "Transportes del Norte S.A.")
+        historial.marcar_con_historial(cliente.id)
+
+        with pytest.raises(ClienteConHistorial):
+            gestor.eliminar(cliente.id)
+
+        assert historial.consultas == [cliente.id]
+        assert otro.id not in historial.consultas
+
     def test_eliminar_dos_veces_es_idempotente(self, gestor: GestorClientes) -> None:
         cliente = _registrar(gestor)
 
