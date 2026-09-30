@@ -11,6 +11,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +26,10 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
+# H13 (T003): `scripts` NO se empaqueta a propósito. Es código de una sola ejecución que se corre
+# desde el checkout con `python -m scripts.migracion`, no parte del desplegable web: si fuera
+# incluido, una imagen de producción cargaría openpyxl y el módulo de migración sin necesidad.
+# `pytest` igual lo encuentra gracias a `pythonpath = ["."]` de abajo.
 include = ["app*"]
 
 [tool.pytest.ini_options]
