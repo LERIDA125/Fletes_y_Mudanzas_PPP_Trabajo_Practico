@@ -11,10 +11,21 @@ from app.api.schemas.equipamiento import (
     ServicioEquipamientoRead,
 )
 from app.api.schemas.pago import PagoCreate, PagoRead, PagoUpdate
-from app.api.schemas.peon import PeonCreate, PeonRead, PeonUpdate, ServicioPeonCreate, ServicioPeonRead
+from app.api.schemas.peon import (
+    PeonCreate,
+    PeonRead,
+    PeonUpdate,
+    ServicioPeonCreate,
+    ServicioPeonRead,
+)
 from app.api.schemas.remito import RemitoCreate, RemitoRead
 from app.api.schemas.rendicion import RendicionCreate, RendicionRead, RendicionUpdate
-from app.api.schemas.servicio import EstadoServicioRead, ServicioCreate, ServicioRead, ServicioUpdate
+from app.api.schemas.servicio import (
+    EstadoServicioRead,
+    ServicioCreate,
+    ServicioRead,
+    ServicioUpdate,
+)
 from app.api.schemas.tipo_vehiculo import (
     TipoVehiculoCreate,
     TipoVehiculoRead,

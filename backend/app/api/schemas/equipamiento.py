@@ -6,7 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class EquipamientoBase(BaseModel):
-    descripcion: str = Field(min_length=2, max_length=150, description="Descripción del equipamiento (ej. Carretilla, Rampas, Mantas)")
+    descripcion: str = Field(
+        min_length=2,
+        max_length=150,
+        description="Descripción del equipamiento (ej. Carretilla, Rampas, Mantas)",
+    )
 
 
 class EquipamientoCreate(EquipamientoBase):
@@ -37,3 +41,4 @@ class ServicioEquipamientoRead(BaseModel):
     id_servicio: int
     id_equipamiento: int
     cantidad: int
+

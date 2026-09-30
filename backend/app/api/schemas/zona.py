@@ -6,9 +6,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ZonaBase(BaseModel):
-    nombre_zona: str = Field(min_length=2, max_length=100, description="Nombre de la zona (ej. CABA Centro, Zona Norte)")
+    nombre_zona: str = Field(
+        min_length=2,
+        max_length=100,
+        description="Nombre de la zona (ej. CABA Centro, Zona Norte)",
+    )
     permite_tarde: bool = Field(default=False, description="Indica si admite turnos tarde")
-    observaciones_horarias: str | None = Field(default=None, description="Restricciones u observaciones horarias")
+    observaciones_horarias: str | None = Field(
+        default=None, description="Restricciones u observaciones horarias"
+    )
 
 
 class ZonaCreate(ZonaBase):

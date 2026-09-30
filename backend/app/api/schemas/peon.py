@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PeonBase(BaseModel):
-    nombre_completo: str = Field(min_length=2, max_length=150, description="Nombre completo del peón/ayudante")
+    nombre_completo: str = Field(
+        min_length=2, max_length=150, description="Nombre completo del peón/ayudante"
+    )
     telefono: str = Field(description="Teléfono de contacto")
     activo: bool = Field(default=True, description="Estado operativo del peón")
 
@@ -37,3 +39,4 @@ class ServicioPeonRead(BaseModel):
 
     id_servicio: int
     id_peon: int
+
