@@ -1,1 +1,17 @@
 .env
+
+# Artefactos de Python (H13 / T035)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Insumo crudo del cliente (H13 / T035): `raw-data/Caso 2 Fletes_Mudanzas_Express_Datos.xlsx` es
+# un insumo de la cátedra, no código. El script lo busca ahí por configuración y falla con un
+# mensaje claro si no está; no hace falta versionarlo.
+raw-data/
+
+# OJO: `backend/data/` NO está ignorado a propósito. El reporte de la migración
+# (`backend/data/reporte_migracion.md`) es el entregable que revisa el equipo para ver qué se
+# decidió y qué quedó pendiente, así que se versiona. Es regenerable con
+# `python -m scripts.migracion --solo-transformacion`.
