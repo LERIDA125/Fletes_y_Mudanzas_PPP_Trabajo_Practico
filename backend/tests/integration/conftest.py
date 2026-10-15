@@ -35,16 +35,23 @@ def _url_de_test() -> URL:
 def engine_test() -> Iterator[Engine]:
     url_prueba = make_url(get_settings().DATABASE_URL)
     admin = create_engine(
-        url_prueba.set(database="postgres"), isolation_level="AUTOCOMMIT", pool_pre_ping=True
+        url_prueba.set(database="postgres"),
+        isolation_level="AUTOCOMMIT",
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 3},
     )
-    with admin.connect() as conexion:
-        existe = conexion.execute(
-            text("SELECT 1 FROM pg_database WHERE datname = :nombre"),
-            {"nombre": BASE_DATOS_TEST},
-        ).scalar()
-        if not existe:
-            conexion.execute(text(f'CREATE DATABASE "{BASE_DATOS_TEST}"'))
-    admin.dispose()
+    try:
+        with admin.connect() as conexion:
+            existe = conexion.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :nombre"),
+                {"nombre": BASE_DATOS_TEST},
+            ).scalar()
+            if not existe:
+                conexion.execute(text(f'CREATE DATABASE "{BASE_DATOS_TEST}"'))
+    except Exception as exc:
+        pytest.skip(f"PostgreSQL no está disponible: {exc}")
+    finally:
+        admin.dispose()
 
     engine = create_engine(_url_de_test(), pool_pre_ping=True)
     Base.metadata.create_all(engine)

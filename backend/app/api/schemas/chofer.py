@@ -25,4 +25,3 @@ class ChoferRead(ChoferBase):
     model_config = ConfigDict(from_attributes=True)
 
     id_chofer: int = Field(description="Identificador único del chofer")
-

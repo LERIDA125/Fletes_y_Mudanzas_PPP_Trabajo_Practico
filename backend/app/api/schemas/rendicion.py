@@ -35,4 +35,3 @@ class RendicionRead(RendicionBase):
     model_config = ConfigDict(from_attributes=True)
 
     id_rendicion: int = Field(description="Identificador de la rendición")
-

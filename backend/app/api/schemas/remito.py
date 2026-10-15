@@ -23,4 +23,3 @@ class RemitoRead(RemitoBase):
     model_config = ConfigDict(from_attributes=True)
 
     id_remito: int = Field(description="Identificador único del remito")
-

@@ -109,8 +109,6 @@ class GestorVehiculos:
         if chofer_id is not None and not self._choferes.existe_activo(chofer_id):
             raise ChoferInvalido(chofer_id)
 
-    def _verificar_patente_disponible(
-        self, patente: str, excluir_id: int | None = None
-    ) -> None:
+    def _verificar_patente_disponible(self, patente: str, excluir_id: int | None = None) -> None:
         if self._repo.existe_patente(patente, excluir_id=excluir_id):
             raise PatenteDuplicada(patente)

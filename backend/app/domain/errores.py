@@ -77,7 +77,6 @@ class ChoferInvalido(ReglaNegocioError):
 class VehiculoConServicios(ReglaNegocioError):
     def __init__(self, vehiculo_id: int) -> None:
         super().__init__(
-            f"El vehículo {vehiculo_id} tiene servicios asociados "
-            "y no se puede dar de baja"
+            f"El vehículo {vehiculo_id} tiene servicios asociados y no se puede dar de baja"
         )
         self.vehiculo_id = vehiculo_id

@@ -56,10 +56,7 @@ class VehiculoRepo:
 
     def listar(self, busqueda: str | None, offset: int, limit: int) -> list[Vehiculo]:
         consulta = (
-            self._consulta_filtrada(busqueda)
-            .order_by(VehiculoORM.id)
-            .offset(offset)
-            .limit(limit)
+            self._consulta_filtrada(busqueda).order_by(VehiculoORM.id).offset(offset).limit(limit)
         )
         return [a_dominio(orm) for orm in self._db.scalars(consulta)]
 

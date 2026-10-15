@@ -31,4 +31,3 @@ class PagoRead(PagoBase):
     model_config = ConfigDict(from_attributes=True)
 
     id_pago: int = Field(description="Identificador único del pago")
-

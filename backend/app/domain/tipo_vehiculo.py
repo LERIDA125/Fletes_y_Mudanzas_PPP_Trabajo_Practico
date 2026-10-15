@@ -92,8 +92,7 @@ class TipoVehiculo:
         largo_descripcion = len(self.descripcion)
         if not DESCRIPCION_MIN <= largo_descripcion <= DESCRIPCION_MAX:
             raise ReglaNegocioError(
-                f"La descripción debe tener entre {DESCRIPCION_MIN} "
-                f"y {DESCRIPCION_MAX} caracteres"
+                f"La descripción debe tener entre {DESCRIPCION_MIN} y {DESCRIPCION_MAX} caracteres"
             )
 
         if self.capacidad_carga_kg <= 0:

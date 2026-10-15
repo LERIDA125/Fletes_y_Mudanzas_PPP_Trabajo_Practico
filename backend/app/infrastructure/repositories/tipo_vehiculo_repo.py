@@ -92,15 +92,11 @@ class TipoVehiculoRepo:
 
     def desactivar(self, tipo_id: int) -> None:
         self._db.execute(
-            update(TipoVehiculoORM)
-            .where(TipoVehiculoORM.id == tipo_id)
-            .values(activo=False)
+            update(TipoVehiculoORM).where(TipoVehiculoORM.id == tipo_id).values(activo=False)
         )
         self._db.commit()
 
-    def existe_descripcion(
-        self, descripcion_key: str, excluir_id: int | None = None
-    ) -> bool:
+    def existe_descripcion(self, descripcion_key: str, excluir_id: int | None = None) -> bool:
         consulta = select(TipoVehiculoORM.id).where(
             TipoVehiculoORM.descripcion_key == descripcion_key
         )
@@ -112,8 +108,6 @@ class TipoVehiculoRepo:
         consulta = select(TipoVehiculoORM).where(TipoVehiculoORM.activo.is_(True))
         if busqueda:
             consulta = consulta.where(
-                TipoVehiculoORM.descripcion_key.contains(
-                    normalizar_descripcion_key(busqueda)
-                )
+                TipoVehiculoORM.descripcion_key.contains(normalizar_descripcion_key(busqueda))
             )
         return consulta

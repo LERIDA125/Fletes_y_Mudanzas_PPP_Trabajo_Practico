@@ -41,4 +41,3 @@ class ServicioEquipamientoRead(BaseModel):
     id_servicio: int
     id_equipamiento: int
     cantidad: int
-

@@ -39,4 +39,3 @@ class ServicioPeonRead(BaseModel):
 
     id_servicio: int
     id_peon: int
-

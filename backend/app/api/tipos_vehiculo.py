@@ -26,9 +26,7 @@ RESPUESTAS_ALTA = {
     status.HTTP_403_FORBIDDEN: {
         "description": "El rol del usuario no permite dar de alta tipos de vehículo."
     },
-    status.HTTP_409_CONFLICT: {
-        "description": "Ya existe un tipo de vehículo con esa descripción."
-    },
+    status.HTTP_409_CONFLICT: {"description": "Ya existe un tipo de vehículo con esa descripción."},
     status.HTTP_422_UNPROCESSABLE_CONTENT: {
         "description": "Alguno de los datos requeridos falta o no cumple el formato."
     },
@@ -170,9 +168,7 @@ def actualizar_tipo_vehiculo(
         status.HTTP_404_NOT_FOUND: {
             "description": "No existe un tipo de vehículo activo con ese identificador."
         },
-        status.HTTP_409_CONFLICT: {
-            "description": "El tipo de vehículo tiene vehículos asociados."
-        },
+        status.HTTP_409_CONFLICT: {"description": "El tipo de vehículo tiene vehículos asociados."},
     },
     dependencies=[Depends(require_rol(ROL_ADMIN))],
 )

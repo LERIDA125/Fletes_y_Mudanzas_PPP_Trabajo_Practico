@@ -115,9 +115,7 @@ def obtener_vehiculo(
         status.HTTP_404_NOT_FOUND: {
             "description": "No existe un vehículo activo con ese identificador."
         },
-        status.HTTP_409_CONFLICT: {
-            "description": "La patente nueva ya pertenece a otro vehículo."
-        },
+        status.HTTP_409_CONFLICT: {"description": "La patente nueva ya pertenece a otro vehículo."},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": "Alguno de los datos requeridos falta o no cumple el formato."
         },
@@ -151,9 +149,7 @@ def actualizar_vehiculo(
         status.HTTP_404_NOT_FOUND: {
             "description": "No existe un vehículo activo con ese identificador."
         },
-        status.HTTP_409_CONFLICT: {
-            "description": "El vehículo tiene servicios asociados."
-        },
+        status.HTTP_409_CONFLICT: {"description": "El vehículo tiene servicios asociados."},
     },
     dependencies=[Depends(require_rol(ROL_ADMIN))],
 )
