@@ -7,6 +7,9 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.api.schemas.comun import Pagina
+from app.api.schemas.comun import Pagina
+
 from app.domain.tipo_vehiculo import (
     DESCRIPCION_MAX,
     DESCRIPCION_MIN,
@@ -88,12 +91,5 @@ class TipoVehiculoRead(TipoVehiculoBase):
         return cls.model_validate(tipo, from_attributes=True)
 
 
-class TipoVehiculoListado(BaseModel):
+class TipoVehiculoListado(Pagina[TipoVehiculoRead]):
     """Página de tipos de vehículo con el total de los que cumplen el filtro."""
-
-    items: list[TipoVehiculoRead]
-    total: int = Field(
-        description="Cantidad total de tipos de vehículo que cumplen el filtro, no la de la página."
-    )
-    page: int
-    size: int

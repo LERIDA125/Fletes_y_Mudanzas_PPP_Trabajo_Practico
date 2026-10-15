@@ -94,6 +94,13 @@ class VehiculoRepo:
             consulta = consulta.where(VehiculoORM.id != excluir_id)
         return self._db.scalar(consulta.limit(1)) is not None
 
+    def tiene_vehiculos(self, tipo_id: int) -> bool:
+        consulta = select(VehiculoORM.id).where(
+            VehiculoORM.id_tipo_vehiculo == tipo_id,
+            VehiculoORM.activo.is_(True),
+        )
+        return self._db.scalar(consulta.limit(1)) is not None
+
     def _consulta_filtrada(self, busqueda: str | None):
         consulta = select(VehiculoORM).where(VehiculoORM.activo.is_(True))
         if busqueda:

@@ -6,6 +6,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.api.schemas.comun import Pagina
+from app.api.schemas.comun import Pagina
+
 from app.domain.vehiculo import Vehiculo, normalizar_patente
 
 
@@ -71,12 +74,5 @@ class VehiculoRead(VehiculoBase):
         return cls.model_validate(vehiculo, from_attributes=True)
 
 
-class VehiculoListado(BaseModel):
+class VehiculoListado(Pagina[VehiculoRead]):
     """Página de vehículos con el total de los que cumplen el filtro."""
-
-    items: list[VehiculoRead]
-    total: int = Field(
-        description="Cantidad total de vehículos que cumplen el filtro, no la de la página."
-    )
-    page: int
-    size: int

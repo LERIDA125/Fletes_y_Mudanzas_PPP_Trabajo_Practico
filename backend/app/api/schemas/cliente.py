@@ -12,6 +12,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.api.schemas.comun import Pagina
 from app.domain.cliente import (
     DIRECCION_MAX,
     DIRECCION_MIN,
@@ -103,12 +104,5 @@ class ClienteRead(BaseModel):
         return cls.model_validate(cliente, from_attributes=True)
 
 
-class ClienteListado(BaseModel):
+class ClienteListado(Pagina[ClienteRead]):
     """Página de clientes con el total de los que cumplen el filtro (FR-007)."""
-
-    items: list[ClienteRead]
-    total: int = Field(
-        description="Cantidad total de clientes que cumplen el filtro, no la de la página."
-    )
-    page: int
-    size: int

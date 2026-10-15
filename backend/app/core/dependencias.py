@@ -100,15 +100,11 @@ def get_repo_tipos_vehiculo(db: Annotated[Session, Depends(get_db)]) -> TipoVehi
     return TipoVehiculoRepo(db)
 
 
-def get_consulta_vehiculos_por_tipo() -> ConsultaVehiculosPorTipo:
-    """Inyección del puerto de consulta de vehículos por tipo.
-
-    STUB temporal: devuelve False hasta que exista la historia de Vehículos con su repositorio
-    completo. Ver spec H4, DP-03.
-    """
-    from app.infrastructure.repositories.consulta_stub import ConsultaVehiculosPorTipoVacia
-
-    return ConsultaVehiculosPorTipoVacia()
+def get_consulta_vehiculos_por_tipo(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaVehiculosPorTipo:
+    """Inyección del puerto de consulta de vehículos por tipo usando VehiculoRepo."""
+    return VehiculoRepo(db)
 
 
 def get_gestor_tipos_vehiculo(
@@ -131,15 +127,11 @@ def get_repo_vehiculos(db: Annotated[Session, Depends(get_db)]) -> VehiculoRepos
     return VehiculoRepo(db)
 
 
-def get_consulta_tipo_vehiculo() -> ConsultaTipoVehiculo:
-    """Inyección del puerto de consulta de tipos de vehículo.
-
-    STUB temporal: devuelve False hasta que exista la historia de Vehículos con su repositorio
-    completo. Ver spec H4, DP-03.
-    """
-    from app.infrastructure.repositories.consulta_stub import ConsultaTipoVehiculoVacio
-
-    return ConsultaTipoVehiculoVacio()
+def get_consulta_tipo_vehiculo(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaTipoVehiculo:
+    """Inyección del puerto de consulta de tipos de vehículo usando TipoVehiculoRepo."""
+    return TipoVehiculoRepo(db)
 
 
 def get_consulta_chofer() -> ConsultaChofer:
