@@ -4,6 +4,9 @@ Importar este paquete registra las tablas en Base.metadata, que es lo que usa Al
 para el autogenerate.
 """
 
+from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
+from app.infrastructure.models.vehiculo import VehiculoORM
 
-__all__ = ["ClienteORM"]
+__all__ = ["ChoferORM", "ClienteORM", "TipoVehiculoORM", "VehiculoORM"]
