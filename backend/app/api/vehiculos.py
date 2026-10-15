@@ -18,7 +18,9 @@ TAMANO_DE_PAGINA_POR_DEFECTO = 20
 TAMANO_DE_PAGINA_MAXIMO = 100
 
 RESPUESTAS_ALTA = {
-    status.HTTP_403_FORBIDDEN: {"description": "El rol del usuario no permite dar de alta vehículos."},
+    status.HTTP_403_FORBIDDEN: {
+        "description": "El rol del usuario no permite dar de alta vehículos."
+    },
     status.HTTP_409_CONFLICT: {"description": "Ya existe un vehículo con esa patente."},
     status.HTTP_422_UNPROCESSABLE_CONTENT: {
         "description": "Alguno de los datos requeridos falta o no cumple el formato."
@@ -107,11 +109,15 @@ def obtener_vehiculo(
         "creación no se pueden cambiar, y la patente no puede quedar igual a la de otro vehículo."
     ),
     responses={
-        status.HTTP_403_FORBIDDEN: {"description": "El rol del usuario no permite modificar vehículos."},
+        status.HTTP_403_FORBIDDEN: {
+            "description": "El rol del usuario no permite modificar vehículos."
+        },
         status.HTTP_404_NOT_FOUND: {
             "description": "No existe un vehículo activo con ese identificador."
         },
-        status.HTTP_409_CONFLICT: {"description": "La patente nueva ya pertenece a otro vehículo."},
+        status.HTTP_409_CONFLICT: {
+            "description": "La patente nueva ya pertenece a otro vehículo."
+        },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": "Alguno de los datos requeridos falta o no cumple el formato."
         },
@@ -139,11 +145,15 @@ def actualizar_vehiculo(
     summary="Dar de baja un vehículo",
     description="Elimina un vehículo que no tenga servicios asociados. La baja es lógica.",
     responses={
-        status.HTTP_403_FORBIDDEN: {"description": "El rol del usuario no permite dar de baja vehículos."},
+        status.HTTP_403_FORBIDDEN: {
+            "description": "El rol del usuario no permite dar de baja vehículos."
+        },
         status.HTTP_404_NOT_FOUND: {
             "description": "No existe un vehículo activo con ese identificador."
         },
-        status.HTTP_409_CONFLICT: {"description": "El vehículo tiene servicios asociados."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El vehículo tiene servicios asociados."
+        },
     },
     dependencies=[Depends(require_rol(ROL_ADMIN))],
 )

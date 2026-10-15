@@ -30,4 +30,6 @@ class TipoVehiculoORM(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (Index("ix_tipos_vehiculo_activo_descripcion_key", "activo", "descripcion_key"),)
+    __table_args__ = (
+        Index("ix_tipos_vehiculo_activo_descripcion_key", "activo", "descripcion_key"),
+    )

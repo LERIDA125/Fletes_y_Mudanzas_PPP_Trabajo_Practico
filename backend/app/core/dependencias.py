@@ -155,7 +155,8 @@ def get_consulta_chofer() -> ConsultaChofer:
 def get_consulta_servicios_vehiculo() -> ConsultaServiciosVehiculo:
     """Inyección del puerto de consulta de servicios por vehículo.
 
-    STUB temporal: devuelve False hasta que exista la historia de Servicios (H6). Ver spec H4, DP-03.
+    STUB temporal: devuelve False hasta que exista la historia de Servicios (H6).
+    Ver spec H4, DP-03.
     """
     from app.infrastructure.repositories.consulta_stub import ConsultaServiciosVehiculoVacio
 

@@ -5,14 +5,13 @@ import pytest
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
 from app.domain.errores import (
     DescripcionDuplicada,
+    ReglaNegocioError,
     TipoVehiculoConVehiculos,
     TipoVehiculoNoEncontrado,
-    ReglaNegocioError,
 )
 from tests.unit.application.tipos_vehiculo.fakes import (
     FakeConsultaVehiculosPorTipo,
     FakeTipoVehiculoRepo,
-    TipoVehiculoYaExiste,
 )
 
 DESCRIPCION = "Camioneta 1/2 tonelada"
