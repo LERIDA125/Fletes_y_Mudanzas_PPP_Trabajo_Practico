@@ -96,7 +96,7 @@ def test_clientes_api_seguridad_y_errores(
     cliente: TestClient,
     admin: dict[str, str],
     chofer: dict[str, str],
-    historial_simulado: HistorialSimulado,
+    historial_fake: HistorialSimulado,
 ) -> None:
     # 1. Crear un cliente base como admin
     payload1 = {
@@ -143,9 +143,9 @@ def test_clientes_api_seguridad_y_errores(
     assert cliente.put("/api/clientes/999999", json=payload1, headers=admin).status_code == 404
     assert cliente.delete("/api/clientes/999999", headers=admin).status_code == 404
 
-    # 6. Rechazo de baja con historial 400
-    historial_simulado.marcar_con_historial(c1_id)
+    # 6. Rechazo de baja con historial 409
+    historial_fake.marcar_con_historial(c1_id)
     resp_baja_historial = cliente.delete(f"/api/clientes/{c1_id}", headers=admin)
-    assert resp_baja_historial.status_code == 400
+    assert resp_baja_historial.status_code == 409
     # Sigue activo y disponible
     assert cliente.get(f"/api/clientes/{c1_id}", headers=admin).status_code == 200
