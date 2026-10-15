@@ -1,14 +1,7 @@
-"""Tests del reporte (FR-034 a FR-036).
-
-El reporte es el entregable que le dice a una persona qué mirar. Estos tests verifican que tenga las
-secciones que la spec exige y que cada caso quede con su hoja, su fila y su valor original, que es
-lo que permite rastrear el dato hasta el Excel.
-"""
+"""Tests del reporte (FR-034 a FR-036)."""
 
 from datetime import date
 from decimal import Decimal
-
-import pytest
 
 from scripts.migracion.carga import ResultadoCarga
 from scripts.migracion.reporte import DatosReporte, generar_markdown
@@ -37,7 +30,7 @@ BLOQUEANTE = RevisionHumana(
 
 
 def movil(**extra) -> Movil:
-    datos = {
+    datos_dict = {
         "codigo": "MOV-02",
         "nombre_chofer": "El Ruso",
         "nombre_chofer_key": "el ruso",
@@ -51,8 +44,8 @@ def movil(**extra) -> Movil:
         "observaciones": ["En taller hasta el martes"],
         "filas_de_origen": [4],
     }
-    datos.update(extra)
-    return Movil(**datos)
+    datos_dict.update(extra)
+    return Movil(**datos_dict)
 
 
 def cliente(nombre: str = "Uno") -> ClienteMigrable:
@@ -110,34 +103,26 @@ def datos(casos=None, carga=None, clientes=None, moviles=None, viajes=None) -> D
 
 
 class TestSecciones:
-    @pytest.mark.parametrize(
-        "seccion",
-        [
+    def test_el_reporte_tiene_las_secciones_y_metadatos_requeridos(self) -> None:
+        texto = generar_markdown(datos())
+        for seccion in [
             "# Reporte de migración de datos históricos",
             "## Resumen",
             "## Transformaciones aplicadas",
             "## Casos para revisión humana",
             "## Gaps de mapeo",
-        ],
-    )
-    def test_el_reporte_tiene_las_secciones_que_pide_la_spec(self, seccion: str) -> None:
-        """FR-034: las secciones tienen que estar separadas, no mezcladas en un bloque de texto."""
-        assert seccion in generar_markdown(datos())
+        ]:
+            assert seccion in texto
 
-    def test_el_reporte_nombra_el_archivo_de_origen(self) -> None:
-        assert "raw-data/datos.xlsx" in generar_markdown(datos())
-
-    def test_el_reporte_avisa_los_catologos_provisionales(self) -> None:
-        texto = generar_markdown(datos())
-
+        assert "raw-data/datos.xlsx" in texto
         assert "no están confirmados por el cliente" in texto
         assert "Medios de pago (PROPUESTOS, no confirmados)" in texto
 
 
 class TestTransformacionesAplicadas:
-    @pytest.mark.parametrize(
-        "columna",
-        [
+    def test_cada_transformacion_y_hoja_esta_descrita(self) -> None:
+        texto = generar_markdown(datos())
+        columnas = [
             "`Cod_Movil`",
             "`Telefono_Contacto`",
             "`Tipo_Vehiculo`",
@@ -154,15 +139,9 @@ class TestTransformacionesAplicadas:
             "`Bultos_Estimados`",
             "`Monto_Cobrado`",
             "`Estado_Cobro`",
-        ],
-    )
-    def test_cada_transformacion_de_la_planilla_esta_descrita(self, columna: str) -> None:
-        texto = generar_markdown(datos())
-
-        assert columna in texto
-
-    def test_cada_fila_dice_de_que_hoja_va(self) -> None:
-        texto = generar_markdown(datos())
+        ]
+        for columna in columnas:
+            assert columna in texto
 
         assert "Choferes_y_Moviles" in texto
         assert "Clientes_Cotizaciones" in texto
@@ -170,77 +149,55 @@ class TestTransformacionesAplicadas:
 
 
 class TestRevisionHumana:
-    def test_los_bloqueantes_y_los_de_confirmacion_estan_en_secciones_distintas(self) -> None:
-        """FR-036: hay que poder saber de entrada qué frena la migración."""
+    def test_secciones_y_formato_de_revision_humana(self) -> None:
         texto = generar_markdown(datos(casos=[CASO, BLOQUEANTE]))
-
         assert "## Bloqueantes (1)" in texto
         assert "## Para confirmar (1)" in texto
-
-    def test_cada_caso_cita_la_hoja_la_fila_y_el_valor_original(self) -> None:
-        """FR-035: sin la fila original el caso no se puede buscar en el Excel."""
-        texto = generar_markdown(datos(casos=[CASO]))
-
-        assert "Registro_Viajes" in texto
-        assert "VJ-2005" in texto
-        assert "Anotado en la libreta" in texto
-
-    def test_el_cuenta_de_casos_aparece_en_el_encabezado(self) -> None:
-        texto = generar_markdown(datos(casos=[CASO, BLOQUEANTE]))
-
         assert "2 (1 bloqueantes, 1 para confirmar)" in texto
 
-    def test_sin_casos_el_reporte_lo_dice_y_no_inventa_una_tabla(self) -> None:
-        texto = generar_markdown(datos(casos=[]))
+        texto_caso = generar_markdown(datos(casos=[CASO]))
+        assert "Registro_Viajes" in texto_caso
+        assert "VJ-2005" in texto_caso
+        assert "Anotado en la libreta" in texto_caso
 
-        assert "No quedó ningún caso para revisar" in texto
-        assert "## Bloqueantes" not in texto
+        texto_vacio = generar_markdown(datos(casos=[]))
+        assert "No quedó ningún caso para revisar" in texto_vacio
+        assert "## Bloqueantes" not in texto_vacio
 
-    def test_los_textos_preservados_aparecen_con_su_original(self) -> None:
-        """SC-005: el texto libre tiene que poder leerse, no solo haberse mapeado."""
-        texto = generar_markdown(datos())
-
-        assert "En taller hasta el martes" in texto
-        assert "Archivadores pesados" in texto
+        texto_obs = generar_markdown(datos())
+        assert "En taller hasta el martes" in texto_obs
+        assert "Archivadores pesados" in texto_obs
 
 
 class TestGapsDeMapeo:
-    @pytest.mark.parametrize(
-        "columna", ["`ID_Cliente`", "`Localidad_Barrio`", "`Condicion_IVA`", "`Historial_Pagos`"]
-    )
-    def test_las_cuatro_columnas_sin_destino_estan_nombradas(self, columna: str) -> None:
-        """FR-020 / SC-006: el gap se reporta, no se resuelve agregando una columna."""
-        assert columna in generar_markdown(datos())
-
-    def test_el_reporte_dice_que_no_se_agrego_ninguna_columna(self) -> None:
+    def test_columnas_sin_destino_nombradas_en_reporte(self) -> None:
         texto = generar_markdown(datos())
-
+        for columna in [
+            "`ID_Cliente`",
+            "`Localidad_Barrio`",
+            "`Condicion_IVA`",
+            "`Historial_Pagos`",
+        ]:
+            assert columna in texto
         assert "No se agregó ninguna columna a las entidades" in texto
         assert "requiere acordarlo con quien implementó H1" in texto
 
 
 class TestResumen:
-    def test_dice_cuantos_clientes_se_cargaron_y_cuantos_ya_existian(self) -> None:
+    def test_resumen_y_listado_de_omitidos(self) -> None:
         carga = ResultadoCarga(agregados=[cliente("Uno")], ya_existentes=["Dos"], omitidos=["Tres"])
         texto = generar_markdown(datos(carga=carga))
-
         assert "cargados: **1**" in texto
         assert "ya existentes: **1**" in texto
         assert "omitidos: **1**" in texto
 
-    def test_dice_que_las_tablas_que_faltan_no_se_escribieron(self) -> None:
-        """DP-09: el reporte tiene que dejar claro el alcance de la carga."""
-        texto = generar_markdown(datos())
+        texto_base = generar_markdown(datos())
+        assert "tabla `choferes` + `vehiculos`" in texto_base
+        assert "pendiente: la tabla no existe" in texto_base
+        assert "tabla `servicios`" in texto_base
+        assert "tabla `pagos`" in texto_base
 
-        assert "tabla `choferes` + `vehiculos`" in texto
-        assert "pendiente: la tabla no existe" in texto
-        assert "tabla `servicios`" in texto
-        assert "tabla `pagos`" in texto
-
-    def test_los_omitidos_se_listan_por_nombre(self) -> None:
-        """FR-033: lo que no se escribió queda nombrado en el reporte, no solo contado."""
-        carga = ResultadoCarga(omitidos=["Juan Carlos Gomez"])
-        texto = generar_markdown(datos(carga=carga))
-
-        assert "Clientes que no se pudieron cargar" in texto
-        assert "Juan Carlos Gomez" in texto
+        carga_omitidos = ResultadoCarga(omitidos=["Juan Carlos Gomez"])
+        texto_omit = generar_markdown(datos(carga=carga_omitidos))
+        assert "Clientes que no se pudieron cargar" in texto_omit
+        assert "Juan Carlos Gomez" in texto_omit
