@@ -9,12 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.domain.vehiculo import Vehiculo, normalizar_patente
 
 
-class VehiculoCreate(BaseModel):
-    """Los datos requeridos del alta de un vehículo."""
-
-    model_config = ConfigDict(extra="forbid")
+class VehiculoBase(BaseModel):
+    """Base compatible con ERD (H13)."""
 
     patente: str = Field(
+        min_length=6,
+        max_length=15,
         description="Patente del vehículo. Formato argentino: AAA 123 o AA 123 ABC.",
         examples=["ABC 123"],
     )
@@ -29,22 +29,42 @@ class VehiculoCreate(BaseModel):
         return normalizar_patente(valor) if isinstance(valor, str) else valor
 
 
+class VehiculoCreate(VehiculoBase):
+    """Los datos requeridos del alta de un vehículo."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class VehiculoUpdate(VehiculoCreate):
     """La edición toma los mismos datos obligatorios que el alta (DD-5)."""
 
 
-class VehiculoRead(BaseModel):
+class VehiculoRead(VehiculoBase):
     """Vehículo tal como lo devuelve el sistema."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int = Field(description="Identificador del vehículo, asignado por el sistema.")
-    patente: str
-    id_tipo_vehiculo: int
-    id_chofer_habitual: int | None
-    activo: bool = Field(description="False cuando el vehículo fue dado de baja.")
-    creado_en: datetime = Field(description="Fecha de alta, asignada por el sistema.")
-    actualizado_en: datetime = Field(description="Fecha de la última modificación.")
+    id: int = Field(
+        description="Identificador del vehículo, asignado por el sistema.",
+        validation_alias="id",
+    )
+    activo: bool = Field(
+        default=True,
+        description="False cuando el vehículo fue dado de baja.",
+    )
+    creado_en: datetime | None = Field(
+        default=None,
+        description="Fecha de alta, asignada por el sistema.",
+    )
+    actualizado_en: datetime | None = Field(
+        default=None,
+        description="Fecha de la última modificación.",
+    )
+
+    @property
+    def id_vehiculo(self) -> int:
+        """Alias para compatibilidad con el ERD (H13)."""
+        return self.id
 
     @classmethod
     def de_vehiculo(cls, vehiculo: Vehiculo) -> VehiculoRead:
