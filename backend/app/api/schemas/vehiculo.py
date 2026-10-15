@@ -1,28 +1,82 @@
-"""Schemas de Vehículo según el modelo de datos (ERD)."""
+"""Schemas de entrada y salida de vehículos en la capa de Presentación."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.domain.vehiculo import Vehiculo, normalizar_patente
 
 
 class VehiculoBase(BaseModel):
-    patente: str = Field(min_length=6, max_length=15, description="Patente / dominio del vehículo")
-    id_tipo_vehiculo: int = Field(description="Referencia al tipo de vehículo")
-    id_chofer_habitual: int | None = Field(
-        default=None, description="Chofer asignado habitualmente"
+    """Base compatible con ERD (H13)."""
+
+    patente: str = Field(
+        min_length=6,
+        max_length=15,
+        description="Patente del vehículo. Formato argentino: AAA 123 o AA 123 ABC.",
+        examples=["ABC 123"],
     )
+    id_tipo_vehiculo: int = Field(gt=0, description="Identificador del tipo de vehículo.")
+    id_chofer_habitual: int | None = Field(
+        default=None, description="Identificador del chofer habitual. Opcional."
+    )
+
+    @field_validator("patente", mode="before")
+    @classmethod
+    def _normalizar_patente(cls, valor: object) -> object:
+        return normalizar_patente(valor) if isinstance(valor, str) else valor
 
 
 class VehiculoCreate(VehiculoBase):
+    """Los datos requeridos del alta de un vehículo."""
+
     model_config = ConfigDict(extra="forbid")
 
 
-class VehiculoUpdate(VehiculoBase):
-    model_config = ConfigDict(extra="forbid")
+class VehiculoUpdate(VehiculoCreate):
+    """La edición toma los mismos datos obligatorios que el alta (DD-5)."""
 
 
 class VehiculoRead(VehiculoBase):
+    """Vehículo tal como lo devuelve el sistema."""
+
     model_config = ConfigDict(from_attributes=True)
 
-    id_vehiculo: int = Field(description="Identificador único del vehículo")
+    id: int = Field(
+        description="Identificador del vehículo, asignado por el sistema.",
+        validation_alias="id",
+    )
+    activo: bool = Field(
+        default=True,
+        description="False cuando el vehículo fue dado de baja.",
+    )
+    creado_en: datetime | None = Field(
+        default=None,
+        description="Fecha de alta, asignada por el sistema.",
+    )
+    actualizado_en: datetime | None = Field(
+        default=None,
+        description="Fecha de la última modificación.",
+    )
 
+    @property
+    def id_vehiculo(self) -> int:
+        """Alias para compatibilidad con el ERD (H13)."""
+        return self.id
+
+    @classmethod
+    def de_vehiculo(cls, vehiculo: Vehiculo) -> VehiculoRead:
+        return cls.model_validate(vehiculo, from_attributes=True)
+
+
+class VehiculoListado(BaseModel):
+    """Página de vehículos con el total de los que cumplen el filtro."""
+
+    items: list[VehiculoRead]
+    total: int = Field(
+        description="Cantidad total de vehículos que cumplen el filtro, no la de la página."
+    )
+    page: int
+    size: int

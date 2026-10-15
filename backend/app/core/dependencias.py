@@ -13,9 +13,23 @@ from sqlalchemy.orm import Session
 
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
+from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
+from app.application.tipos_vehiculo.puertos import (
+    ConsultaVehiculosPorTipo,
+    TipoVehiculoRepository,
+)
+from app.application.vehiculos.gestor_vehiculos import GestorVehiculos
+from app.application.vehiculos.puertos import (
+    ConsultaChofer,
+    ConsultaServiciosVehiculo,
+    ConsultaTipoVehiculo,
+    VehiculoRepository,
+)
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 from app.infrastructure.repositories.historial_cliente_repo import HistorialClienteRepoVacio
+from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
+from app.infrastructure.repositories.vehiculo_repo import VehiculoRepo
 
 HEADER_ROL = "X-Rol"
 ROL_ADMIN = "admin"
@@ -53,6 +67,9 @@ def require_rol(rol_requerido: str) -> Callable[..., str]:
     return _exigir_rol
 
 
+# ── Clientes (H1) ─────────────────────────────────────────────────────────────
+
+
 def get_repo_clientes(db: Annotated[Session, Depends(get_db)]) -> ClienteRepository:
     return ClienteRepo(db)
 
@@ -73,4 +90,91 @@ def get_gestor_clientes(
     return GestorClientes(
         repositorio_clientes=repositorio_clientes,
         consulta_historial=consulta_historial,
+    )
+
+
+# ── Tipos de Vehículo (H4) ────────────────────────────────────────────────────
+
+
+def get_repo_tipos_vehiculo(db: Annotated[Session, Depends(get_db)]) -> TipoVehiculoRepository:
+    return TipoVehiculoRepo(db)
+
+
+def get_consulta_vehiculos_por_tipo() -> ConsultaVehiculosPorTipo:
+    """Inyección del puerto de consulta de vehículos por tipo.
+
+    STUB temporal: devuelve False hasta que exista la historia de Vehículos con su repositorio
+    completo. Ver spec H4, DP-03.
+    """
+    from app.infrastructure.repositories.consulta_stub import ConsultaVehiculosPorTipoVacia
+
+    return ConsultaVehiculosPorTipoVacia()
+
+
+def get_gestor_tipos_vehiculo(
+    repositorio_tipos: Annotated[TipoVehiculoRepository, Depends(get_repo_tipos_vehiculo)],
+    consulta_vehiculos: Annotated[
+        ConsultaVehiculosPorTipo, Depends(get_consulta_vehiculos_por_tipo)
+    ],
+) -> GestorTiposVehiculo:
+    """Único punto donde se arma el gestor de tipos de vehículo."""
+    return GestorTiposVehiculo(
+        repositorio_tipos=repositorio_tipos,
+        consulta_vehiculos=consulta_vehiculos,
+    )
+
+
+# ── Vehículos (H4) ────────────────────────────────────────────────────────────
+
+
+def get_repo_vehiculos(db: Annotated[Session, Depends(get_db)]) -> VehiculoRepository:
+    return VehiculoRepo(db)
+
+
+def get_consulta_tipo_vehiculo() -> ConsultaTipoVehiculo:
+    """Inyección del puerto de consulta de tipos de vehículo.
+
+    STUB temporal: devuelve False hasta que exista la historia de Vehículos con su repositorio
+    completo. Ver spec H4, DP-03.
+    """
+    from app.infrastructure.repositories.consulta_stub import ConsultaTipoVehiculoVacio
+
+    return ConsultaTipoVehiculoVacio()
+
+
+def get_consulta_chofer() -> ConsultaChofer:
+    """Inyección del puerto de consulta de choferes.
+
+    STUB temporal: devuelve False hasta que exista la historia de Choferes (H2). Ver spec H4.
+    """
+    from app.infrastructure.repositories.consulta_stub import ConsultaChoferVacio
+
+    return ConsultaChoferVacio()
+
+
+def get_consulta_servicios_vehiculo() -> ConsultaServiciosVehiculo:
+    """Inyección del puerto de consulta de servicios por vehículo.
+
+    STUB temporal: devuelve False hasta que exista la historia de Servicios (H6).
+    Ver spec H4, DP-03.
+    """
+    from app.infrastructure.repositories.consulta_stub import ConsultaServiciosVehiculoVacio
+
+    return ConsultaServiciosVehiculoVacio()
+
+
+def get_gestor_vehiculos(
+    repositorio_vehiculos: Annotated[VehiculoRepository, Depends(get_repo_vehiculos)],
+    consulta_tipos: Annotated[ConsultaTipoVehiculo, Depends(get_consulta_tipo_vehiculo)],
+    consulta_choferes: Annotated[ConsultaChofer, Depends(get_consulta_chofer)],
+    consulta_servicios: Annotated[
+        ConsultaServiciosVehiculo, Depends(get_consulta_servicios_vehiculo)
+    ],
+) -> GestorVehiculos:
+    """Único punto donde se arma el gestor de vehículos."""
+    return GestorVehiculos(
+        repositorio_vehiculos=repositorio_vehiculos,
+        consulta_tipos=consulta_tipos,
+        consulta_choferes=consulta_choferes,
+        consulta_servicios=consulta_servicios,
     )
