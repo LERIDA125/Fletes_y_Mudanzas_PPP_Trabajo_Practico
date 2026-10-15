@@ -8,8 +8,6 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.schemas.comun import Pagina
-from app.api.schemas.comun import Pagina
-
 from app.domain.tipo_vehiculo import (
     DESCRIPCION_MAX,
     DESCRIPCION_MIN,

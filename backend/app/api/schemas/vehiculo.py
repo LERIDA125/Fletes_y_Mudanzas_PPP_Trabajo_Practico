@@ -7,8 +7,6 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.schemas.comun import Pagina
-from app.api.schemas.comun import Pagina
-
 from app.domain.vehiculo import Vehiculo, normalizar_patente
 
 

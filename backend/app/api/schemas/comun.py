@@ -16,4 +16,3 @@ class Pagina[T](BaseModel):
     @property
     def pages(self) -> int:
         return math.ceil(self.total / self.size) if self.size > 0 else 0
-

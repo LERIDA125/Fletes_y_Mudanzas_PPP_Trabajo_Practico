@@ -12,6 +12,7 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.infrastructure.models  # noqa: F401 - Registra todas las tablas en Base.metadata
 from app.core.config import get_settings
 from app.core.dependencias import get_historial_clientes
 from app.infrastructure.db.base import Base

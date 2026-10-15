@@ -29,7 +29,7 @@ def test_vehiculos_api_ciclo_completo_admin(
 
     # 2. Registrar vehículo con el tipo creado (verifica conexión de puerto real)
     payload_vehiculo = {
-        "patente": "AA 123 CD",
+        "patente": "AA 123 ABC",
         "id_tipo_vehiculo": tipo_id,
         "id_chofer_habitual": None,
     }
@@ -47,7 +47,7 @@ def test_vehiculos_api_ciclo_completo_admin(
         .first()
     )
     assert fila_veh is not None and fila_veh["activo"] is True
-    assert fila_veh["patente"] == "AA 123 CD"
+    assert fila_veh["patente"] == "AA 123 ABC"
 
     # 3. Listados y filtros
     resp_listar_tipos = cliente.get("/api/tipos-vehiculo", headers=admin)
@@ -61,15 +61,15 @@ def test_vehiculos_api_ciclo_completo_admin(
     # 4. Detalle y modificación
     resp_det = cliente.get(f"/api/vehiculos/{veh_id}", headers=admin)
     assert resp_det.status_code == 200
-    assert resp_det.json()["patente"] == "AA 123 CD"
+    assert resp_det.json()["patente"] == "AA 123 ABC"
 
     resp_mod = cliente.put(
         f"/api/vehiculos/{veh_id}",
-        json={"patente": "AA 999 CD", "id_tipo_vehiculo": tipo_id, "id_chofer_habitual": None},
+        json={"patente": "AA 999 XYZ", "id_tipo_vehiculo": tipo_id, "id_chofer_habitual": None},
         headers=admin,
     )
     assert resp_mod.status_code == 200
-    assert resp_mod.json()["patente"] == "AA 999 CD"
+    assert resp_mod.json()["patente"] == "AA 999 XYZ"
 
     # 5. Baja lógica de vehículo y luego de tipo
     assert cliente.delete(f"/api/vehiculos/{veh_id}", headers=admin).status_code == 204
@@ -99,7 +99,7 @@ def test_vehiculos_api_seguridad_y_reglas(
 
     v = cliente.post(
         "/api/vehiculos",
-        json={"patente": "AF 555 ZZ", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
+        json={"patente": "AF 555 ZZZ", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
         headers=admin,
     ).json()
     vid = v["id"]
@@ -110,7 +110,7 @@ def test_vehiculos_api_seguridad_y_reglas(
     assert (
         cliente.post(
             "/api/vehiculos",
-            json={"patente": "AC 111 AA", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
+            json={"patente": "AC 111 AAA", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
             headers=chofer,
         ).status_code
         == 403
@@ -129,7 +129,7 @@ def test_vehiculos_api_seguridad_y_reglas(
     assert (
         cliente.post(
             "/api/vehiculos",
-            json={"patente": "AC 222 BB", "id_tipo_vehiculo": 99999, "id_chofer_habitual": None},
+            json={"patente": "AC 222 BBB", "id_tipo_vehiculo": 99999, "id_chofer_habitual": None},
             headers=admin,
         ).status_code
         == 422
@@ -152,7 +152,7 @@ def test_vehiculos_api_seguridad_y_reglas(
     assert (
         cliente.post(
             "/api/vehiculos",
-            json={"patente": "AF 555 ZZ", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
+            json={"patente": "AF 555 ZZZ", "id_tipo_vehiculo": tid, "id_chofer_habitual": None},
             headers=admin,
         ).status_code
         == 409
@@ -160,4 +160,3 @@ def test_vehiculos_api_seguridad_y_reglas(
 
     # 5. Bloqueo de eliminación de tipo con vehículos activos (409)
     assert cliente.delete(f"/api/tipos-vehiculo/{tid}", headers=admin).status_code == 409
-
