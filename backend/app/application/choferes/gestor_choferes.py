@@ -34,9 +34,7 @@ class GestorChoferes:
 
     def eliminar(self, chofer_id: int) -> None:
         chofer = self._repo.obtener_por_id(chofer_id)
-        if chofer is None:
+        if chofer is None or not chofer.activo:
             raise ChoferNoEncontrado(chofer_id)
-        if not chofer.activo:
-            return
         chofer.desactivar()
         self._repo.desactivar(chofer.id)

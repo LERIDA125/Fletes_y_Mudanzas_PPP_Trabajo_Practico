@@ -99,6 +99,10 @@ def test_h3_gestor_choferes() -> None:
     with pytest.raises(ChoferNoEncontrado):
         gestor.obtener(otro.id)
 
+    # Baja repetida de un chofer ya inactivo → ChoferNoEncontrado (FR-014, criterio 3)
+    with pytest.raises(ChoferNoEncontrado):
+        gestor.eliminar(otro.id)
+
     # Baja de un chofer inexistente → ChoferNoEncontrado
     with pytest.raises(ChoferNoEncontrado):
         gestor.eliminar(999)
