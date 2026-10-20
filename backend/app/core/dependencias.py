@@ -11,6 +11,8 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.application.choferes.gestor_choferes import GestorChoferes
+from app.application.choferes.puertos import ChoferRepository
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
@@ -26,6 +28,7 @@ from app.application.vehiculos.puertos import (
     VehiculoRepository,
 )
 from app.infrastructure.db.session import get_db
+from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 from app.infrastructure.repositories.historial_cliente_repo import HistorialClienteRepoVacio
 from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
@@ -134,14 +137,9 @@ def get_consulta_tipo_vehiculo(
     return TipoVehiculoRepo(db)
 
 
-def get_consulta_chofer() -> ConsultaChofer:
-    """Inyección del puerto de consulta de choferes.
-
-    STUB temporal: devuelve False hasta que exista la historia de Choferes (H2). Ver spec H4.
-    """
-    from app.infrastructure.repositories.consulta_stub import ConsultaChoferVacio
-
-    return ConsultaChoferVacio()
+def get_consulta_chofer(db: Annotated[Session, Depends(get_db)]) -> ConsultaChofer:
+    """Inyección del puerto de consulta de choferes usando ChoferRepo (H3)."""
+    return ChoferRepo(db)
 
 
 def get_consulta_servicios_vehiculo() -> ConsultaServiciosVehiculo:
@@ -170,3 +168,17 @@ def get_gestor_vehiculos(
         consulta_choferes=consulta_choferes,
         consulta_servicios=consulta_servicios,
     )
+
+
+# ── Choferes (H3) ─────────────────────────────────────────────────────────────
+
+
+def get_repo_choferes(db: Annotated[Session, Depends(get_db)]) -> ChoferRepository:
+    return ChoferRepo(db)
+
+
+def get_gestor_choferes(
+    repositorio_choferes: Annotated[ChoferRepository, Depends(get_repo_choferes)],
+) -> GestorChoferes:
+    """Único punto donde se arma el gestor de choferes."""
+    return GestorChoferes(repositorio_choferes=repositorio_choferes)

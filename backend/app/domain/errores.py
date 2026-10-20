@@ -95,3 +95,12 @@ class VehiculoConServicios(ConflictoOperacion):
             f"El vehículo {vehiculo_id} tiene servicios asociados y no se puede dar de baja"
         )
         self.vehiculo_id = vehiculo_id
+
+
+# ── Choferes (H3) ──────────────────────────────────────────────────────────────
+
+
+class ChoferNoEncontrado(RecursoNoEncontrado):
+    def __init__(self, chofer_id: int) -> None:
+        super().__init__(f"No existe un chofer con id {chofer_id}")
+        self.chofer_id = chofer_id
