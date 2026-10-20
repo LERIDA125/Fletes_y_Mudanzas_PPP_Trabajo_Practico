@@ -4,16 +4,11 @@ Estos stubs devuelven False para indicar que no hay dependencias que impidan
 una operación. Se usan hasta que las historias correspondientes implementen
 las consultas reales.
 
-- ConsultaChoferVacio: hasta H2 (Choferes) — siempre False.
 - ConsultaServiciosVehiculoVacio: hasta H6 (Servicios) — siempre False.
+
+La consulta de choferes ya tiene implementación real (`ChoferRepo.existe_activo`), porque H3
+completó la entidad Chofer.
 """
-
-
-class ConsultaChoferVacio:
-    """STUB temporal de ConsultaChofer. Devuelve False hasta H2."""
-
-    def existe_activo(self, chofer_id: int) -> bool:
-        return False
 
 
 class ConsultaServiciosVehiculoVacio:
