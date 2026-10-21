@@ -61,6 +61,8 @@ El sistema sigue una arquitectura en capas estricta orientada al dominio y desac
 | **Linter & Formateador** | [Ruff](https://astral.sh/ruff) |
 | **Testing** | [Pytest](https://docs.pytest.org/) & HTTPX (`TestClient`) |
 | **Contenedores** | Docker & Docker Compose |
+| **Frontend** | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS |
+| **Testing Frontend** | Vitest + React Testing Library + Playwright (E2E) |
 
 ---
 
@@ -68,14 +70,22 @@ El sistema sigue una arquitectura en capas estricta orientada al dominio y desac
 
 ```text
 fletes-mudanzas-express/
-├── AGENTS.md                  # Fuente de verdad de arquitectura y convenciones
+├── AGENTS.md                  # Guía operativa del equipo (runtime)
 ├── README.md                  # Documentación general del proyecto
+├── .specify/                  # Spec Kit: constitución, templates, scripts y workflow
+│   └── memory/constitution.md # Constitución vigente: principios y contratos técnicos
 ├── docker-compose.yml         # Entorno local multi-contenedor (PostgreSQL + Backend)
-├── specs/                     # Spec Kit: especificaciones funcionales por historia
-│   ├── H1-gestion-clientes.md
-│   ├── H3-gestion-choferes.md
-│   ├── H4-gestion-vehiculos.md
-│   └── H13-migracion-datos-historicos.md
+├── specs/                     # Spec Kit: un directorio por historia (layout nativo)
+│   ├── 001-gestion-clientes/
+│   │   ├── spec.md            # Requisitos y criterios de aceptación
+│   │   ├── plan.md            # Decisión técnica de la historia
+│   │   ├── tasks.md           # Tareas de implementación
+│   │   ├── quickstart.md      # Cómo levantar y ejercitar la historia
+│   │   ├── checklists/        # Checklist de calidad de requisitos
+│   │   └── feature.json       # Mapeo historia ↔ directorio ↔ rama
+│   ├── 002-migracion-datos-historicos/
+│   ├── 003-gestion-vehiculos/
+│   └── 004-gestion-choferes/
 ├── raw-data/                  # Planillas Excel para migración de datos
 └── backend/
     ├── pyproject.toml         # Configuración del proyecto, dependencias y herramientas
@@ -188,14 +198,20 @@ ruff format .
 
 ## 📋 7. Metodología de Trabajo y Convenciones
 
-- **Spec-Driven Development (Spec Kit)**: Ninguna historia de usuario se implementa sin su correspondiente especificación en `/specs/H#-nombre.md`, detallando criterios en formato Dado/Cuando/Entonces.
-- **Ramas cortas por historia**: Formato `feature/H#-nombre` (ej. `feature/H3-gestion-choferes`).
+- **Spec-Driven Development (Spec Kit)**: Ninguna historia de usuario se implementa sin su
+  correspondiente documentación en `/specs/<NNN>-<slug>/` (`spec.md` + `plan.md` + `tasks.md`),
+  detallando criterios en formato Dado/Cuando/Entonces. La **constitución** del proyecto vive en
+  `.specify/memory/constitution.md` y define los principios no negociables y los contratos
+  técnicos de backend y frontend.
+- **Ramas cortas por historia**: el nombre de la rama es exactamente el del directorio del spec
+  (`005-agenda-disponibilidad` ↔ `specs/005-agenda-disponibilidad/`).
 - **Conventional Commits**: Mensajes estructurados (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
 - **Pull Requests obligatorios**: Todo cambio mergeado a `main` requiere revisión cruzada y CI (lint + tests) en verde.
 - **Decisiones de Diseño Clave (`AGENTS.md` §11)**:
   - **DD-1**: Baja lógica generalizada con flag `activo = False`.
   - **DD-2**: Clave canónica normalizada (`*_key`) para búsquedas y unicidad insensible a acentos y espacios.
   - **DD-3**: Autorización por puertos y roles (`admin` y `chofer`).
+  - **DD-4**: Un único teléfono por cliente, validado por cantidad de dígitos (7–20).
   - **DD-5**: Modificaciones completas vía `PUT` para preservar la coherencia del modelo.
 
 ---

@@ -1,6 +1,6 @@
 # Implementation Plan: H3 — Gestión de Choferes
 
-**Spec**: `specs/H3-gestion-choferes.md`
+**Spec**: `specs/004-gestion-choferes/spec.md`
 
 **Branch**: `feature/CRUD_choferes`
 

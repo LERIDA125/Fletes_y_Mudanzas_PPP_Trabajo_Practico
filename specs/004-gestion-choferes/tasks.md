@@ -1,6 +1,6 @@
 # Tasks: H3 — Gestión de Choferes
 
-**Input**: `specs/H3-gestion-choferes.md` (spec) + `specs/H3-gestion-choferes-plan.md` (plan)
+**Input**: `specs/004-gestion-choferes/spec.md` (spec) + `specs/004-gestion-choferes/plan.md` (plan)
 
 **Prerequisites**: plan, spec (para las historias de usuario)
 

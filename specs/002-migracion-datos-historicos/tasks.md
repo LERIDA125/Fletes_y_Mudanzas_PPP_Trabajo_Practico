@@ -2,7 +2,7 @@
 
 **Feature Branch**: `feature/H13-migracion-datos-historicos`
 
-**Spec**: `specs/H13-migracion-datos-historicos.md`
+**Spec**: `specs/002-migracion-datos-historicos/spec.md`
 
 **Input**: Spec desde `/plan` (sección "Plan de implementación" de la spec).
 
@@ -244,7 +244,7 @@
   **Objetivo**: no commitear datos crudos ni artefactos de Python.
   **Checks**: `git status` limpio de artefactos.
 
-- [x] **T036** [P] Documentar en `specs/H13-migracion-datos-historicos-quickstart.md` cómo correr la
+- [x] **T036** [P] Documentar en `specs/002-migracion-datos-historicos/quickstart.md` cómo correr la
   migración, igual que hizo H1.
 
   **Checks**: los comandos del quickstart son los que funcionan.

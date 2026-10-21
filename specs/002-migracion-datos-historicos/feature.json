@@ -1,0 +1,21 @@
+{
+  "feature_directory": "specs/002-migracion-datos-historicos",
+  "story_id": "H13",
+  "title": "Migración de Datos Históricos",
+  "branch": "feature/H13-migracion-datos-historicos",
+  "created": "2026-09-30",
+  "merged": "2026-10-15",
+  "status": "implemented",
+  "artifacts": {
+    "spec": "specs/002-migracion-datos-historicos/spec.md",
+    "plan": "specs/002-migracion-datos-historicos/plan.md",
+    "tasks": "specs/002-migracion-datos-historicos/tasks.md",
+    "quickstart": "specs/002-migracion-datos-historicos/quickstart.md",
+    "checklist": "specs/002-migracion-datos-historicos/checklists/requirements.md"
+  },
+  "notes": {
+    "plan": "plan.md es retrospectivo: reconstruido el 2026-10-21 por ingeniería inversa sobre el código mergeado en 9ce322f (PR #2).",
+    "branch": "La rama feature/H13-migracion-datos-historicos no sigue la convención actual (el nombre debe ser igual al directorio del spec). Preexiste a la regla y no se renombra: la trazabilidad queda en el merge commit 9ce322f.",
+    "spec_status": "La spec sigue con Status: Draft: nunca pasó el gate review-spec del workflow de Spec Kit, que es posterior a esta historia. El código está implementado y mergeado; lo que no se hizo es la aprobación formal del documento."
+  }
+}

@@ -1,10 +1,18 @@
 # AGENTS.md — Fletes y Mudanzas Express (MVP 1)
 
-Este archivo es la fuente de verdad para cualquier agente de IA (OpenCode, Claude Code, etc.)
-y para cualquier integrante del equipo que empiece a codear en este repositorio. Léelo entero
-antes de tocar código. Si algo acá contradice lo que pide una historia puntual, gana la
-especificación de esa historia en `/specs/`, no este archivo — y hay que actualizar este
-archivo si el cambio es una decisión de fondo, no un detalle de una sola historia.
+Este archivo es la fuente de verdad **operativa** para cualquier agente de IA (OpenCode, Claude
+Code, etc.) y para cualquier integrante del equipo que empiece a codear en este repositorio.
+Léelo entero antes de tocar código.
+
+> **Precedencia documental** (ver *Governance* de la constitución):
+> 1. **`.specify/memory/constitution.md`** — la constitución: principios no negociables y
+>    contratos técnicos de backend y frontend. **Manda sobre todo lo demás.**
+> 2. `specs/<NNN>-<slug>/spec.md` — requisitos de esa historia.
+> 3. `specs/<NNN>-<slug>/plan.md` — decisión técnica de esa historia.
+> 4. **Este AGENTS.md** — guía de uso en runtime, atajos y convenciones de equipo.
+>
+> Si algo acá contradice lo que pide una historia puntual, gana la spec de esa historia. Si algo
+> acá contradice la constitución, gana la constitución y hay que corregir este archivo.
 
 ## 1. Qué es este proyecto
 
@@ -52,12 +60,12 @@ de negocio, primero preguntate si no se está mezclando lógica entre capas.
 | Capa | Tecnología |
 |---|---|
 | Backend | FastAPI (Python) |
-| Frontend | React |
+| Frontend | Next.js 15 (App Router) + React 19 + TypeScript |
 | Base de datos | PostgreSQL |
 | Migraciones | Alembic |
 | Autenticación | JWT, roles `admin` / `chofer` |
 | Testing backend | Pytest |
-| Testing frontend | Vitest + React Testing Library |
+| Testing frontend | Vitest + React Testing Library + Playwright (E2E) |
 | Gestión de tareas | Trello (plantilla Scrum) |
 | Agente de desarrollo | OpenCode |
 
@@ -66,10 +74,21 @@ de negocio, primero preguntate si no se está mezclando lógica entre capas.
 ```
 fletes-mudanzas-express/
 ├── AGENTS.md                     # este archivo
-├── specs/                        # Spec Kit: una spec por historia (H1 a H13)
-│   ├── H1-gestion-clientes.md
-│   ├── H5-agenda-disponibilidad.md
-│   ├── H7-cotizaciones.md
+├── .specify/                     # Spec Kit: constitución, templates, scripts y workflow
+│   ├── memory/constitution.md    # constitución vigente (fuente de verdad de gobernanza)
+│   ├── templates/                # templates de spec / plan / tasks / checklist
+│   ├── scripts/powershell/       # scripts del CLI de Spec Kit
+│   └── workflows/speckit/         # workflow con los gates de revisión del ciclo
+├── specs/                        # Spec Kit: un directorio por historia (layout nativo)
+│   ├── 001-gestion-clientes/
+│   │   ├── spec.md               # requisitos y criterios de aceptación
+│   │   ├── plan.md               # decisión técnica: capas, endpoints, migraciones, tests
+│   │   ├── tasks.md              # tareas de implementación
+│   │   ├── quickstart.md         # cómo levantar y ejercitar la historia
+│   │   ├── checklists/
+│   │   │   └── requirements.md   # checklist de calidad de requisitos
+│   │   └── feature.json          # mapeo historia ↔ directorio ↔ rama
+│   ├── 005-agenda-disponibilidad/
 │   └── ...
 ├── .opencode/                     # config del agente (skills propias del proyecto, si se agregan más adelante)
 ├── backend/
@@ -114,14 +133,20 @@ fletes-mudanzas-express/
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/                # una carpeta por pantalla (admin y chofer)
-│   │   │   ├── admin/
-│   │   │   └── chofer/
-│   │   ├── components/
-│   │   │   └── shared/           # componentes "tontos" compartidos (badges, botones, etc.)
-│   │   ├── hooks/                # useServicios, useAgenda, useCotizacion, etc. (fetch acá, nunca en el componente)
-│   │   ├── api/                  # cliente HTTP + tipos generados desde el OpenAPI de FastAPI
-│   │   └── App.tsx
+│   │   ├── app/                  # App Router: rutas, layouts y route groups (admin) y (chofer)
+│   │   ├── features/             # vertical slices: una carpeta por historia
+│   │   │   └── <feature>/
+│   │   │       ├── components/    # componentes de la feature
+│   │   │       ├── hooks/        # useServicios, useAgenda, useCotizacion... (fetch acá, nunca en el componente)
+│   │   │       ├── schemas/      # Zod schemas de validación de formulario
+│   │   │       └── types.ts      # re-export de los tipos generados
+│   │   ├── lib/
+│   │   │   ├── api/              # cliente HTTP + tipos generados desde el OpenAPI de FastAPI
+│   │   │   ├── auth/             # sesión y guards de rol
+│   │   │   └── utils/            # helpers puros
+│   │   ├── components/ui/        # primitivas de UI reutilizables
+│   │   ├── styles/               # tokens de diseño (Tailwind) y estilos globales
+│   │   └── types/                # tipos generados desde el OpenAPI de FastAPI
 │   ├── tests/
 │   └── package.json
 ├── .github/
@@ -131,17 +156,19 @@ fletes-mudanzas-express/
 
 ## 5. Cómo trabajamos siendo 4 personas en el mismo repo
 
-- **Una rama corta por historia de usuario**, nunca se codea directo sobre `main`:
-  `feature/H5-agenda-disponibilidad`, `feature/H7-cotizaciones`, etc. El número de historia
-  conecta la rama con su spec (`/specs/H5-...md`) y con su tarjeta de Trello.
+- **Una rama corta por historia de usuario**, nunca se codea directo sobre `main`. El nombre de la
+  rama es **exactamente** el nombre del directorio de su spec: `005-agenda-disponibilidad` ↔
+  `specs/005-agenda-disponibilidad/`. Esa correspondencia hace auditable el rastro
+  spec → rama → código. (Las ramas históricas `feature/H#-nombre` de H1, H4 y H13 preexisten a
+  esta regla y quedan registradas en el `feature.json` de su historia.)
 - **Conventional Commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`.
 - **Pull Request obligatorio hacia `main`**, con:
   - Al menos 1 revisión cruzada de otro integrante (nunca autoaprobarse).
   - CI (lint + tests) en verde.
 - **`main` siempre desplegable.** Un tag de versión (`v0.1`, `v0.2`, `v1.0-mvp1`) en cada hito
   del Gantt.
-- **Antes de tocar una historia**, leer su spec en `/specs/`. Si no existe todavía, escribirla
-  primero (ver sección 7) — no arrancar a codear sin especificación.
+- **Antes de tocar una historia**, leer su `spec.md` y su `plan.md` en `/specs/<NNN>-<slug>/`. Si no
+  existen todavía, escribirlos primero (ver sección 7) — no arrancar a codear sin especificación.
 - **Si el cliente cambia una regla de negocio**, el cambio se hace primero en la spec
   afectada, después en el plan, y recién después en el código. Nunca se parchea el código
   directo sin dejar rastro de por qué cambió.
@@ -163,15 +190,30 @@ registrado en la spec correspondiente como supuesto temporal:
 Antes de escribir código para una historia:
 
 ```
-/constitution   # ya definida en este AGENTS.md — no hace falta repetirla
-/specify        # especificar la historia puntual (criterios "dado/cuando/entonces")
-/plan           # qué capas, entidades y endpoints toca
-/tasks          # descomponer en tareas chicas
-implement       # recién acá se escribe código y tests
+speckit.constitution   # amendá la constitución si la historia la pone en riesgo (raro)
+speckit.specify        # especificar la historia puntual (criterios "dado/cuando/entonces")
+speckit.plan           # qué capas, entidades y endpoints toca
+speckit.tasks          # descomponer en tareas chicas
+speckit.implement      # recién acá se escribe código y tests
 ```
 
-Las specs viven en `/specs/H#-nombre.md`. El código es un resultado derivado de la spec, no
+Los comandos de Spec Kit viven en `.opencode/commands/speckit.*.md` y se invocan con el separador
+`.` (no `/`). El ciclo completo, con sus gates de revisión, está declarado en
+`.specify/workflows/speckit/workflow.yml`.
+
+Cada historia vive en `/specs/<NNN>-<slug>/` con `spec.md`, `plan.md`, `tasks.md`, `quickstart.md`,
+`checklists/requirements.md` y `feature.json`. El código es un resultado derivado de la spec, no
 al revés.
+
+### Regla de Oro
+
+> Ante **cualquier funcionalidad nueva**, el agente frena y responde:
+> **"Primero redactemos el spec.md y el plan.md."**
+> No escribe código hasta que el Tech Lead apruebe ambos documentos.
+
+**La constitución vive en `.specify/memory/constitution.md`** y es la fuente de verdad de
+gobernanza: los principios transversales y los contratos de backend y frontend. Este AGENTS.md es
+la guía de uso en runtime y **no** la sustituye.
 
 ## 8. Testing: prioridad
 

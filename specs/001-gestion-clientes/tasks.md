@@ -1,6 +1,6 @@
-﻿# Tasks: H1 — Gestión de Clientes
+# Tasks: H1 — Gestión de Clientes
 
-**Input**: `specs/H1-gestion-clientes.md` (spec) + `specs/H1-gestion-clientes-plan.md` (plan)
+**Input**: `specs/001-gestion-clientes/spec.md` (spec) + `specs/001-gestion-clientes/plan.md` (plan)
 
 **Prerequisites**: plan, spec (para las historias de usuario)
 
@@ -145,7 +145,7 @@ testear y entregar de forma independiente.
 - [x] **T057** Verificar cobertura de los escenarios de aceptación: cada FR-001…FR-020 mapeado a al menos un test (SC-001)
 - [x] **T058** Revisar que ninguna regla de negocio quedó en `app/api/` ni en `app/infrastructure/` (gate de AGENTS.md §2)
 - [x] **T059** [P] Actualizar `AGENTS.md`: DD-1 a DD-4, convención de PK `integer` identity, y nota de que el chequeo de roles es un stub hasta la historia de autenticación
-- [x] **T060** [P] Escribir `specs/H1-gestion-clientes-quickstart.md` con los comandos para levantar el entorno y probar los endpoints
+- [x] **T060** [P] Escribir `specs/001-gestion-clientes/quickstart.md` con los comandos para levantar el entorno y probar los endpoints
 - [x] **T061** Correr la checklist completa del DoD de AGENTS.md §9
 - [x] **T062** Abrir el PR a `main` con Conventional Commits y pedir revisión cruzada (no autoaprobarse) — push de la rama hecho (5 commits: US1–US4 + polish); el PR se crea desde https://github.com/LERIDA125/Fletes_y_Mudanzas_PPP_Trabajo_Practico/pull/new/feature/H1-gestion-clientes (`gh` no está instalado en el entorno)
 
