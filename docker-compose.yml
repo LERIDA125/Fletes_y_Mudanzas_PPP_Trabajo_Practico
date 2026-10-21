@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: fletes
       POSTGRES_DB: fletes
     ports:
-      - "${POSTGRES_PUERTO:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PUERTO:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,8 +21,11 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://fletes:fletes@postgres:5432/fletes
+    environment:
+      ENVIRONMENT: dev
+      DEV_ASSUME_ADMIN: "true"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -39,7 +42,7 @@ services:
       API_URL: http://backend:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./frontend:/app
       # node_modules vive en el volumen para no pisar los del contenedor con el

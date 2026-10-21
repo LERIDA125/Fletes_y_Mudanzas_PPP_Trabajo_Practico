@@ -68,6 +68,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/servicios/cotizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cotizar un viaje
+         * @description Calcula el precio en ARS con las tarifas activas del tipo de vehículo. La distancia recibida es de ida; el servidor la duplica y aplica una franquicia de 10 km.
+         */
+        post: operations["cotizar_servicio_api_servicios_cotizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/servicios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar servicios
+         * @description Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las asignaciones opcionales.
+         */
+        get: operations["listar_servicios_api_servicios_get"];
+        put?: never;
+        /**
+         * Registrar un servicio
+         * @description Registra un servicio en estado pendiente. El servidor obtiene las tarifas vigentes, recalcula el precio y guarda el detalle tarifario; el cliente no puede enviar importes.
+         */
+        post: operations["crear_servicio_api_servicios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/choferes": {
         parameters: {
             query?: never;
@@ -449,10 +493,182 @@ export interface components {
              */
             tiene_cuenta_corriente: boolean;
         };
+        /** CotizacionRead */
+        CotizacionRead: {
+            /** Id Tipo Vehiculo */
+            id_tipo_vehiculo: number;
+            /** Descripcion Tipo Vehiculo */
+            descripcion_tipo_vehiculo: string;
+            /** Horas Estimadas */
+            horas_estimadas: string;
+            /** Distancia Ida Km */
+            distancia_ida_km: string;
+            /** Distancia Total Km */
+            distancia_total_km: string;
+            /** Km Franquicia */
+            km_franquicia: string;
+            /** Km Excedente */
+            km_excedente: string;
+            /** Tarifa Hora Base */
+            tarifa_hora_base: string;
+            /** Tarifa Km Excedente */
+            tarifa_km_excedente: string;
+            /** Precio Final */
+            precio_final: string;
+            /**
+             * Moneda
+             * @default ARS
+             * @constant
+             */
+            moneda: "ARS";
+        };
+        /** CotizacionRequest */
+        CotizacionRequest: {
+            /**
+             * Id Tipo Vehiculo
+             * @description Tipo de vehículo cuya tarifa se utilizará.
+             */
+            id_tipo_vehiculo: number;
+            /**
+             * Horas Estimadas
+             * @description Duración estimada ingresada por el operador; mínimo 1 hora.
+             */
+            horas_estimadas: number | string;
+            /**
+             * Distancia Ida Km
+             * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
+             */
+            distancia_ida_km: number | string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ServicioCreate */
+        ServicioCreate: {
+            /**
+             * Id Tipo Vehiculo
+             * @description Tipo de vehículo cuya tarifa se utilizará.
+             */
+            id_tipo_vehiculo: number;
+            /**
+             * Horas Estimadas
+             * @description Duración estimada ingresada por el operador; mínimo 1 hora.
+             */
+            horas_estimadas: number | string;
+            /**
+             * Distancia Ida Km
+             * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
+             */
+            distancia_ida_km: number | string;
+            /**
+             * Id Cliente
+             * @description Cliente que solicita el servicio.
+             */
+            id_cliente: number;
+            /**
+             * Id Chofer
+             * @description Chofer asignado, si se conoce.
+             */
+            id_chofer?: number | null;
+            /**
+             * Id Vehiculo
+             * @description Vehículo asignado; debe pertenecer al tipo seleccionado.
+             */
+            id_vehiculo?: number | null;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Hora Inicio */
+            hora_inicio?: string | null;
+        };
+        /**
+         * ServicioListado
+         * @description Página de Servicios con relaciones legibles.
+         */
+        ServicioListado: {
+            /** Items */
+            items: components["schemas"]["ServicioRead"][];
+            /**
+             * Total
+             * @description Cantidad total de registros que cumplen el filtro.
+             */
+            total: number;
+            /**
+             * Page
+             * @description Número de página actual (base 1).
+             */
+            page: number;
+            /**
+             * Size
+             * @description Cantidad de elementos por página.
+             */
+            size: number;
+        };
+        /** ServicioRead */
+        ServicioRead: {
+            /** Id Servicio */
+            id_servicio: number;
+            /** Id Cliente */
+            id_cliente: number;
+            /** Razon Social Cliente */
+            razon_social_cliente: string;
+            /** Id Tipo Vehiculo */
+            id_tipo_vehiculo: number;
+            /** Descripcion Tipo Vehiculo */
+            descripcion_tipo_vehiculo: string;
+            /** Id Chofer */
+            id_chofer: number | null;
+            /** Nombre Chofer */
+            nombre_chofer: string | null;
+            /** Id Vehiculo */
+            id_vehiculo: number | null;
+            /** Patente Vehiculo */
+            patente_vehiculo: string | null;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Hora Inicio */
+            hora_inicio: string | null;
+            /** Horas Estimadas */
+            horas_estimadas: string;
+            /** Distancia Ida Km */
+            distancia_ida_km: string;
+            /** Distancia Total Km */
+            distancia_total_km: string;
+            /** Km Franquicia */
+            km_franquicia: string;
+            /** Km Excedente */
+            km_excedente: string;
+            /** Tarifa Hora Aplicada */
+            tarifa_hora_aplicada: string;
+            /** Tarifa Km Aplicada */
+            tarifa_km_aplicada: string;
+            /** Precio Total */
+            precio_total: string;
+            /**
+             * Moneda
+             * @default ARS
+             * @constant
+             */
+            moneda: "ARS";
+            /** Estado */
+            estado: string;
+            /**
+             * Creado En
+             * Format: date-time
+             */
+            creado_en: string;
+            /**
+             * Actualizado En
+             * Format: date-time
+             */
+            actualizado_en: string;
         };
         /**
          * TipoVehiculoCreate
@@ -843,7 +1059,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path?: never;
@@ -930,7 +1146,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -988,7 +1204,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1038,6 +1254,146 @@ export interface operations {
             };
         };
     };
+    cotizar_servicio_api_servicios_cotizar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CotizacionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CotizacionRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Los datos son inválidos o el tipo no está activo. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listar_servicios_api_servicios_get: {
+        parameters: {
+            query?: {
+                /** @description Número de página, empezando en 1. */
+                page?: number;
+                /** @description Cantidad de servicios por página. */
+                size?: number;
+            };
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioListado"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_servicio_api_servicios_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServicioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Los datos o las referencias activas del servicio son inválidos. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listar_choferes_api_choferes_get: {
         parameters: {
             query?: {
@@ -1078,7 +1434,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path?: never;
@@ -1158,7 +1514,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1209,7 +1565,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1292,7 +1648,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path?: never;
@@ -1379,7 +1735,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1437,7 +1793,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1527,7 +1883,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path?: never;
@@ -1614,7 +1970,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {
@@ -1672,7 +2028,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description Rol del usuario autenticado. */
+                /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
             };
             path: {

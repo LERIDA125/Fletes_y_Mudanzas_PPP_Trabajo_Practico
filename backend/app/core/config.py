@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+psycopg://fletes:fletes@localhost:5432/fletes"
     ENVIRONMENT: str = "dev"
+    DEV_ASSUME_ADMIN: bool = False
     # Orígenes del navegador autorizados a llamar a la API. En desarrollo es el
     # Next.js local; en producción se setea por variable de entorno con la URL
     # real del frontend.

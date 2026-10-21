@@ -58,7 +58,7 @@ class ConsultaChofer(Protocol):
 class ConsultaServiciosVehiculo(Protocol):
     """Verifica si un vehículo tiene servicios asociados.
 
-    Implementación real: llega con la historia de Servicios (H6). Ver spec H4.
+    Implementación real: provista por el repositorio de Servicios (H8). Ver spec H4.
     """
 
     def tiene_servicios(self, vehiculo_id: int) -> bool: ...
