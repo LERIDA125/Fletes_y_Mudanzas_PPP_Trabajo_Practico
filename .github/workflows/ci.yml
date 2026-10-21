@@ -57,3 +57,32 @@ jobs:
       - name: Tests de integración
         working-directory: backend
         run: pytest tests/integration
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: pip install -e "."
+      - name: Instalar dependencias del frontend
+        run: npm ci
+      - name: Generar tipos desde el OpenAPI del backend
+        run: npm run gen:api
+      - name: Verificar que los tipos generados estén al día
+        run: git diff --exit-code src/types/openapi.d.ts
+      - name: Lint, format, typecheck y tests
+        run: npm run verificar
+      - name: Build de producción
+        run: npm run build
