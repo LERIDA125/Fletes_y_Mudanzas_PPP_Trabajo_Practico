@@ -1,6 +1,8 @@
 """Repositorios en memoria para testear la capa de Aplicación sin PostgreSQL."""
 
-from app.application.vehiculos.puertos import VehiculoRepository
+from decimal import Decimal
+
+from app.application.vehiculos.puertos import VehiculoListadoItem, VehiculoRepository
 from app.domain.vehiculo import Vehiculo
 
 
@@ -24,9 +26,17 @@ class FakeVehiculoRepo(VehiculoRepository):
     def obtener_por_id(self, vehiculo_id: int) -> Vehiculo | None:
         return self._por_id.get(vehiculo_id)
 
-    def listar(self, busqueda: str | None, offset: int, limit: int) -> list[Vehiculo]:
+    def listar(self, busqueda: str | None, offset: int, limit: int) -> list[VehiculoListadoItem]:
         candidatos = self._filtrar(busqueda)
-        return candidatos[offset : offset + limit]
+        return [
+            VehiculoListadoItem(
+                vehiculo=vehiculo,
+                descripcion_tipo_vehiculo="Tipo de prueba",
+                capacidad_carga_kg=Decimal("500"),
+                nombre_chofer_habitual=None,
+            )
+            for vehiculo in candidatos[offset : offset + limit]
+        ]
 
     def contar(self, busqueda: str | None) -> int:
         return len(self._filtrar(busqueda))

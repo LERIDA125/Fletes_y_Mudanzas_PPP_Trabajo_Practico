@@ -29,3 +29,15 @@ export function primeraFilaDeLaPagina(page: number, size: number): number {
 export function ultimaFilaDeLaPagina(page: number, size: number, total: number): number {
   return Math.min(page * size, total);
 }
+
+// Formatea el saldo a favor que calcula el backend. Solo transforma la
+// representación: no suma, no resta ni deriva el valor de ningún otro campo
+// (Principio III — el cálculo de negocio vive en app/application/).
+const formatoSaldo = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+});
+
+export function formatearSaldo(monto: number): string {
+  return formatoSaldo.format(monto);
+}

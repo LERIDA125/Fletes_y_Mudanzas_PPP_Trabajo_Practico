@@ -1,6 +1,16 @@
+from dataclasses import dataclass
+from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from app.domain.vehiculo import Vehiculo
+
+
+@dataclass(frozen=True)
+class VehiculoListadoItem:
+    vehiculo: Vehiculo
+    descripcion_tipo_vehiculo: str
+    capacidad_carga_kg: Decimal
+    nombre_chofer_habitual: str | None
 
 
 @runtime_checkable
@@ -11,7 +21,9 @@ class VehiculoRepository(Protocol):
 
     def obtener_por_id(self, vehiculo_id: int) -> Vehiculo | None: ...
 
-    def listar(self, busqueda: str | None, offset: int, limit: int) -> list[Vehiculo]: ...
+    def listar(
+        self, busqueda: str | None, offset: int, limit: int
+    ) -> list[VehiculoListadoItem]: ...
 
     def contar(self, busqueda: str | None) -> int: ...
 

@@ -629,7 +629,7 @@ export interface components {
          */
         VehiculoListado: {
             /** Items */
-            items: components["schemas"]["VehiculoRead"][];
+            items: components["schemas"]["VehiculoListadoRead"][];
             /**
              * Total
              * @description Cantidad total de registros que cumplen el filtro.
@@ -645,6 +645,52 @@ export interface components {
              * @description Cantidad de elementos por página.
              */
             size: number;
+        };
+        /** VehiculoListadoRead */
+        VehiculoListadoRead: {
+            /**
+             * Patente
+             * @description Patente del vehículo. Formato argentino: AAA 123 o AA 123 ABC.
+             * @example ABC 123
+             */
+            patente: string;
+            /**
+             * Id Tipo Vehiculo
+             * @description Identificador del tipo de vehículo.
+             */
+            id_tipo_vehiculo: number;
+            /**
+             * Id Chofer Habitual
+             * @description Identificador del chofer habitual. Opcional.
+             */
+            id_chofer_habitual?: number | null;
+            /**
+             * Id
+             * @description Identificador del vehículo, asignado por el sistema.
+             */
+            id: number;
+            /**
+             * Activo
+             * @description False cuando el vehículo fue dado de baja.
+             * @default true
+             */
+            activo: boolean;
+            /**
+             * Creado En
+             * Format: date-time
+             */
+            creado_en: string;
+            /**
+             * Actualizado En
+             * @description Fecha de la última modificación.
+             */
+            actualizado_en?: string | null;
+            /** Descripcion Tipo Vehiculo */
+            descripcion_tipo_vehiculo: string;
+            /** Capacidad Carga Kg */
+            capacidad_carga_kg: number;
+            /** Nombre Chofer Habitual */
+            nombre_chofer_habitual: string | null;
         };
         /**
          * VehiculoRead
@@ -688,6 +734,21 @@ export interface components {
              * @description Fecha de la última modificación.
              */
             actualizado_en?: string | null;
+            /**
+             * Descripcion Tipo Vehiculo
+             * @description Descripción legible del tipo de vehículo asociado.
+             */
+            descripcion_tipo_vehiculo?: string | null;
+            /**
+             * Capacidad Carga Kg
+             * @description Capacidad de carga en kilogramos del tipo de vehículo asociado.
+             */
+            capacidad_carga_kg?: number | null;
+            /**
+             * Nombre Chofer Habitual
+             * @description Nombre completo del chofer habitual, si está asignado.
+             */
+            nombre_chofer_habitual?: string | null;
         };
         /**
          * VehiculoUpdate
