@@ -4,41 +4,27 @@ import { FilaServicio } from "./fila-servicio";
 
 export function ListadoServicios({ servicios }: { servicios: Servicio[] }) {
   return (
-    <table className="w-full border-collapse text-left max-sm:block">
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] border-collapse text-left">
       <caption className="sr-only">Servicios registrados</caption>
-      <thead className="max-sm:hidden">
-        <tr className="border-b border-linea">
-          <th
-            scope="col"
-            className="py-2 pr-4 text-[0.8125rem] font-medium text-tinta-media"
-          >
-            Cliente y estado
-          </th>
-          <th
-            scope="col"
-            className="py-2 pr-4 text-[0.8125rem] font-medium text-tinta-media"
-          >
-            Vehículo
-          </th>
-          <th
-            scope="col"
-            className="py-2 pr-4 text-[0.8125rem] font-medium text-tinta-media"
-          >
-            Fecha
-          </th>
-          <th
-            scope="col"
-            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
-          >
-            Precio final
-          </th>
-        </tr>
-      </thead>
-      <tbody className="max-sm:block">
-        {servicios.map((servicio) => (
-          <FilaServicio key={servicio.id_servicio} servicio={servicio} />
-        ))}
-      </tbody>
-    </table>
+        <thead>
+          <tr className="h-10 border-b-2 border-panel-borde bg-panel-suave text-left text-[0.6875rem] font-semibold tracking-wide text-panel-secundario">
+            <th scope="col" className="px-3 py-2">ID</th>
+            <th scope="col" className="px-3 py-2">Cliente</th>
+            <th scope="col" className="px-3 py-2">Tipo de vehículo</th>
+            <th scope="col" className="px-3 py-2">Fecha y hora</th>
+            <th scope="col" className="px-3 py-2">Asignación</th>
+            <th scope="col" className="px-3 py-2 text-right">Recorrido</th>
+            <th scope="col" className="px-3 py-2 text-center">Estado</th>
+            <th scope="col" className="px-3 py-2 text-right">Precio total</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-panel-borde text-[0.8125rem]">
+          {servicios.map((servicio) => (
+            <FilaServicio key={servicio.id_servicio} servicio={servicio} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

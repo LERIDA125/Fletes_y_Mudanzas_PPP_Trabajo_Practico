@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import { registrarServicio, solicitarCotizacion } from "@/features/servicios/actions";
@@ -49,6 +49,7 @@ function cotizacionCoincide(
 
 export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
   const [mensaje, setMensaje] = useState("");
   const [servicioCreado, setServicioCreado] = useState<string | null>(null);
@@ -147,24 +148,56 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
   }
 
   return (
-    <details className="mb-8 border-y border-linea">
-      <summary className="cursor-pointer list-none px-4 py-4 text-[1rem] font-semibold text-tinta marker:hidden sm:px-0">
-        Nuevo servicio
-      </summary>
-      <form
-        className="grid gap-5 border-t border-linea px-4 py-6 sm:grid-cols-2 sm:px-0"
-        noValidate
-        onSubmit={(evento) => evento.preventDefault()}
+    <>
+      <button
+        type="button"
+        onClick={() => dialogRef.current?.showModal()}
+        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-panel-primario px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-panel-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul"
       >
-        <div className="sm:col-span-2">
-          <p className="text-[0.875rem] text-tinta-media">
-            Primero obtené una cotización del servidor. El importe se vuelve a calcular al
-            registrar el servicio.
-          </p>
+        <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" d="M12 5v14m-7-7h14" />
+        </svg>
+        <span>Nuevo servicio</span>
+      </button>
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="titulo-formulario-servicio"
+        className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-lg border border-panel-borde bg-panel-superficie p-0 text-panel-texto shadow-2xl backdrop:bg-slate-900/50"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-panel-borde bg-panel-superficie px-5 py-4 sm:px-6">
+          <div>
+            <h2 id="titulo-formulario-servicio" className="text-lg font-semibold">
+              Cotizar y registrar un servicio
+            </h2>
+            <p className="mt-1 text-sm text-panel-secundario">
+              La cotización se calcula en el servidor y se confirma antes del alta.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar formulario"
+            onClick={() => dialogRef.current?.close()}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-panel-secundario hover:bg-panel-suave hover:text-panel-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul"
+          >
+            <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
         </div>
+        <form
+          className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6"
+          noValidate
+          onSubmit={(evento) => evento.preventDefault()}
+        >
+          <div className="sm:col-span-2">
+            <p className="text-sm text-panel-secundario">
+              Primero obtené una cotización del servidor. El importe se vuelve a calcular al
+              registrar el servicio.
+            </p>
+          </div>
 
         {clientes.length === 0 ? (
-          <p role="status" className="sm:col-span-2 text-[0.875rem] text-tinta-media">
+          <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
             No hay clientes activos para seleccionar.
           </p>
         ) : (
@@ -187,7 +220,7 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
         )}
 
         {tiposVehiculo.length === 0 ? (
-          <p role="status" className="sm:col-span-2 text-[0.875rem] text-tinta-media">
+          <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
             No hay tipos de vehículo activos para cotizar.
           </p>
         ) : (
@@ -275,7 +308,7 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
         {mensaje ? (
           <p
             role="alert"
-            className="sm:col-span-2 text-[0.875rem] font-medium text-alerta"
+            className="text-sm font-medium text-red-700 sm:col-span-2"
           >
             {mensaje}
           </p>
@@ -283,7 +316,7 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
         {servicioCreado ? (
           <p
             role="status"
-            className="sm:col-span-2 text-[0.875rem] font-medium text-tinta"
+            className="text-sm font-medium text-panel-verde sm:col-span-2"
           >
             {servicioCreado}
           </p>
@@ -315,16 +348,17 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
             ) : null}
           </div>
         ) : null}
-      </form>
-    </details>
+        </form>
+      </dialog>
+    </>
   );
 }
 
 const claseControl =
-  "mt-1 block min-h-11 w-full rounded-[4px] border border-linea bg-white px-3 text-[0.9375rem] text-tinta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-senal";
+  "mt-1 block min-h-11 w-full rounded-md border border-panel-borde bg-panel-superficie px-3 text-sm text-panel-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul";
 
 const claseBoton =
-  "inline-flex min-h-11 items-center justify-center rounded-[4px] bg-tinta px-5 text-[0.9375rem] font-semibold text-papel hover:bg-tinta/90 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-10 items-center justify-center rounded-md bg-panel-primario px-4 text-sm font-semibold text-white transition-colors hover:bg-panel-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul disabled:cursor-not-allowed disabled:opacity-50";
 
 function Campo({
   id,
@@ -340,7 +374,7 @@ function Campo({
   const idError = `${id}-error`;
   return (
     <div>
-      <label htmlFor={id} className="block text-[0.875rem] font-medium text-tinta">
+      <label htmlFor={id} className="block text-sm font-medium text-panel-secundario">
         {etiqueta}
       </label>
       {children}

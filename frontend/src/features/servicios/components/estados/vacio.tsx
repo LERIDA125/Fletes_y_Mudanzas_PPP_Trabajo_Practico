@@ -1,10 +1,10 @@
 export function EstadoVacio() {
   return (
-    <div role="status" className="border-t border-linea px-4 py-12 sm:px-0">
-      <p className="text-[1rem] font-semibold text-tinta">
+    <div role="status" className="px-5 py-10">
+      <p className="text-base font-semibold text-panel-texto">
         Todavía no hay servicios registrados.
       </p>
-      <p className="mt-2 text-[0.875rem] text-tinta-media">
+      <p className="mt-2 text-sm text-panel-secundario">
         Abrí “Nuevo servicio” para cotizar y registrar el primero.
       </p>
     </div>

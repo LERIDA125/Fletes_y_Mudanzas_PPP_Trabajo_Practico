@@ -33,12 +33,12 @@ export function Paginacion({
   return (
     <nav
       aria-label="Páginas del listado"
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-0"
+      className="flex flex-wrap items-center gap-x-1 gap-y-2"
     >
       {paginaActual > 1 ? (
         <Link
           href={hrefDePagina(paginaActual - 1)}
-          className="inline-flex h-9 items-center rounded-[4px] px-2 text-[0.875rem] font-medium text-senal hover:bg-linea"
+          className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-panel-secundario hover:bg-panel-suave"
         >
           Anterior
         </Link>
@@ -50,10 +50,10 @@ export function Paginacion({
               href={hrefDePagina(pagina)}
               aria-current={pagina === paginaActual ? "page" : undefined}
               className={cn(
-                "inline-flex h-9 min-w-9 items-center justify-center rounded-[4px] px-2 text-[0.875rem] tabular-nums",
+                "inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm tabular-nums",
                 pagina === paginaActual
-                  ? "bg-tinta font-semibold text-papel"
-                  : "text-senal hover:bg-linea",
+                  ? "bg-panel-primario font-semibold text-white"
+                  : "text-panel-secundario hover:bg-panel-suave",
               )}
             >
               {pagina}
@@ -64,7 +64,7 @@ export function Paginacion({
       {paginaActual < paginas ? (
         <Link
           href={hrefDePagina(paginaActual + 1)}
-          className="inline-flex h-9 items-center rounded-[4px] px-2 text-[0.875rem] font-medium text-senal hover:bg-linea"
+          className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-panel-secundario hover:bg-panel-suave"
         >
           Siguiente
         </Link>

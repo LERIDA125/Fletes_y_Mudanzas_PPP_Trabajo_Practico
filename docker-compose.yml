@@ -21,7 +21,6 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://fletes:fletes@postgres:5432/fletes
-    environment:
       ENVIRONMENT: dev
       DEV_ASSUME_ADMIN: "true"
     ports:

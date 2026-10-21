@@ -200,6 +200,7 @@ describe("ListadoServicios", () => {
     const fila = screen.getByRole("rowheader").closest("tr");
     expect(fila).not.toBeNull();
     expect(fila).toHaveTextContent("9.000,00");
-    expect(fila).toHaveTextContent("Sin vehículo · Sin chofer");
+    expect(fila).toHaveTextContent("Sin chofer");
+    expect(fila).toHaveTextContent("Sin vehículo");
   });
 });

@@ -1,4 +1,15 @@
 @theme {
+  --color-panel-fondo: #f8f9ff;
+  --color-panel-superficie: #ffffff;
+  --color-panel-suave: #eff4ff;
+  --color-panel-borde: #c6c6cd;
+  --color-panel-texto: #0b1c30;
+  --color-panel-secundario: #545f73;
+  --color-panel-primario: #131b2e;
+  --color-panel-azul: #1d4ed8;
+  --color-panel-verde: #15803d;
+  --color-panel-ambar: #b45309;
+
   --color-papel: #f7f8fa;
   --color-tinta: #15181d;
   --color-tinta-media: #5c6575;
