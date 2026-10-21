@@ -16,9 +16,7 @@ export function ResumenCotizacion({ cotizacion, vigente }: Propiedades) {
       aria-labelledby="titulo-cotizacion"
       aria-live="polite"
       className={`mt-5 rounded-lg border p-4 ${
-        vigente
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-amber-200 bg-amber-50"
+        vigente ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
       }`}
     >
       <h3 id="titulo-cotizacion" className="text-base font-semibold text-panel-texto">
@@ -43,7 +41,9 @@ export function ResumenCotizacion({ cotizacion, vigente }: Propiedades) {
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-panel-secundario">Distancia total</dt>
-          <dd className="tabular-nums text-panel-texto">{cotizacion.distancia_total_km} km</dd>
+          <dd className="tabular-nums text-panel-texto">
+            {cotizacion.distancia_total_km} km
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-panel-secundario">Kilómetros excedentes</dt>

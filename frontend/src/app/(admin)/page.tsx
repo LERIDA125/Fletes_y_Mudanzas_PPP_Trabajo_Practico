@@ -10,6 +10,7 @@ import { ListadoClientes } from "@/features/clientes/components/listado-clientes
 import { Paginacion } from "@/features/clientes/components/paginacion";
 import { listarClientes, TAMANO_DE_PAGINA } from "@/lib/api/clientes";
 import { ErrorApi } from "@/lib/api/http";
+import { cn } from "@/lib/utils/cn";
 import {
   primeraFilaDeLaPagina,
   totalPaginas,
@@ -22,6 +23,13 @@ export const metadata = {
   title: "Clientes",
 };
 
+const RUTAS = [
+  { href: "/", etiqueta: "Clientes" },
+  { href: "/choferes", etiqueta: "Choferes" },
+  { href: "/vehiculos", etiqueta: "Vehículos" },
+  { href: "/servicios", etiqueta: "Servicios" },
+];
+
 export default function PaginaClientes({ searchParams }: PageProps<"/">) {
   return (
     <>
@@ -30,6 +38,23 @@ export default function PaginaClientes({ searchParams }: PageProps<"/">) {
           <p className="text-[0.8125rem] font-medium text-papel/70">
             Fletes y Mudanzas Express
           </p>
+          <nav aria-label="Secciones" className="flex flex-wrap gap-x-5 gap-y-2">
+            {RUTAS.map((ruta) => (
+              <Link
+                key={ruta.href}
+                href={ruta.href}
+                aria-current={ruta.href === "/" ? "page" : undefined}
+                className={cn(
+                  "text-[0.9375rem] font-medium",
+                  ruta.href === "/"
+                    ? "text-papel underline decoration-2 underline-offset-8"
+                    : "text-papel/65 hover:text-papel",
+                )}
+              >
+                {ruta.etiqueta}
+              </Link>
+            ))}
+          </nav>
           <Suspense fallback={<div className="h-10 w-full max-w-sm" />}>
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>

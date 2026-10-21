@@ -27,6 +27,7 @@ const RUTAS = [
   { href: "/", etiqueta: "Clientes" },
   { href: "/choferes", etiqueta: "Choferes" },
   { href: "/vehiculos", etiqueta: "Vehículos" },
+  { href: "/servicios", etiqueta: "Servicios" },
 ];
 
 export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos">) {
