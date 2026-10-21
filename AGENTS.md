@@ -60,7 +60,7 @@ de negocio, primero preguntate si no se está mezclando lógica entre capas.
 | Capa | Tecnología |
 |---|---|
 | Backend | FastAPI (Python) |
-| Frontend | Next.js 15 (App Router) + React 19 + TypeScript |
+| Frontend | Next.js 16 (App Router) + React 19 + TypeScript |
 | Base de datos | PostgreSQL |
 | Migraciones | Alembic |
 | Autenticación | JWT, roles `admin` / `chofer` |

@@ -61,7 +61,7 @@ El sistema sigue una arquitectura en capas estricta orientada al dominio y desac
 | **Linter & Formateador** | [Ruff](https://astral.sh/ruff) |
 | **Testing** | [Pytest](https://docs.pytest.org/) & HTTPX (`TestClient`) |
 | **Contenedores** | Docker & Docker Compose |
-| **Frontend** | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS |
+| **Frontend** | Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS |
 | **Testing Frontend** | Vitest + React Testing Library + Playwright (E2E) |
 
 ---

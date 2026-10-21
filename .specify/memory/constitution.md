@@ -213,15 +213,15 @@ app/
 
 ## Contrato Frontend (Development Workflow & Constraints)
 
-> Esta sección es **normativa** desde ya. El frontend todavía **no existe** (greenfield): el
-> contrato de abajo es el que va a regir la primera historia de frontend, que DEBE arrancar por
-> `spec.md` + `plan.md` de la historia correspondiente, y no por scaffolding directo.
+> Esta sección es **normativa**. Rige toda historia de frontend. La primera de ellas
+> (`005-frontend-scaffolding-clientes`) arrancó por su `spec.md` + `plan.md` antes del
+> scaffolding, conforme a la Regla de Oro.
 
 ### Stack (fijado; cambiarlo es una enmienda de constitución)
 
 | Capa | Tecnología |
 |---|---|
-| Framework | **Next.js 15** con App Router (RSC, Server Actions, Route Handlers) |
+| Framework | **Next.js 16** con App Router (RSC, Server Actions, Route Handlers) |
 | UI | React 19 |
 | Lenguaje | TypeScript en modo `strict` (sin `any` sin justificación) |
 | Estilos | Tailwind CSS v4 con tokens de diseño en `src/styles/tokens.css` |
@@ -230,13 +230,16 @@ app/
 | Tipos de API | `openapi-typescript` generado desde el OpenAPI de FastAPI |
 | Tests | Vitest + React Testing Library + `@testing-library/user-event`; Playwright para E2E |
 | Lint / formato | ESLint (`next/core-web-vitals`) + Prettier |
-| Paquete | Gestor de paquetes a definir en el spec de la primera historia (npm o pnpm) |
+| Paquete | **npm** (elegido en el spec de la primera historia de frontend, FR-007 de `005`) |
 
-**Nota de versionado**: Context7 no estuvo disponible al ratificar esta constitución, así que las
-versiones mayores fijadas acá (Next.js 15, React 19, Tailwind v4, TanStack Query v5) **deben
-verificarse contra la documentación oficial vigente en el momento de implementar**. Si la
+**Nota de versionado**: las versiones mayores de este stack se verificaron contra el registro de
+paquetes de npm el **2026-10-21** (`next` 16.4.2, `react` 19.3.1, `tailwindcss` 4.3.3), y la
+constitución quedó corregida en la enmienda v2.0.0. Cualquier versión mayor que se agregue acá
+**debe** verificarse contra la documentación oficial vigente en el momento de implementar. Si la
 verificación revela una versión mayor incompatible con esta sección, la corrección se hace
-actualizando esta constitución, no desviándose en la implementación.
+actualizando esta constitución, no desviándose en la implementación. `TanStack Query` y `Playwright`
+siguen **sin** fijarse a un patch: se verifican al incorporarlos, cada uno con la historia que los
+necesite.
 
 ### Estructura de carpetas
 
@@ -376,4 +379,11 @@ Cuando el cliente confirme una de ellas, el flujo obligatorio es:
 3. Actualizar esta constitución **solo** si el cambio altera un principio o un contrato técnico.
 4. Recién entonces, implementar.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-21
+### Registro de enmiendas
+
+| Versión | Fecha | Qué cambió | Por qué | Migración |
+|---|---|---|---|---|
+| **2.0.0** | 2026-10-21 | Contrato Frontend → Stack: Next.js **15 → 16**; el gestor de paquetes pasa de "a definir" a **npm**; el caveat de "el frontend todavía no existe" deja de aplicar; la *Nota de versionado* pasa de pendiente a verificada. | La nota de versionado obligaba a verificar las versiones mayores antes de implementar. Verificado contra el registro de npm el 2026-10-21: `next` 16.4.2 es la rama estable (16.4 salió el 2026-10-06), mientras que 15 es una rama anterior. Elegir 15 para un frontend greenfield habría significado arrancar con los avisos de seguridad de React Server Components (CVE-2025-66478) y las actualizaciones out-of-band de octubre 2026 por delante, y con herramientería que ya apoya a 16. El gestor de paquetes se resolvió en FR-007 del spec 005, como la constitución mandaba. | N/A — no había frontend implementado. La regla de versionado califica como MAJOR "romper un contrato (stack…)"; el contrato roto aún no tenía código detrás, así que no corresponde plan de migración. El backend, la estructura de capas y el resto de la constitución quedan intactos. |
+| 1.0.0 | 2026-10-21 | Ratificación inicial. | Alineación SDD del repositorio (Fases 1–3). | — |
+
+**Version**: 2.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-21
