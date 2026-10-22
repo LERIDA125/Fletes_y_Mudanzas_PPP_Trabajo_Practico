@@ -86,3 +86,12 @@ jobs:
         run: npm run verificar
       - name: Build de producción
         run: npm run build
+
+  docker-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar configuración y build de Docker Compose
+        run: |
+          docker compose config
+          docker compose build
