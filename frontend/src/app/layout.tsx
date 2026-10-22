@@ -20,8 +20,29 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-AR" className={`${archivo.variable} h-full`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+    <html lang="es-AR" suppressHydrationWarning className={`${archivo.variable} h-full`}>
+      <head>
+        <meta name="color-scheme" content="light dark" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
+              } catch(e){}
+            })()`,
+          }}
+        />
+      </head>
+      <body className="flex min-h-full flex-col bg-[var(--papel)] text-[var(--tinta)] transition-colors duration-150">
+        {children}
+      </body>
     </html>
   );
 }

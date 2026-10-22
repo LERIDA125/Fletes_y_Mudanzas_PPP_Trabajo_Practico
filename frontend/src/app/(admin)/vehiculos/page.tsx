@@ -30,7 +30,7 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
       model: "Mercedes Benz Sprinter",
       size: "Grande",
       status: "Disponible",
-      statusColor: "bg-[#e9f8ef] text-[#248952]",
+      statusColor: "bg-[#e9f8ef] text-[#248952] dark:bg-[#163827] dark:text-[#4ade80]",
       km: "156.240 km",
     },
     {
@@ -38,7 +38,7 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
       model: "Iveco Daily",
       size: "Grande",
       status: "En viaje",
-      statusColor: "bg-[#e9f4ff] text-[#2879bd]",
+      statusColor: "bg-[#e9f4ff] text-[#2879bd] dark:bg-[#1a3356] dark:text-[#60a5fa]",
       km: "204.820 km",
     },
     {
@@ -46,7 +46,7 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
       model: "Renault Master",
       size: "Grande",
       status: "Disponible",
-      statusColor: "bg-[#e9f8ef] text-[#248952]",
+      statusColor: "bg-[#e9f8ef] text-[#248952] dark:bg-[#163827] dark:text-[#4ade80]",
       km: "98.430 km",
     },
     {
@@ -54,7 +54,7 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
       model: "Fiat Ducato",
       size: "Chico",
       status: "Mantenimiento",
-      statusColor: "bg-[#f1edff] text-[#7951c9]",
+      statusColor: "bg-[#f1edff] text-[#7951c9] dark:bg-[#2b1f48] dark:text-[#c084fc]",
       km: "121.090 km",
     },
   ];
@@ -65,24 +65,26 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#2165d5] dark:text-[#60a5fa]">
               Flota operativa
             </p>
-            <span className="rounded-full bg-[#e9f8ef] px-2.5 py-0.5 text-[11px] font-bold text-[#248952]">
+            <span className="rounded-full bg-[#e9f8ef] px-2.5 py-0.5 text-[11px] font-bold text-[#248952] dark:bg-[#163827] dark:text-[#4ade80]">
               3 disponibles
             </span>
           </div>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl dark:text-white">
             Vehículos
           </h2>
-          <p className="mt-1 text-xs text-[#7f8da1]">
+          <p className="mt-1 text-xs text-[#7f8da1] dark:text-[#94a3b8]">
             Controlá tu flota, capacidad, estado y mantenimiento.
           </p>
         </div>
 
         <div className="w-full sm:w-auto">
           <Suspense
-            fallback={<div className="h-10 w-full sm:w-72 rounded-lg bg-slate-100" />}
+            fallback={
+              <div className="h-10 w-full sm:w-72 rounded-lg bg-slate-100 dark:bg-slate-800" />
+            }
           >
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
@@ -94,10 +96,10 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
         {fleetSample.map((v) => (
           <article
             key={v.name}
-            className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm transition hover:shadow-md"
+            className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm transition hover:shadow-md dark:border-[#1e2c44] dark:bg-[#111c2e]"
           >
             <div className="flex items-start justify-between">
-              <div className="grid size-10 place-items-center rounded-xl bg-[#edf4ff] text-[#2165d5]">
+              <div className="grid size-10 place-items-center rounded-xl bg-[#edf4ff] text-[#2165d5] dark:bg-[#1a3356] dark:text-[#60a5fa]">
                 <Truck size={18} />
               </div>
               <span
@@ -106,24 +108,28 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
                 {v.status}
               </span>
             </div>
-            <h3 className="mt-3 text-sm font-bold text-[#172b4d]">{v.name}</h3>
-            <p className="mt-0.5 text-xs text-[#718096]">{v.model}</p>
-            <div className="mt-3 flex justify-between border-t border-[#f0f2f5] pt-2.5 text-xs">
-              <span className="text-[#96a2b2]">Tipo</span>
-              <span className="font-bold text-[#172b4d]">
+            <h3 className="mt-3 text-sm font-bold text-[#172b4d] dark:text-white">
+              {v.name}
+            </h3>
+            <p className="mt-0.5 text-xs text-[#718096] dark:text-[#94a3b8]">{v.model}</p>
+            <div className="mt-3 flex justify-between border-t border-[#f0f2f5] pt-2.5 text-xs dark:border-[#1e2c44]">
+              <span className="text-[#96a2b2] dark:text-[#64748b]">Tipo</span>
+              <span className="font-bold text-[#172b4d] dark:text-white">
                 Camión {v.size.toLowerCase()}
               </span>
             </div>
             <div className="mt-1.5 flex justify-between text-xs">
-              <span className="text-[#96a2b2]">Kilometraje</span>
-              <span className="font-semibold text-[#5c6d83]">{v.km}</span>
+              <span className="text-[#96a2b2] dark:text-[#64748b]">Kilometraje</span>
+              <span className="font-semibold text-[#5c6d83] dark:text-[#cbd5e1]">
+                {v.km}
+              </span>
             </div>
           </article>
         ))}
       </div>
 
       {/* Tabla completa de vehículos conectada a backend */}
-      <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm dark:border-[#1e2c44] dark:bg-[#111c2e]">
         <Suspense fallback={<Cargando />}>
           <Listado searchParams={searchParams} />
         </Suspense>
@@ -173,7 +179,7 @@ async function Listado({ searchParams }: { searchParams: SearchParams }) {
 
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 pt-2">
         <Paginacion paginaActual={resultado.page} paginas={paginas} criterio={criterio} />
-        <p className="text-xs text-slate-500 tabular-nums">
+        <p className="text-xs text-slate-500 tabular-nums dark:text-slate-400">
           {`Mostrando ${primeraFilaDeLaPagina(
             resultado.page,
             TAMANO_DE_PAGINA,
@@ -190,16 +196,19 @@ async function Listado({ searchParams }: { searchParams: SearchParams }) {
 
 function PaginaFueraDeRango({ pagina }: { pagina: number }) {
   return (
-    <div role="status" className="border-t border-slate-200 py-10 text-center">
-      <p className="text-base font-semibold text-slate-900">
+    <div
+      role="status"
+      className="border-t border-slate-200 py-10 text-center dark:border-slate-800"
+    >
+      <p className="text-base font-semibold text-slate-900 dark:text-white">
         La página {pagina} no tiene vehículos.
       </p>
-      <p className="mt-2 text-sm text-slate-500">
+      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
         El listado no llega tan lejos. Volvé a empezar desde el principio.
       </p>
       <Link
         href="/vehiculos"
-        className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-xs hover:bg-slate-50"
+        className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
       >
         Ir a la primera página
       </Link>

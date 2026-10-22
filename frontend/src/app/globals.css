@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light dark;
+}
+
+html.dark,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --papel: #0b1320;
+  --tinta: #f1f5f9;
+  --tinta-media: #94a3b8;
+  --linea: #1e2c44;
+}
+
 body {
   background: var(--papel);
   color: var(--tinta);
