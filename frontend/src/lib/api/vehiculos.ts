@@ -14,13 +14,13 @@ export const TAMANO_DE_PAGINA = 20;
 export async function listarVehiculos(
   criterio: CriterioDeBusqueda = {},
 ): Promise<ListadoVehiculos> {
-  const url = new URL("/api/vehiculos");
+  const parametros = new URLSearchParams();
 
   if (criterio.q) {
-    url.searchParams.set("q", criterio.q);
+    parametros.set("q", criterio.q);
   }
-  url.searchParams.set("page", String(criterio.page ?? 1));
-  url.searchParams.set("size", String(criterio.size ?? TAMANO_DE_PAGINA));
+  parametros.set("page", String(criterio.page ?? 1));
+  parametros.set("size", String(criterio.size ?? TAMANO_DE_PAGINA));
 
-  return request<ListadoVehiculos>(url.toString());
+  return request<ListadoVehiculos>(`/api/vehiculos?${parametros.toString()}`);
 }
