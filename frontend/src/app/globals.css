@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light dark;
+}
+
+html.dark,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --papel: #0b1320;
+  --tinta: #f1f5f9;
+  --tinta-media: #94a3b8;
+  --linea: #1e2c44;
+}
+
+body {
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--senal) 18%, transparent);
+  color: var(--tinta);
+}
+
+/* El navegador dibuja su propio botón de borrado sobre `type="search"`; el listado
+   ya ofrece uno propio con vocabulario del dominio. */
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}

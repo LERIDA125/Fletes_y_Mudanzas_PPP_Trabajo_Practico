@@ -104,12 +104,7 @@ def repo_test(sesion_test: Session) -> ClienteRepo:
 
 
 class HistorialSimulado:
-    """Doble del puerto `ConsultaHistorialCliente` para probar FR-015 por HTTP.
-
-    La implementación real (`HistorialClienteRepoVacio`) responde "sin historial" para cualquier
-    cliente, y la historia de Servicios todavía no existe (llega en H4), así que el `409` de
-    FR-015 no se puede alcanzar por un endpoint sin reemplazar esta dependencia.
-    """
+    """Doble del puerto `ConsultaHistorialCliente` para probar FR-015 por HTTP."""
 
     def __init__(self) -> None:
         self._clientes_con_historial: set[int] = set()

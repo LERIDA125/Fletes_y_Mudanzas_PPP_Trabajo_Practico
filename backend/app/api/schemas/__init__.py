@@ -21,10 +21,11 @@ from app.api.schemas.peon import (
 from app.api.schemas.remito import RemitoCreate, RemitoRead
 from app.api.schemas.rendicion import RendicionCreate, RendicionRead, RendicionUpdate
 from app.api.schemas.servicio import (
-    EstadoServicioRead,
+    CotizacionRead,
+    CotizacionRequest,
     ServicioCreate,
+    ServicioListado,
     ServicioRead,
-    ServicioUpdate,
 )
 from app.api.schemas.tipo_vehiculo import (
     TipoVehiculoCreate,
@@ -48,10 +49,11 @@ __all__ = [
     "VehiculoCreate",
     "VehiculoUpdate",
     "VehiculoRead",
-    "EstadoServicioRead",
+    "CotizacionRequest",
+    "CotizacionRead",
     "ServicioCreate",
-    "ServicioUpdate",
     "ServicioRead",
+    "ServicioListado",
     "ZonaCreate",
     "ZonaUpdate",
     "ZonaRead",

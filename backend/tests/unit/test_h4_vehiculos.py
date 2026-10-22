@@ -190,7 +190,7 @@ def test_h4_gestor_vehiculos() -> None:
 
     # 2. Listado y búsqueda
     vehiculos, total = gestor.listar(busqueda="ABC", offset=0, limit=10)
-    assert total == 1 and vehiculos[0].patente == "ABC 123"
+    assert total == 1 and vehiculos[0].vehiculo.patente == "ABC 123"
 
     assert gestor.obtener(1).patente == "ABC 123"
     with pytest.raises(VehiculoNoEncontrado):

@@ -1,0 +1,21 @@
+{
+  "feature_directory": "specs/004-gestion-choferes",
+  "story_id": "H3",
+  "title": "Gestión de Choferes",
+  "branch": "feature/CRUD_choferes",
+  "created": "2026-10-19",
+  "merged": "2026-10-20",
+  "status": "implemented",
+  "artifacts": {
+    "spec": "specs/004-gestion-choferes/spec.md",
+    "plan": "specs/004-gestion-choferes/plan.md",
+    "tasks": "specs/004-gestion-choferes/tasks.md",
+    "quickstart": "specs/004-gestion-choferes/quickstart.md",
+    "checklist": "specs/004-gestion-choferes/checklists/requirements.md"
+  },
+  "notes": {
+    "plan": "Único plan.md nativo del proyecto: se redactó antes de implementar la historia, con el ciclo speckit.specify → speckit.plan → speckit.tasks → speckit.implement. Sirve de referencia de estilo para los planes retrospectivos de 001, 002 y 003.",
+    "branch": "La rama feature/CRUD_choferes no sigue la convención actual (el nombre debe ser igual al directorio del spec). Es el nombre real de la rama del PR #4 y no se renombra: la trazabilidad queda en el merge commit a3a8389.",
+    "spec_status": "La spec sigue con Status: Draft: nunca pasó el gate review-spec del workflow de Spec Kit. El código está implementado y mergeado; lo que no se hizo es la aprobación formal del documento."
+  }
+}

@@ -1,0 +1,119 @@
+"""Único punto de acceso SQLAlchemy para Servicios."""
+
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.application.servicios.puertos import ServicioListadoItem
+from app.domain.errores import ReferenciasServicioInvalidas
+from app.domain.servicio import Servicio
+from app.infrastructure.models.chofer import ChoferORM
+from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.servicio import ServicioORM
+from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
+from app.infrastructure.models.vehiculo import VehiculoORM
+
+
+def a_dominio(orm: ServicioORM) -> Servicio:
+    return Servicio(
+        id=orm.id,
+        id_cliente=orm.id_cliente,
+        id_tipo_vehiculo=orm.id_tipo_vehiculo,
+        id_chofer=orm.id_chofer,
+        id_vehiculo=orm.id_vehiculo,
+        fecha=orm.fecha,
+        hora_inicio=orm.hora_inicio,
+        horas_estimadas=orm.horas_estimadas,
+        distancia_ida_km=orm.distancia_ida_km,
+        distancia_total_km=orm.distancia_total_km,
+        km_franquicia=orm.km_franquicia,
+        km_excedente=orm.km_excedente,
+        tarifa_hora_aplicada=orm.tarifa_hora_aplicada,
+        tarifa_km_aplicada=orm.tarifa_km_aplicada,
+        precio_total=orm.precio_total,
+        estado=orm.estado,
+        creado_en=orm.creado_en,
+        actualizado_en=orm.actualizado_en,
+    )
+
+
+def a_orm(servicio: Servicio) -> ServicioORM:
+    return ServicioORM(
+        id=servicio.id,
+        id_cliente=servicio.id_cliente,
+        id_tipo_vehiculo=servicio.id_tipo_vehiculo,
+        id_chofer=servicio.id_chofer,
+        id_vehiculo=servicio.id_vehiculo,
+        fecha=servicio.fecha,
+        hora_inicio=servicio.hora_inicio,
+        horas_estimadas=servicio.horas_estimadas,
+        distancia_ida_km=servicio.distancia_ida_km,
+        distancia_total_km=servicio.distancia_total_km,
+        km_franquicia=servicio.km_franquicia,
+        km_excedente=servicio.km_excedente,
+        tarifa_hora_aplicada=servicio.tarifa_hora_aplicada,
+        tarifa_km_aplicada=servicio.tarifa_km_aplicada,
+        precio_total=servicio.precio_total,
+        estado=servicio.estado,
+        creado_en=servicio.creado_en,
+        actualizado_en=servicio.actualizado_en,
+    )
+
+
+class ServicioRepo:
+    def __init__(self, db: Session) -> None:
+        self._db = db
+
+    def crear(self, servicio: Servicio) -> ServicioListadoItem:
+        orm = a_orm(servicio)
+        self._db.add(orm)
+        try:
+            self._db.commit()
+        except IntegrityError as error:
+            self._db.rollback()
+            raise ReferenciasServicioInvalidas() from error
+        self._db.refresh(orm)
+        fila = self._db.execute(self._consulta_con_nombres().where(ServicioORM.id == orm.id)).one()
+        return self._a_item(fila)
+
+    def listar(self, offset: int, limit: int) -> list[ServicioListadoItem]:
+        consulta = self._consulta_con_nombres().order_by(ServicioORM.id).offset(offset).limit(limit)
+        return [self._a_item(fila) for fila in self._db.execute(consulta)]
+
+    def contar(self) -> int:
+        return self._db.scalar(select(func.count()).select_from(ServicioORM)) or 0
+
+    def tiene_historial(self, cliente_id: int) -> bool:
+        consulta = select(ServicioORM.id).where(ServicioORM.id_cliente == cliente_id)
+        return self._db.scalar(consulta.limit(1)) is not None
+
+    def tiene_servicios(self, vehiculo_id: int) -> bool:
+        consulta = select(ServicioORM.id).where(ServicioORM.id_vehiculo == vehiculo_id)
+        return self._db.scalar(consulta.limit(1)) is not None
+
+    @staticmethod
+    def _consulta_con_nombres():
+        return (
+            select(
+                ServicioORM,
+                ClienteORM.razon_social,
+                TipoVehiculoORM.descripcion,
+                ChoferORM.nombre_completo,
+                VehiculoORM.patente,
+            )
+            .join(ClienteORM, ServicioORM.id_cliente == ClienteORM.id)
+            .join(TipoVehiculoORM, ServicioORM.id_tipo_vehiculo == TipoVehiculoORM.id)
+            .outerjoin(ChoferORM, ServicioORM.id_chofer == ChoferORM.id)
+            .outerjoin(VehiculoORM, ServicioORM.id_vehiculo == VehiculoORM.id)
+        )
+
+    @staticmethod
+    def _a_item(fila) -> ServicioListadoItem:
+        orm, razon_social, descripcion_tipo, nombre_chofer, patente = fila
+        return ServicioListadoItem(
+            servicio=a_dominio(orm),
+            razon_social_cliente=razon_social,
+            descripcion_tipo_vehiculo=descripcion_tipo,
+            nombre_chofer=nombre_chofer,
+            patente_vehiculo=patente,
+        )

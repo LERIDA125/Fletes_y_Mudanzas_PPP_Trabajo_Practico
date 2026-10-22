@@ -1,4 +1,9 @@
+import os
+
 import pytest
+
+os.environ["ENVIRONMENT"] = "dev"
+os.environ["DEV_ASSUME_ADMIN"] = "true"
 
 
 @pytest.fixture(scope="session", autouse=True)

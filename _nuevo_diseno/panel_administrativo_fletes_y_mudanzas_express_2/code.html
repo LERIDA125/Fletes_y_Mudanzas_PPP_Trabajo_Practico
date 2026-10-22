@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fletes y Mudanzas Express - Panel de Control Logístico</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-surface": "#213145",
+            "surface-container-high": "#dce9ff",
+            "surface-variant": "#d3e4fe",
+            "surface-container-highest": "#d3e4fe",
+            "secondary": "#545f73",
+            "primary": "#000000",
+            "on-secondary-fixed-variant": "#3c475a",
+            "error-container": "#ffdad6",
+            "tertiary": "#000000",
+            "on-background": "#0b1c30",
+            "on-secondary": "#ffffff",
+            "secondary-fixed-dim": "#bcc7de",
+            "primary-fixed": "#dae2fd",
+            "secondary-fixed": "#d8e3fb",
+            "on-surface-variant": "#45464d",
+            "on-tertiary-container": "#497cff",
+            "tertiary-fixed-dim": "#b4c5ff",
+            "primary-container": "#131b2e",
+            "surface-bright": "#f8f9ff",
+            "primary-fixed-dim": "#bec6e0",
+            "on-tertiary-fixed-variant": "#003ea8",
+            "on-error": "#ffffff",
+            "outline": "#76777d",
+            "tertiary-fixed": "#dbe1ff",
+            "on-tertiary-fixed": "#00174b",
+            "on-primary-container": "#7c839b",
+            "tertiary-container": "#00174b",
+            "outline-variant": "#c6c6cd",
+            "inverse-on-surface": "#eaf1ff",
+            "on-primary-fixed": "#131b2e",
+            "surface-tint": "#565e74",
+            "error": "#ba1a1a",
+            "on-primary-fixed-variant": "#3f465c",
+            "surface-container": "#e5eeff",
+            "surface": "#f8f9ff",
+            "surface-container-low": "#eff4ff",
+            "background": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-container": "#d5e0f8",
+            "inverse-primary": "#bec6e0",
+            "on-primary": "#ffffff",
+            "on-surface": "#0b1c30",
+            "surface-dim": "#cbdbf5",
+            "surface-container-lowest": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-secondary-container": "#586377",
+            "on-secondary-fixed": "#111c2d"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1.5rem",
+            "margin-compact": "0.75rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "gutter": "1rem",
+            "space-lg": "1.25rem",
+            "gutter-compact": "0.5rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.75rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "label-md": ["Inter", "sans-serif"],
+            "tabular-data": ["Inter", "monospace"],
+            "headline-sm": ["Inter", "sans-serif"],
+            "headline-xl": ["Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "body-lg": ["Inter", "sans-serif"],
+            "label-sm": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "headline-lg": ["1.5rem", { "lineHeight": "2rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "0", "fontWeight": "400" }],
+            "label-md": ["0.8125rem", { "lineHeight": "1rem", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "tabular-data": ["0.8125rem", { "lineHeight": "1.125rem", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-sm": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-xl": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.025em", "fontWeight": "700" }],
+            "body-sm": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "body-lg": ["1rem", { "lineHeight": "1.5rem", "letterSpacing": "0", "fontWeight": "400" }],
+            "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.04em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="h-full bg-surface text-on-surface antialiased overflow-hidden font-body-md">
+<div class="flex h-screen w-screen overflow-hidden">
+<!-- SHARED COMPONENT: SideNavBar -->
+<aside class="fixed left-0 top-0 bottom-0 z-30 flex flex-col h-full w-60 py-4 px-3 bg-surface-container-lowest border-r border-outline-variant shrink-0 justify-between">
+<div class="flex flex-col gap-4">
+<!-- Brand Header -->
+<div class="flex items-center gap-3 px-2 pb-3 border-b border-outline-variant">
+<div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-xl">local_shipping</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-label-md font-headline-sm font-bold text-on-surface tracking-tight truncate">Fletes y Mudanzas</span>
+<span class="text-body-sm font-body-sm text-secondary truncate">Operaciones Express</span>
+</div>
+</div>
+<!-- System KPI Operational Chip -->
+<div class="px-2">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container border border-outline-variant/60">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+<span class="text-label-sm font-label-sm text-on-surface">Flota Activa: 18/20</span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary font-tabular-data">90%</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex flex-col gap-1 mt-1" id="sidebar-nav">
+<!-- Inicio -->
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors w-full text-left rounded-lg" id="nav-btn-inicio" onclick="switchTab('inicio')">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span>Inicio</span>
+</button>
+<!-- Servicios (Active tab per context requirement) -->
+<button class="flex items-center gap-3 px-3 py-2 border-l-2 border-primary text-primary bg-surface-container-low font-label-md text-label-md transition-colors w-full text-left" id="nav-btn-servicios" onclick="switchTab('servicios')">
+<span class="material-symbols-outlined text-lg">local_shipping</span>
+<span>Servicios</span>
+</button>
+<!-- Clientes -->
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors w-full text-left rounded-lg" id="nav-btn-clientes" onclick="switchTab('clientes')">
+<span class="material-symbols-outlined text-lg">groups</span>
+<span>Clientes</span>
+</button>
+<!-- Choferes -->
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors w-full text-left rounded-lg" id="nav-btn-choferes" onclick="switchTab('choferes')">
+<span class="material-symbols-outlined text-lg">badge</span>
+<span>Choferes</span>
+</button>
+<!-- Vehículos -->
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors w-full text-left rounded-lg" id="nav-btn-vehiculos" onclick="switchTab('vehiculos')">
+<span class="material-symbols-outlined text-lg">directions_car</span>
+<span>Vehículos</span>
+</button>
+</nav>
+</div>
+<!-- Footer & Operational Status -->
+<div class="flex flex-col gap-2 pt-3 border-t border-outline-variant">
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+<span class="text-label-sm font-label-sm text-secondary">Servidor Operativo</span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary tabular-nums">latencia: 18ms</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors rounded-lg w-full text-left">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Configuración</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors rounded-lg w-full text-left">
+<span class="material-symbols-outlined text-lg">help</span>
+<span>Soporte</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Workspace (Offset by 240px Sidebar) -->
+<div class="flex-1 ml-60 flex flex-col h-full overflow-hidden bg-background">
+<!-- SHARED COMPONENT: TopNavBar -->
+<header class="flex justify-between items-center w-full h-14 px-6 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-20 shrink-0">
+<!-- Left: Breadcrumb & Search Bar -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-body-sm font-body-sm">
+<span class="text-secondary font-medium">Operaciones</span>
+<span class="text-outline text-xs">/</span>
+<span class="text-on-surface font-semibold" id="breadcrumb-current">Servicios</span>
+</div>
+<!-- Table Global Search Bar -->
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-secondary text-base pointer-events-none">search</span>
+<input class="w-full pl-9 pr-14 py-1.5 text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface placeholder:text-secondary focus:outline-none focus:border-secondary focus:ring-2 focus:ring-surface-container-high transition-all" placeholder="Buscar servicio, chofer o cliente..." type="text"/>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-surface-container text-label-sm font-label-sm text-secondary border border-outline-variant tabular-nums">
+              Ctrl+K
+            </div>
+</div>
+</div>
+<!-- Right: Actions, Notifications, Profile -->
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest text-on-surface border border-outline-variant rounded-lg font-label-md text-label-md hover:bg-surface-container hover:border-secondary transition-colors shadow-sm" onclick="exportReport()">
+<span class="material-symbols-outlined text-base">file_download</span>
+<span>Exportar</span>
+</button>
+<button class="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" onclick="openQuotationModal()">
+<span class="material-symbols-outlined text-base">add</span>
+<span>Nuevo Servicio / Cotizar</span>
+</button>
+<div class="h-5 w-px bg-outline-variant mx-1"></div>
+<!-- Notification Icon -->
+<button class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors relative" title="Notificaciones">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span>
+</button>
+<button class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title="Ayuda y documentación">
+<span class="material-symbols-outlined text-xl">help_outline</span>
+</button>
+<div class="h-5 w-px bg-outline-variant mx-1"></div>
+<!-- User Profile -->
+<div class="flex items-center gap-2.5 pl-1 cursor-pointer">
+<img alt="Avatar de Administrador" class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A professional, clean corporate headshot portrait of a female operations logistics director named Laura in a modern minimalist office with soft neutral ambient lighting, wearing professional business attire with an authoritative yet warm expression, highly detailed and elegant." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9_2jgqUg6OKh9qvgaXFFx0OcYcvvUTa_9mFyDc04vPztyXuXpxGsuLay0TGJmk1JkqNvkFqzkEgYF824Ed1PUJDzXrEIKeGIB-UCLBvq2d-skXasXrbuKjGhZwB21EfkKin0o_kvaApbfQ0aGNN-Nk_r5b8GEOcDec0qihcHDp06Pr1ffwtEgNFrH6VhyvJrYuM9cy1GQd4QSjbFrZ0y1UsvJoztS5e27y-8KJQLQtYpbeubc-Oo8"/>
+<div class="flex flex-col text-left">
+<span class="text-label-md font-label-md text-on-surface leading-tight">Lic. Laura Benítez</span>
+<span class="text-label-sm font-label-sm text-secondary leading-tight">Operaciones y Despacho</span>
+</div>
+</div>
+</div>
+</header>
+<!-- View Containers (Stage) -->
+<main class="flex-1 overflow-y-auto p-6" id="main-content-scroll">
+<!-- SECTION 1: INICIO (KPIs / Operational Cockpit) -->
+<section class="hidden flex-col gap-6" id="view-inicio">
+<div class="flex items-center justify-between">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Tablero Operativo de Control</h1>
+<p class="text-body-sm font-body-sm text-secondary">Telemetría consolidada y estado de flota en tiempo real.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm text-secondary">Turno: <span class="font-semibold text-on-surface">Matutino (07:00 - 15:00)</span></span>
+</div>
+</div>
+<!-- 4 KPIs Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label-sm font-label-sm uppercase tracking-wider">Servicios Hoy</span>
+<span class="material-symbols-outlined text-xl">local_shipping</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-headline-xl font-headline-xl text-on-surface tabular-nums">34</span>
+<span class="text-label-sm font-label-sm text-emerald-600 flex items-center font-semibold">
+<span class="material-symbols-outlined text-xs">arrow_upward</span> +12%
+                </span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary mt-1">26 completados · 8 en curso</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label-sm font-label-sm uppercase tracking-wider">Facturación Bruta Diaria</span>
+<span class="material-symbols-outlined text-xl">payments</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-headline-xl font-headline-xl text-on-surface tabular-nums">$ 1.842.500</span>
+<span class="text-label-sm font-label-sm text-secondary font-tabular-data">ARS</span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary mt-1">Ticket promedio: $ 54.191 ARS</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label-sm font-label-sm uppercase tracking-wider">Disponibilidad de Choferes</span>
+<span class="material-symbols-outlined text-xl">airline_seat_recline_normal</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-headline-xl font-headline-xl text-on-surface tabular-nums">92,5%</span>
+<span class="text-label-sm font-label-sm text-secondary">18 activos</span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary mt-1">2 en descanso programado</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label-sm font-label-sm uppercase tracking-wider">Puntualidad en Arribo</span>
+<span class="material-symbols-outlined text-xl">schedule</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-headline-xl font-headline-xl text-on-surface tabular-nums">98,2%</span>
+<span class="text-label-sm font-label-sm text-emerald-600 font-semibold">+0.8%</span>
+</div>
+<span class="text-body-sm font-body-sm text-secondary mt-1">Desvío medio: 4.2 min</span>
+</div>
+</div>
+<!-- Quick Dispatch Overview Card -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-5">
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant">
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Monitoreo Rápido de Fletes en Tránsito</h2>
+<p class="text-body-sm font-body-sm text-secondary">Movimiento continuo de unidades en AMBA y corredores urbanos.</p>
+</div>
+<button class="text-label-md font-label-md text-primary hover:underline flex items-center gap-1" onclick="switchTab('servicios')">
+                Ver todos los despachos <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
+<div class="p-3 rounded-lg border border-outline-variant bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-on-surface font-tabular-data">#SRV-2024-0891</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-blue-100 text-blue-800 border border-blue-200">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> En Tránsito
+                  </span>
+</div>
+<div class="mt-2 text-body-sm font-body-sm text-on-surface">
+<p class="font-medium text-on-surface">Arcor Alimentos S.A.</p>
+<p class="text-secondary text-body-sm">Chofer: Carlos Méndez (AF-394-KM)</p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/60 flex justify-between items-center text-label-sm font-label-sm text-secondary">
+<span>Dist: 42 km (Est: 3.5h)</span>
+<span class="text-on-surface font-semibold tabular-nums">$ 64.200,00 ARS</span>
+</div>
+</div>
+<div class="p-3 rounded-lg border border-outline-variant bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-on-surface font-tabular-data">#SRV-2024-0893</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-blue-100 text-blue-800 border border-blue-200">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> En Tránsito
+                  </span>
+</div>
+<div class="mt-2 text-body-sm font-body-sm text-on-surface">
+<p class="font-medium text-on-surface">Distribuidora Mayorista Sur</p>
+<p class="text-secondary text-body-sm">Chofer: Roberto Gómez (AD-892-XZ)</p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/60 flex justify-between items-center text-label-sm font-label-sm text-secondary">
+<span>Dist: 28 km (Est: 2.5h)</span>
+<span class="text-on-surface font-semibold tabular-nums">$ 48.500,00 ARS</span>
+</div>
+</div>
+<div class="p-3 rounded-lg border border-outline-variant bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-on-surface font-tabular-data">#SRV-2024-0895</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-amber-100 text-amber-800 border border-amber-200">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Pendiente
+                  </span>
+</div>
+<div class="mt-2 text-body-sm font-body-sm text-on-surface">
+<p class="font-medium text-on-surface">Logística Quilmes SRL</p>
+<p class="text-secondary text-body-sm">Sin Chofer asignado</p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/60 flex justify-between items-center text-label-sm font-label-sm text-secondary">
+<span>Dist: 65 km (Est: 5.0h)</span>
+<span class="text-on-surface font-semibold tabular-nums">$ 89.000,00 ARS</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: SERVICIOS (Master Operational Ledger - Active Default) -->
+<section class="flex flex-col gap-4" id="view-servicios">
+<!-- Page Header & Action Controls -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Gestión Principal de Servicios y Despacho</h1>
+<p class="text-body-sm font-body-sm text-secondary">Control de operaciones en curso, asignación de móviles y liquidación de tarifas urbanas.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm" onclick="openQuotationModal()">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+<span>+ Nuevo Servicio / Cotizar</span>
+</button>
+</div>
+</div>
+<!-- Filter Toolbar Matrix -->
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-1 overflow-x-auto" id="filter-tabs">
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm bg-primary text-on-primary" onclick="filterServices('todos', this)">
+                Todos (28)
+              </button>
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors" onclick="filterServices('en-transito', this)">
+                En Tránsito (8)
+              </button>
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors" onclick="filterServices('pendiente', this)">
+                Pendiente Asignación (5)
+              </button>
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors" onclick="filterServices('completado', this)">
+                Completado (12)
+              </button>
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors" onclick="filterServices('programado', this)">
+                Programado (3)
+              </button>
+<button class="service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors" onclick="filterServices('cancelado', this)">
+                Cancelado (0)
+              </button>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm text-secondary">Ordenar por:</span>
+<select class="text-body-sm font-body-sm bg-surface-container-lowest border border-outline-variant rounded py-1 px-2 text-on-surface focus:outline-none focus:border-secondary">
+<option>Fecha (Más reciente)</option>
+<option>Mayor Importe ($)</option>
+<option>Distancia (km)</option>
+</select>
+</div>
+</div>
+<!-- Master Ledger Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-none">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse" id="services-table">
+<thead>
+<tr class="bg-surface-container-low border-b-2 border-outline-variant text-secondary text-label-sm font-label-sm uppercase tracking-wider h-9">
+<th class="py-2 px-3">id_servicio</th>
+<th class="py-2 px-3">Cliente</th>
+<th class="py-2 px-3">Tipo Vehículo</th>
+<th class="py-2 px-3">Fecha y Hora</th>
+<th class="py-2 px-3">Chofer y Vehículo Asignados</th>
+<th class="py-2 px-3 text-right">Recorrido</th>
+<th class="py-2 px-3 text-center">Estado</th>
+<th class="py-2 px-3 text-right">Precio Total</th>
+<th class="py-2 px-4 text-center sticky right-0 bg-surface-container-low">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant text-body-sm font-body-sm">
+<!-- Row 1: En Tránsito -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-2.5 px-3 font-semibold text-on-surface tabular-nums">#SRV-2024-0891</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Arcor Alimentos S.A.</div>
+<div class="text-secondary text-label-sm font-tabular-data">ID: #CLI-0018</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm font-label-sm border border-outline-variant">
+                        Camión Mediano 3.5t
+                      </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="text-on-surface">24/10/2024</div>
+<div class="text-secondary text-label-sm tabular-nums">08:30 hs</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Carlos Méndez</div>
+<div class="text-secondary text-label-sm font-mono">AF-394-KM</div>
+</td>
+<td class="py-2.5 px-3 text-right tabular-nums">
+<span class="font-medium">42 km</span>
+<span class="text-secondary text-label-sm block">3.5 hs est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-label-sm font-label-sm bg-blue-50 text-blue-700 border border-blue-200">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                        En Tránsito
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right font-semibold tabular-nums text-on-surface">
+                      $ 64.200,00 ARS
+                    </td>
+<td class="py-2.5 px-4 text-center sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">
+<button class="text-label-sm font-label-sm px-2.5 py-1 rounded border border-outline-variant hover:border-secondary hover:bg-surface-container transition-colors whitespace-nowrap" onclick="openDetailModal('SRV-2024-0891', 'Arcor Alimentos S.A.', 'Camión Mediano 3.5t', 42, 84, 30, 54, 12000, 480, 64200)">
+                        Ver liquidación
+                      </button>
+</td>
+</tr>
+<!-- Row 2: Pendiente Asignación -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-2.5 px-3 font-semibold text-on-surface tabular-nums">#SRV-2024-0892</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Cervecería &amp; Maltería Quilmes</div>
+<div class="text-secondary text-label-sm font-tabular-data">ID: #CLI-0042</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm font-label-sm border border-outline-variant">
+                        Utilitario 1.5t
+                      </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="text-on-surface">24/10/2024</div>
+<div class="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 text-label-sm">
+                        Horario sin definir
+                      </div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-high text-secondary text-label-sm font-medium">
+                        Sin asignar
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right tabular-nums">
+<span class="font-medium">18 km</span>
+<span class="text-secondary text-label-sm block">2.0 hs est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-label-sm font-label-sm bg-amber-50 text-amber-800 border border-amber-200">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                        Pendiente
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right font-semibold tabular-nums text-on-surface">
+                      $ 31.500,00 ARS
+                    </td>
+<td class="py-2.5 px-4 text-center sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">
+<button class="text-label-sm font-label-sm px-2.5 py-1 rounded border border-outline-variant hover:border-secondary hover:bg-surface-container transition-colors whitespace-nowrap" onclick="openDetailModal('SRV-2024-0892', 'Cervecería &amp; Maltería Quilmes', 'Utilitario 1.5t', 18, 36, 30, 6, 8500, 320, 31500)">
+                        Ver liquidación
+                      </button>
+</td>
+</tr>
+<!-- Row 3: Completado -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-2.5 px-3 font-semibold text-on-surface tabular-nums">#SRV-2024-0890</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Fravega Express Logística</div>
+<div class="text-secondary text-label-sm font-tabular-data">ID: #CLI-0005</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm font-label-sm border border-outline-variant">
+                        Furgón Corto
+                      </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="text-on-surface">23/10/2024</div>
+<div class="text-secondary text-label-sm tabular-nums">14:00 hs</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Matías Albornoz</div>
+<div class="text-secondary text-label-sm font-mono">AC-712-PP</div>
+</td>
+<td class="py-2.5 px-3 text-right tabular-nums">
+<span class="font-medium">25 km</span>
+<span class="text-secondary text-label-sm block">3.0 hs est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-label-sm font-label-sm bg-teal-50 text-teal-800 border border-teal-200">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+                        Completado
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right font-semibold tabular-nums text-on-surface">
+                      $ 48.500,00 ARS
+                    </td>
+<td class="py-2.5 px-4 text-center sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">
+<button class="text-label-sm font-label-sm px-2.5 py-1 rounded border border-outline-variant hover:border-secondary hover:bg-surface-container transition-colors whitespace-nowrap" onclick="openDetailModal('SRV-2024-0890', 'Fravega Express Logística', 'Furgón Corto', 25, 50, 30, 20, 9500, 380, 48500)">
+                        Ver liquidación
+                      </button>
+</td>
+</tr>
+<!-- Row 4: En Tránsito -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-2.5 px-3 font-semibold text-on-surface tabular-nums">#SRV-2024-0889</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Muebles &amp; Diseño Palermo</div>
+<div class="text-secondary text-label-sm font-tabular-data">ID: #CLI-0089</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm font-label-sm border border-outline-variant">
+                        Camión Mediano 3.5t
+                      </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="text-on-surface">24/10/2024</div>
+<div class="text-secondary text-label-sm tabular-nums">11:15 hs</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Roberto Gómez</div>
+<div class="text-secondary text-label-sm font-mono">AD-892-XZ</div>
+</td>
+<td class="py-2.5 px-3 text-right tabular-nums">
+<span class="font-medium">38 km</span>
+<span class="text-secondary text-label-sm block">4.0 hs est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-label-sm font-label-sm bg-blue-50 text-blue-700 border border-blue-200">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                        En Tránsito
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right font-semibold tabular-nums text-on-surface">
+                      $ 58.900,00 ARS
+                    </td>
+<td class="py-2.5 px-4 text-center sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">
+<button class="text-label-sm font-label-sm px-2.5 py-1 rounded border border-outline-variant hover:border-secondary hover:bg-surface-container transition-colors whitespace-nowrap" onclick="openDetailModal('SRV-2024-0889', 'Muebles &amp; Diseño Palermo', 'Camión Mediano 3.5t', 38, 76, 30, 46, 11500, 460, 58900)">
+                        Ver liquidación
+                      </button>
+</td>
+</tr>
+<!-- Row 5: Programado -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-2.5 px-3 font-semibold text-on-surface tabular-nums">#SRV-2024-0888</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Techint Construcciones</div>
+<div class="text-secondary text-label-sm font-tabular-data">ID: #CLI-0012</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm font-label-sm border border-outline-variant">
+                        Camión Pesado 7.0t
+                      </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="text-on-surface">25/10/2024</div>
+<div class="text-secondary text-label-sm tabular-nums">06:00 hs</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-medium text-on-surface">Esteban Paredes</div>
+<div class="text-secondary text-label-sm font-mono">AE-109-LM</div>
+</td>
+<td class="py-2.5 px-3 text-right tabular-nums">
+<span class="font-medium">85 km</span>
+<span class="text-secondary text-label-sm block">6.0 hs est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-label-sm font-label-sm bg-purple-50 text-purple-700 border border-purple-200">
+<span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                        Programado
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-right font-semibold tabular-nums text-on-surface">
+                      $ 114.000,00 ARS
+                    </td>
+<td class="py-2.5 px-4 text-center sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">
+<button class="text-label-sm font-label-sm px-2.5 py-1 rounded border border-outline-variant hover:border-secondary hover:bg-surface-container transition-colors whitespace-nowrap" onclick="openDetailModal('SRV-2024-0888', 'Techint Construcciones', 'Camión Pesado 7.0t', 85, 170, 40, 130, 15000, 520, 114000)">
+                        Ver liquidación
+                      </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Pagination & Count -->
+<div class="flex items-center justify-between px-4 py-3 bg-surface-container-low border-t border-outline-variant text-body-sm font-body-sm">
+<span class="text-secondary">Mostrando 5 de 28 servicios activos</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 border border-outline-variant rounded bg-surface-container-lowest text-secondary hover:text-on-surface disabled:opacity-50 text-label-sm font-label-sm" disabled="">Anterior</button>
+<span class="px-2 text-label-sm font-label-sm font-semibold">1</span>
+<button class="px-2.5 py-1 border border-outline-variant rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container text-label-sm font-label-sm">Siguiente</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: CLIENTES -->
+<section class="hidden flex-col gap-4" id="view-clientes">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Cuentas Corrientes y Clientes Corporativos</h1>
+<p class="text-body-sm font-body-sm text-secondary">Registro fiscal, estado crediticio y direcciones habituales de carga.</p>
+</div>
+<button class="flex items-center gap-2 px-3.5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-lg">person_add</span>
+<span>+ Nuevo Cliente</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b-2 border-outline-variant text-secondary text-label-sm font-label-sm uppercase h-9">
+<th class="py-2 px-3">id</th>
+<th class="py-2 px-3">razon_social</th>
+<th class="py-2 px-3">telefono</th>
+<th class="py-2 px-3">direccion_habitual</th>
+<th class="py-2 px-3 text-center">tiene_cuenta_corriente</th>
+<th class="py-2 px-3 text-center">activo</th>
+<th class="py-2 px-3">creado_en</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant text-body-sm font-body-sm">
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CLI-0005</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Fravega Express Logística S.A.</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 11 4982-1200</td>
+<td class="py-2.5 px-3 text-secondary">Av. Valentín Gómez 151, Haedo</td>
+<td class="py-2.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-50 text-emerald-700 border border-emerald-200">Sí</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">12/01/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CLI-0012</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Techint Construcciones</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 11 4018-8000</td>
+<td class="py-2.5 px-3 text-secondary">Pasaje Carlos María della Paolera 299, CABA</td>
+<td class="py-2.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-50 text-emerald-700 border border-emerald-200">Sí</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">04/03/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CLI-0018</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Arcor Alimentos S.A.</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 11 5169-7000</td>
+<td class="py-2.5 px-3 text-secondary">Ruta Panamericana Km 34.5, Don Torcuato</td>
+<td class="py-2.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-50 text-emerald-700 border border-emerald-200">Sí</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">19/05/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CLI-0042</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Cervecería &amp; Maltería Quilmes</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 11 4349-1000</td>
+<td class="py-2.5 px-3 text-secondary">12 de Octubre y Gran Canaria, Quilmes</td>
+<td class="py-2.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-secondary border border-outline-variant">No</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">11/08/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CLI-0099</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Distribuidora Retail San Martín</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 11 4755-3390</td>
+<td class="py-2.5 px-3 text-secondary">Calle Belgrano 2410, San Martín</td>
+<td class="py-2.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-secondary border border-outline-variant">No</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-slate-100 text-slate-600 border border-slate-200">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactivo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">15/02/2024</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- SECTION 4: CHOFERES -->
+<section class="hidden flex-col gap-4" id="view-choferes">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Padrón de Choferes y Saldos a Favor</h1>
+<p class="text-body-sm font-body-sm text-secondary">Control de haberes liquidados, adelantos y estado de actividad de conductores.</p>
+</div>
+<button class="flex items-center gap-2 px-3.5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-lg">badge</span>
+<span>+ Registrar Chofer</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b-2 border-outline-variant text-secondary text-label-sm font-label-sm uppercase h-9">
+<th class="py-2 px-3">id</th>
+<th class="py-2 px-3">nombre_completo</th>
+<th class="py-2 px-3">telefono</th>
+<th class="py-2 px-3 text-right">saldo_a_favor</th>
+<th class="py-2 px-3 text-center">activo</th>
+<th class="py-2 px-3">creado_en</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant text-body-sm font-body-sm">
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CHF-101</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Carlos Méndez</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 9 11 5821-4491</td>
+<td class="py-2.5 px-3 text-right font-semibold text-emerald-700 tabular-nums">$ 24.800,00 ARS</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">10/02/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CHF-102</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Roberto Gómez</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 9 11 6390-1122</td>
+<td class="py-2.5 px-3 text-right font-semibold text-emerald-700 tabular-nums">$ 18.250,00 ARS</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">18/02/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CHF-103</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Matías Albornoz</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 9 11 4109-8831</td>
+<td class="py-2.5 px-3 text-right font-semibold text-emerald-700 tabular-nums">$ 32.100,00 ARS</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">05/03/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CHF-104</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Esteban Paredes</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 9 11 7720-3349</td>
+<td class="py-2.5 px-3 text-right font-semibold text-emerald-700 tabular-nums">$ 41.600,00 ARS</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">14/04/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#CHF-105</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface">Luciano Ferreyra</td>
+<td class="py-2.5 px-3 tabular-nums text-secondary">+54 9 11 2940-5510</td>
+<td class="py-2.5 px-3 text-right font-semibold text-secondary tabular-nums">$ 0,00 ARS</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-slate-100 text-slate-600 border border-slate-200">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactivo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">20/09/2023</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- SECTION 5: VEHÍCULOS -->
+<section class="hidden flex-col gap-4" id="view-vehiculos">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Parque Automotor y Capacidades de Carga</h1>
+<p class="text-body-sm font-body-sm text-secondary">Estado de VTV, choferes asignados por defecto y tonelaje homologado.</p>
+</div>
+<button class="flex items-center gap-2 px-3.5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-lg">directions_car</span>
+<span>+ Incorporar Vehículo</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b-2 border-outline-variant text-secondary text-label-sm font-label-sm uppercase h-9">
+<th class="py-2 px-3">id</th>
+<th class="py-2 px-3">patente</th>
+<th class="py-2 px-3">descripcion_tipo_vehiculo</th>
+<th class="py-2 px-3 text-right">capacidad_carga_kg</th>
+<th class="py-2 px-3">chofer_habitual</th>
+<th class="py-2 px-3 text-center">activo</th>
+<th class="py-2 px-3">creado_en</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant text-body-sm font-body-sm">
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#VEH-01</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface font-mono">AF-394-KM</td>
+<td class="py-2.5 px-3 text-on-surface">Camión Mediano 3.5t</td>
+<td class="py-2.5 px-3 text-right tabular-nums font-semibold">3.500 kg</td>
+<td class="py-2.5 px-3 text-on-surface">Carlos Méndez</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">15/01/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#VEH-02</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface font-mono">AD-892-XZ</td>
+<td class="py-2.5 px-3 text-on-surface">Camión Mediano 3.5t</td>
+<td class="py-2.5 px-3 text-right tabular-nums font-semibold">3.500 kg</td>
+<td class="py-2.5 px-3 text-on-surface">Roberto Gómez</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">22/02/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#VEH-03</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface font-mono">AC-712-PP</td>
+<td class="py-2.5 px-3 text-on-surface">Furgón Corto</td>
+<td class="py-2.5 px-3 text-right tabular-nums font-semibold">1.200 kg</td>
+<td class="py-2.5 px-3 text-on-surface">Matías Albornoz</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">10/03/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#VEH-04</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface font-mono">AE-109-LM</td>
+<td class="py-2.5 px-3 text-on-surface">Camión Pesado 7.0t</td>
+<td class="py-2.5 px-3 text-right tabular-nums font-semibold">7.000 kg</td>
+<td class="py-2.5 px-3 text-on-surface">Esteban Paredes</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Activo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">19/04/2023</td>
+</tr>
+<tr class="hover:bg-surface-container-low">
+<td class="py-2.5 px-3 font-medium text-secondary tabular-nums">#VEH-05</td>
+<td class="py-2.5 px-3 font-semibold text-on-surface font-mono">AG-420-TY</td>
+<td class="py-2.5 px-3 text-on-surface">Utilitario 1.5t</td>
+<td class="py-2.5 px-3 text-right tabular-nums font-semibold">1.500 kg</td>
+<td class="py-2.5 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-secondary text-label-sm font-medium">
+                        Sin chofer habitual
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-slate-100 text-slate-600 border border-slate-200">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactivo
+                      </span>
+</td>
+<td class="py-2.5 px-3 text-secondary tabular-nums">02/11/2023</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</main>
+</div>
+</div>
+<!-- MODAL 1: FLUJO DE ALTA Y COTIZACIÓN EN 2 PASOS -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center p-4" id="modal-cotizador">
+<!-- Backdrop -->
+<div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeQuotationModal()"></div>
+<!-- Modal Dialog Window -->
+<div class="relative w-full max-w-2xl bg-surface-container-lowest rounded-lg border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[921px]">
+<!-- Modal Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface-container-lowest shrink-0">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-base">receipt_long</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface leading-tight">Flujo de Alta y Cotización en 2 Pasos</h3>
+<p class="text-body-sm font-body-sm text-secondary leading-tight">Cotizador oficial tarifado por backend sin recálculo de cliente.</p>
+</div>
+</div>
+<button class="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container transition-colors" onclick="closeQuotationModal()">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<!-- Step Ribbon Indicator -->
+<div class="px-6 py-3 bg-surface-container-low border-b border-outline-variant flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2" id="step1-indicator">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary text-label-sm font-label-sm flex items-center justify-center">1</span>
+<span class="text-label-md font-label-md text-on-surface">Paso 1: Solicitud de Parámetros</span>
+</div>
+<div class="h-0.5 flex-1 mx-4 bg-outline-variant" id="step-connector"></div>
+<div class="flex items-center gap-2 opacity-50" id="step2-indicator">
+<span class="w-6 h-6 rounded-full bg-surface-container text-secondary text-label-sm font-label-sm flex items-center justify-center border border-outline-variant">2</span>
+<span class="text-label-md font-label-md text-secondary">Paso 2: Liquidación de Servidor</span>
+</div>
+</div>
+<!-- Modal Body (Step 1 and Step 2 container) -->
+<div class="p-6 overflow-y-auto flex-1">
+<!-- STEP 1: FORMULARIO DE SOLICITUD -->
+<div class="flex flex-col gap-4" id="quotation-step-1">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Cliente -->
+<div class="md:col-span-2">
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Razón Social del Cliente *</label>
+<select class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="form-cliente">
+<option value="Arcor Alimentos S.A. (#CLI-0018)">Arcor Alimentos S.A. (#CLI-0018) - Cta Cte Activa</option>
+<option value="Cervecería &amp; Maltería Quilmes (#CLI-0042)">Cervecería &amp; Maltería Quilmes (#CLI-0042)</option>
+<option value="Fravega Express Logística (#CLI-0005)">Fravega Express Logística (#CLI-0005) - Cta Cte Activa</option>
+<option value="Muebles &amp; Diseño Palermo (#CLI-0089)">Muebles &amp; Diseño Palermo (#CLI-0089)</option>
+<option value="Techint Construcciones (#CLI-0012)">Techint Construcciones (#CLI-0012) - Cta Cte Activa</option>
+</select>
+</div>
+<!-- Tipo de Vehículo -->
+<div class="md:col-span-2">
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Tipo de Vehículo Requerido *</label>
+<select class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="form-tipo-vehiculo">
+<option data-code="TP-03" data-franquicia="30" data-th="12000" data-tkm="480" value="Camión Mediano 3.5t">Camión Mediano 3.5t (Capacidad 3.500 kg - Chasis Abierto/Cerrado)</option>
+<option data-code="TP-01" data-franquicia="30" data-th="8500" data-tkm="320" value="Utilitario 1.5t">Utilitario 1.5t (Capacidad 1.500 kg - Kangoo / Fiorino / Partner)</option>
+<option data-code="TP-02" data-franquicia="30" data-th="9500" data-tkm="380" value="Furgón Corto">Furgón Corto (Capacidad 1.200 kg - Boxer / Sprinter Techo Alto)</option>
+<option data-code="TP-04" data-franquicia="40" data-th="15000" data-tkm="520" value="Camión Pesado 7.0t">Camión Pesado 7.0t (Capacidad 7.000 kg - Balancín / 2 Ejes)</option>
+</select>
+</div>
+<!-- Fecha del Servicio -->
+<div>
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Fecha de Servicio *</label>
+<input class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="form-fecha" type="date" value="2024-10-25"/>
+</div>
+<!-- Hora Inicio -->
+<div>
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Hora de Inicio Estimada *</label>
+<input class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" id="form-hora" type="time" value="09:00"/>
+</div>
+<!-- Horas Estimadas de Labor -->
+<div>
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Horas Estimadas de Labor *</label>
+<div class="relative">
+<input class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary tabular-nums" id="form-horas" max="24" min="1" type="number" value="4"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-body-sm">horas</span>
+</div>
+</div>
+<!-- Distancia de Ida (km) -->
+<div>
+<label class="block text-label-sm font-label-sm text-secondary mb-1">Distancia de Ida (km) *</label>
+<div class="relative">
+<input class="w-full px-3 py-2 text-body-md font-body-md bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary tabular-nums" id="form-km" max="1000" min="1" type="number" value="38"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-body-sm">km</span>
+</div>
+</div>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant text-label-sm font-label-sm text-secondary flex items-start gap-2">
+<span class="material-symbols-outlined text-base text-primary mt-0.5">info</span>
+<span>La cotización se calculará de forma directa con la tabla de tarifas homologadas por el servidor central. Incluye franquicia mínima de 30 km según la categoría.</span>
+</div>
+</div>
+<!-- STEP 2: PRESENTACIÓN DE LA COTIZACIÓN DEL SERVIDOR -->
+<div class="hidden flex-col gap-4" id="quotation-step-2">
+<div class="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-label-md font-label-md">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-700">check_circle</span>
+              Cotización validada y firmada por el servidor logístico
+            </span>
+<span class="text-label-sm font-label-sm font-mono">TOKEN: #AUTH-SRV-984</span>
+</div>
+<!-- Parameter Summary Specs -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg divide-y divide-outline-variant">
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-secondary">Tipo Vehículo Requerido:</span>
+<span class="font-semibold text-on-surface" id="summary-tipo-vehiculo">Camión Mediano 3.5t (#TP-03)</span>
+</div>
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-secondary">Horas Estimadas de Labor:</span>
+<span class="font-semibold text-on-surface tabular-nums" id="summary-horas">4.0 horas</span>
+</div>
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-secondary">Distancia de Ida informada:</span>
+<span class="font-semibold text-on-surface tabular-nums" id="summary-km-ida">38 km</span>
+</div>
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm bg-surface-container-low">
+<span class="text-secondary font-medium">Distancia Total Calculada por Backend (Ida y Vuelta):</span>
+<span class="font-bold text-on-surface tabular-nums" id="summary-km-total">76 km</span>
+</div>
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-secondary">Franquicia Km Incluida vs. Km Excedente:</span>
+<span class="font-semibold text-on-surface tabular-nums" id="summary-km-breakdown">30 km incl. / 46 km excedente</span>
+</div>
+<div class="p-3 flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-secondary">Tarifa Base por Hora / Tarifa por Km Excedente:</span>
+<span class="font-semibold text-on-surface tabular-nums" id="summary-tarifas">$ 12.000 /h · $ 480 /km exc.</span>
+</div>
+</div>
+<!-- Highlight Final Price Card -->
+<div class="p-4 bg-surface-container-lowest border-2 border-primary rounded-lg flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-secondary uppercase font-semibold">Importe final cotizado por el servidor</span>
+<span class="text-headline-xl font-headline-xl text-primary tabular-nums" id="summary-precio-final">$ 62.400,00 ARS</span>
+<span class="text-label-sm font-label-sm text-secondary">No incluye IVA ni peajes especiales. Válido por 48 horas.</span>
+</div>
+<div class="text-right">
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-surface-container rounded text-label-sm font-label-sm text-on-surface border border-outline-variant">
+<span class="material-symbols-outlined text-sm">verified</span> Servidor Oficial
+              </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Actions Footer -->
+<div class="px-6 py-4 bg-surface-container-lowest border-t border-outline-variant flex items-center justify-between shrink-0">
+<div class="flex items-center justify-between w-full" id="step-1-actions">
+<button class="px-4 py-2 border border-outline-variant rounded-lg text-secondary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="closeQuotationModal()">
+            Cancelar
+          </button>
+<button class="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors" onclick="requestServerQuote()">
+<span>Solicitar Cotización al Servidor</span>
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+</div>
+<div class="hidden items-center justify-between w-full" id="step-2-actions">
+<button class="flex items-center gap-1.5 px-4 py-2 border border-outline-variant rounded-lg text-secondary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="backToStep1()">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+<span>Modificar datos</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" onclick="confirmAndRegisterService()">
+<span class="material-symbols-outlined text-base">check</span>
+<span>Confirmar y Dar de Alta Servicio</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- MODAL 2: DETALLE DE LIQUIDACIÓN DE SERVICIO -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center p-4" id="modal-detalle-liquidacion">
+<div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeDetailModal()"></div>
+<div class="relative w-full max-w-lg bg-surface-container-lowest rounded-lg border border-outline-variant shadow-2xl p-6 flex flex-col gap-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div>
+<span class="text-label-sm font-label-sm text-secondary font-mono" id="detail-srv-id">#SRV-2024-0891</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">Detalle de Liquidación Tarifaria</h3>
+</div>
+<button class="text-secondary hover:text-on-surface" onclick="closeDetailModal()">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-2.5 text-body-sm font-body-sm">
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">Cliente:</span>
+<span class="font-semibold text-on-surface" id="detail-cliente">Arcor Alimentos S.A.</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">Tipo de Vehículo:</span>
+<span class="font-semibold text-on-surface" id="detail-vehiculo">Camión Mediano 3.5t</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">Distancia Ida Informada:</span>
+<span class="font-semibold tabular-nums" id="detail-km-ida">42 km</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">Distancia Total (Ida y Vuelta):</span>
+<span class="font-semibold tabular-nums" id="detail-km-total">84 km</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">km_franquicia (incluidos sin cargo):</span>
+<span class="font-semibold tabular-nums" id="detail-km-franquicia">30 km</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">km_excedente (facturados):</span>
+<span class="font-semibold tabular-nums text-error" id="detail-km-excedente">54 km</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">tarifa_hora_aplicada:</span>
+<span class="font-semibold tabular-nums" id="detail-tarifa-hora">$ 12.000,00 ARS</span>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/50">
+<span class="text-secondary">tarifa_km_aplicada:</span>
+<span class="font-semibold tabular-nums" id="detail-tarifa-km">$ 480,00 ARS</span>
+</div>
+</div>
+<div class="p-3 bg-surface-container rounded-lg border border-outline-variant flex justify-between items-center mt-2">
+<span class="text-label-md font-label-md text-on-surface">Total Liquidado:</span>
+<span class="text-headline-sm font-headline-sm font-bold text-primary tabular-nums" id="detail-precio-total">$ 64.200,00 ARS</span>
+</div>
+<div class="flex justify-end pt-2">
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors" onclick="closeDetailModal()">
+          Cerrar Detalle
+        </button>
+</div>
+</div>
+</div>
+<!-- Notification Toast -->
+<div class="fixed bottom-6 right-6 z-50 hidden items-center gap-3 bg-surface-container-lowest border border-outline-variant shadow-xl px-4 py-3 rounded-lg text-body-sm font-body-sm text-on-surface transition-all" id="toast">
+<span class="material-symbols-outlined text-emerald-600 text-lg" id="toast-icon">check_circle</span>
+<span id="toast-message">Operación realizada con éxito.</span>
+</div>
+<!-- Client-side Operational Controller Script -->
+<script>
+    // Tab Switching Logic
+    const tabs = ['inicio', 'servicios', 'clientes', 'choferes', 'vehiculos'];
+    const tabTitles = {
+      'inicio': 'Inicio',
+      'servicios': 'Servicios',
+      'clientes': 'Clientes',
+      'choferes': 'Choferes',
+      'vehiculos': 'Vehículos'
+    };
+
+    function switchTab(tabName) {
+      // Hide all sections
+      tabs.forEach(t => {
+        const sec = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (sec) sec.classList.add('hidden');
+        if (sec) sec.classList.remove('flex');
+        
+        // Reset sidebar button styles
+        if (btn) {
+          btn.className = "flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface transition-colors w-full text-left rounded-lg";
+        }
+      });
+
+      // Show selected section
+      const activeSec = document.getElementById(`view-${tabName}`);
+      const activeBtn = document.getElementById(`nav-btn-${tabName}`);
+      
+      if (activeSec) {
+        activeSec.classList.remove('hidden');
+        activeSec.classList.add('flex');
+      }
+
+      // Apply shared component style_active_navigation verbatim
+      if (activeBtn) {
+        activeBtn.className = "flex items-center gap-3 px-3 py-2 border-l-2 border-primary text-primary bg-surface-container-low font-label-md text-label-md transition-colors w-full text-left";
+      }
+
+      // Update Breadcrumb
+      document.getElementById('breadcrumb-current').textContent = tabTitles[tabName];
+    }
+
+    // Modal Cotizador Logic
+    function openQuotationModal() {
+      backToStep1();
+      document.getElementById('modal-cotizador').classList.remove('hidden');
+    }
+
+    function closeQuotationModal() {
+      document.getElementById('modal-cotizador').classList.add('hidden');
+    }
+
+    function requestServerQuote() {
+      // Extract form values
+      const clienteSelect = document.getElementById('form-cliente');
+      const vehiculoSelect = document.getElementById('form-tipo-vehiculo');
+      const selectedOption = vehiculoSelect.options[vehiculoSelect.selectedIndex];
+      
+      const tipoVehiculo = vehiculoSelect.value;
+      const vehicleCode = selectedOption.getAttribute('data-code');
+      const franquicia = parseInt(selectedOption.getAttribute('data-franquicia'));
+      const tarifaHora = parseInt(selectedOption.getAttribute('data-th'));
+      const tarifaKm = parseInt(selectedOption.getAttribute('data-tkm'));
+      
+      const horas = parseFloat(document.getElementById('form-horas').value) || 4;
+      const kmIda = parseFloat(document.getElementById('form-km').value) || 38;
+
+      // Pure backend simulation calculation (immutable receipt)
+      const kmTotal = kmIda * 2;
+      const kmExcedente = Math.max(0, kmTotal - franquicia);
+      const subtotalHoras = horas * tarifaHora;
+      const subtotalKm = kmExcedente * tarifaKm;
+      const precioFinal = subtotalHoras + subtotalKm;
+
+      // Populate Step 2 UI directly from simulated server response
+      document.getElementById('summary-tipo-vehiculo').textContent = `${tipoVehiculo} (#${vehicleCode})`;
+      document.getElementById('summary-horas').textContent = `${horas.toFixed(1)} horas ($ ${tarifaHora.toLocaleString('es-AR')}/h)`;
+      document.getElementById('summary-km-ida').textContent = `${kmIda} km`;
+      document.getElementById('summary-km-total').textContent = `${kmTotal} km (calculado retorno)`;
+      document.getElementById('summary-km-breakdown').textContent = `${franquicia} km franquicia / ${kmExcedente} km excedente`;
+      document.getElementById('summary-tarifas').textContent = `$ ${tarifaHora.toLocaleString('es-AR')}/h · $ ${tarifaKm.toLocaleString('es-AR')}/km exc.`;
+      document.getElementById('summary-precio-final').textContent = `$ ${precioFinal.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+
+      // Toggle views
+      document.getElementById('quotation-step-1').classList.add('hidden');
+      document.getElementById('quotation-step-2').classList.remove('hidden');
+      document.getElementById('quotation-step-2').classList.add('flex');
+
+      document.getElementById('step-1-actions').classList.add('hidden');
+      document.getElementById('step-2-actions').classList.remove('hidden');
+      document.getElementById('step-2-actions').classList.add('flex');
+
+      // Update Ribbon Indicator
+      const step2Ind = document.getElementById('step2-indicator');
+      step2Ind.classList.remove('opacity-50');
+      step2Ind.querySelector('span').classList.remove('bg-surface-container', 'text-secondary');
+      step2Ind.querySelector('span').classList.add('bg-primary', 'text-on-primary');
+    }
+
+    function backToStep1() {
+      document.getElementById('quotation-step-2').classList.add('hidden');
+      document.getElementById('quotation-step-2').classList.remove('flex');
+      document.getElementById('quotation-step-1').classList.remove('hidden');
+
+      document.getElementById('step-2-actions').classList.add('hidden');
+      document.getElementById('step-2-actions').classList.remove('flex');
+      document.getElementById('step-1-actions').classList.remove('hidden');
+
+      const step2Ind = document.getElementById('step2-indicator');
+      step2Ind.classList.add('opacity-50');
+      step2Ind.querySelector('span').classList.add('bg-surface-container', 'text-secondary');
+      step2Ind.querySelector('span').classList.remove('bg-primary', 'text-on-primary');
+    }
+
+    function confirmAndRegisterService() {
+      closeQuotationModal();
+      showToast("¡Servicio dado de alta con éxito! Se ha asignado ID #SRV-2024-0896.");
+    }
+
+    // Modal Detalle Liquidación
+    function openDetailModal(id, cliente, vehiculo, kmIda, kmTotal, franquicia, kmExc, tarifaH, tarifaK, total) {
+      document.getElementById('detail-srv-id').textContent = `#${id}`;
+      document.getElementById('detail-cliente').textContent = cliente;
+      document.getElementById('detail-vehiculo').textContent = vehiculo;
+      document.getElementById('detail-km-ida').textContent = `${kmIda} km`;
+      document.getElementById('detail-km-total').textContent = `${kmTotal} km`;
+      document.getElementById('detail-km-franquicia').textContent = `${franquicia} km`;
+      document.getElementById('detail-km-excedente').textContent = `${kmExc} km`;
+      document.getElementById('detail-tarifa-hora').textContent = `$ ${tarifaH.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+      document.getElementById('detail-tarifa-km').textContent = `$ ${tarifaK.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+      document.getElementById('detail-precio-total').textContent = `$ ${total.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+
+      document.getElementById('modal-detalle-liquidacion').classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('modal-detalle-liquidacion').classList.add('hidden');
+    }
+
+    // Services Filter Tabs
+    function filterServices(category, btnElement) {
+      const buttons = document.querySelectorAll('.service-filter-btn');
+      buttons.forEach(b => {
+        b.className = "service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm text-secondary hover:bg-surface-container transition-colors";
+      });
+      btnElement.className = "service-filter-btn px-3 py-1 rounded text-label-sm font-label-sm bg-primary text-on-primary";
+      showToast(`Filtrando servicios por: ${btnElement.textContent.trim()}`);
+    }
+
+    function exportReport() {
+      showToast("Generando reporte operativo consolidado en formato CSV...");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 3500);
+    }
+
+    // Keyboard Shortcuts (Ctrl + K global focus)
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Buscar servicio"]');
+        if (searchInput) searchInput.focus();
+      }
+    });
+  </script>
+</body></html>

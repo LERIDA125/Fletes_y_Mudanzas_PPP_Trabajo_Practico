@@ -2,6 +2,7 @@ from app.application.vehiculos.puertos import (
     ConsultaChofer,
     ConsultaServiciosVehiculo,
     ConsultaTipoVehiculo,
+    VehiculoListadoItem,
     VehiculoRepository,
 )
 from app.domain.errores import (
@@ -59,7 +60,7 @@ class GestorVehiculos:
 
     def listar(
         self, *, busqueda: str | None, offset: int, limit: int
-    ) -> tuple[list[Vehiculo], int]:
+    ) -> tuple[list[VehiculoListadoItem], int]:
         total = self._repo.contar(busqueda)
         return self._repo.listar(busqueda, offset, limit), total
 

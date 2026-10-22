@@ -1,0 +1,23 @@
+{
+  "feature_directory": "specs/003-gestion-vehiculos",
+  "story_id": "H4",
+  "title": "Gestión de Vehículos y Tipos de Vehículo",
+  "branch": "feature/H4-gestion-vehiculos",
+  "created": "2026-10-15",
+  "merged": "2026-10-15",
+  "status": "implemented",
+  "artifacts": {
+    "spec": "specs/003-gestion-vehiculos/spec.md",
+    "plan": "specs/003-gestion-vehiculos/plan.md",
+    "checklist": "specs/003-gestion-vehiculos/checklists/requirements.md"
+  },
+  "missing_artifacts": {
+    "tasks": "No se redactó tasks.md: el código de H4 llegó por el commit 5e1a62f sin commit de documentación.",
+    "quickstart": "No se redactó quickstart.md."
+  },
+  "notes": {
+    "plan": "plan.md es retrospectivo: reconstruido el 2026-10-21 por ingeniería inversa sobre el código mergeado en f050ee5.",
+    "branch": "La rama feature/H4-gestion-vehiculos fue borrada tras el merge del PR #3; la trazabilidad queda en el merge commit f050ee5.",
+    "spec_status": "La spec sigue con Status: Draft pese a estar implementada y mergeada."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "feature_directory": "specs/008-frontend-gestion-servicios",
+  "story_id": "H8",
+  "title": "Frontend de Gestión de Servicios, Cotizaciones, Agenda y Rendiciones",
+  "branch": "008-frontend-gestion-servicios",
+  "created": "2026-10-21",
+  "merged": null,
+  "status": "implemented",
+  "artifacts": {
+    "spec": "specs/008-frontend-gestion-servicios/spec.md",
+    "plan": "specs/008-frontend-gestion-servicios/plan.md",
+    "tasks": "specs/008-frontend-gestion-servicios/tasks.md",
+    "quickstart": "specs/008-frontend-gestion-servicios/quickstart.md",
+    "ssd": "specs/008-frontend-gestion-servicios/ssd.md"
+  },
+  "notes": {
+    "scope": "Frontend completo que integra la API backend de servicios y cotizaciones existentes, adoptando la totalidad de vistas y componentes del prototipo v0 (Move.ly) con modo oscuro nativo, agenda mensual interactiva, arqueo de rendiciones y cotizador en tiempo real.",
+    "branch": "La rama sigue exactamente la convención de Spec Kit: 008-frontend-gestion-servicios.",
+    "backend_integrity": "El backend de FastAPI/PostgreSQL se mantiene 100% inalterado, preservando contratos e invariantes de dominio."
+  }
+}

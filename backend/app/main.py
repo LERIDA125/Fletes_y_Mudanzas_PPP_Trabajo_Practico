@@ -4,8 +4,10 @@ from fastapi.responses import JSONResponse
 
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
+from app.api.servicios import router as servicios_router
 from app.api.tipos_vehiculo import router as tipos_vehiculo_router
 from app.api.vehiculos import router as vehiculos_router
+from app.core.config import get_settings
 from app.domain.errores import (
     ConflictoOperacion,
     DatoInvalido,
@@ -21,7 +23,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=get_settings().ORIGENES_CORS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +70,7 @@ async def regla_de_negocio(_request: Request, error: ReglaNegocioError) -> JSONR
 
 
 app.include_router(clientes_router)
+app.include_router(servicios_router)
 app.include_router(choferes_router)
 app.include_router(tipos_vehiculo_router)
 app.include_router(vehiculos_router)
