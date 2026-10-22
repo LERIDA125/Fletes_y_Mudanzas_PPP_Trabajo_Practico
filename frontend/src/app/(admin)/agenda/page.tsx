@@ -1,379 +1,382 @@
 "use client";
 
-import {
-  CalendarDays,
-  CarFront,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Filter,
-  MoreHorizontal,
-  Plus,
-  Truck,
-  UserRound,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Plus, Truck, UserRound } from "lucide-react";
 import { useState } from "react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const turnos = [
+const services = [
   {
-    hora: "08:30",
-    cliente: "María González",
-    origen: "Palermo, CABA",
-    destino: "Nordelta, Tigre",
-    chofer: "Lucas Ramírez",
-    iniciales: "LR",
-    vehiculo: "Furgón Grande (AF-123-JK)",
-    estado: "En curso",
-    estadoBadge: "border-sky-200 bg-sky-50 text-sky-700",
-    duracion: "2h 30m",
+    time: "08:30",
+    client: "María González",
+    from: "Palermo, CABA",
+    to: "Nordelta, Tigre",
+    driver: "Lucas Ramírez",
+    vehicle: "Furgón Grande",
+    status: "En curso",
+    color: "bg-[#2165d5]",
   },
   {
-    hora: "10:00",
-    cliente: "Estudio Norte",
-    origen: "Belgrano, CABA",
-    destino: "Vicente López",
-    chofer: "Sofía Martínez",
-    iniciales: "SM",
-    vehiculo: "Camioneta Chica (AE-982-PL)",
-    estado: "Pendiente",
-    estadoBadge: "border-amber-200 bg-amber-50 text-amber-700",
-    duracion: "1h 45m",
+    time: "10:00",
+    client: "Estudio Norte",
+    from: "Belgrano, CABA",
+    to: "Vicente López",
+    driver: "Sofía Martínez",
+    vehicle: "Camioneta Chica",
+    status: "Pendiente",
+    color: "bg-[#f0a04b]",
   },
   {
-    hora: "11:30",
-    cliente: "Tomás Fernández",
-    origen: "San Isidro",
-    destino: "Pilar",
-    chofer: "Diego Acosta",
-    iniciales: "DA",
-    vehiculo: "Furgón Grande (AG-441-TR)",
-    estado: "Pendiente",
-    estadoBadge: "border-amber-200 bg-amber-50 text-amber-700",
-    duracion: "3h 00m",
+    time: "11:30",
+    client: "Tomás Rivas",
+    from: "Villa Urquiza",
+    to: "Colegiales",
+    driver: "Diego Acosta",
+    vehicle: "Furgón Grande",
+    status: "Pendiente",
+    color: "bg-[#f0a04b]",
   },
   {
-    hora: "14:00",
-    cliente: "Casa Clara Deco",
-    origen: "Villa Crespo",
-    destino: "Recoleta, CABA",
-    chofer: "Sin chofer asignado",
-    iniciales: "—",
-    vehiculo: "Camioneta Chica",
-    estado: "Pendiente",
-    estadoBadge: "border-amber-200 bg-amber-50 text-amber-700",
-    duracion: "2h 00m",
+    time: "14:00",
+    client: "Ana López",
+    from: "Caballito, CABA",
+    to: "Vicente López",
+    driver: "Martín Soto",
+    vehicle: "Camioneta Chica",
+    status: "Finalizado",
+    color: "bg-[#248952]",
   },
   {
-    hora: "16:30",
-    cliente: "Valentina Ruiz",
-    origen: "Caballito, CABA",
-    destino: "Haedo, Morón",
-    chofer: "Martín Soto",
-    iniciales: "MS",
-    vehiculo: "Furgón Grande (AD-552-ZX)",
-    estado: "Finalizado",
-    estadoBadge: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    duracion: "2h 15m",
+    time: "16:30",
+    client: "Valentina Ruiz",
+    from: "Caballito, CABA",
+    to: "Haedo, Morón",
+    driver: "Esteban Quiroga",
+    vehicle: "Furgón Grande",
+    status: "Pendiente",
+    color: "bg-[#f0a04b]",
   },
 ];
 
-const choferesDisponibilidad = [
-  { nombre: "Lucas Ramírez", estado: "En ruta", estadoColor: "bg-sky-500" },
-  { nombre: "Sofía Martínez", estado: "Asignada", estadoColor: "bg-amber-500" },
-  { nombre: "Diego Acosta", estado: "Asignado", estadoColor: "bg-amber-500" },
-  { nombre: "Martín Soto", estado: "Disponible", estadoColor: "bg-emerald-500" },
-  { nombre: "Esteban Quiroga", estado: "Disponible", estadoColor: "bg-emerald-500" },
-  { nombre: "Julián Varela", estado: "Franco", estadoColor: "bg-slate-400" },
-];
+const monthDays = Array.from({ length: 31 }, (_, i) => ({
+  day: i + 1,
+  weekday: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"][i % 7],
+  services: i % 5 === 0 ? 2 : i % 3 === 0 ? 1 : 0,
+}));
 
 export default function PaginaAgenda() {
-  const [vista, setVista] = useState<"dia" | "semana">("dia");
+  const [selectedDay, setSelectedDay] = useState(23);
+  const [month, setMonth] = useState(9);
+  const [modalNuevoTurno, setModalNuevoTurno] = useState(false);
+
+  const monthNames = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
       {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-orange-600">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
             Planificación operativa
           </p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
-            Agenda de Servicios
+          <h2 className="text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+            Agenda
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Cronograma de viajes, franjas horarias y disponibilidad de choferes.
+          <p className="mt-1 text-xs text-[#7f8da1]">
+            Visualizá y organizá todos los servicios del mes.
           </p>
         </div>
 
-        <Button className="bg-orange-500 shadow-sm shadow-orange-200 hover:bg-orange-600 text-white font-medium self-start sm:self-auto">
-          <Plus className="size-4" />
-          Programar viaje
-        </Button>
+        <button
+          type="button"
+          onClick={() => setModalNuevoTurno(true)}
+          className="flex shrink-0 items-center gap-2 rounded-xl bg-[#2165d5] px-4 py-2.5 text-xs font-bold text-white shadow-[0_5px_12px_rgba(33,101,213,0.18)] transition hover:bg-[#1857bd]"
+        >
+          <Plus size={16} />
+          <span>Nuevo turno</span>
+        </button>
       </div>
 
-      {/* Tarjetas KPI de disponibilidad */}
-      <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Disponibilidad del día"
-      >
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Viajes programados</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  5 viajes
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                <CalendarDays className="size-5" />
-              </div>
+      {/* Grid principal: Calendario mensual + Turnos del día */}
+      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+        {/* Calendario mensual */}
+        <section className="rounded-2xl border border-[#e8edf4] bg-white p-5 sm:p-6 shadow-sm">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-[#172b4d]">Agenda operativa</h3>
+              <p className="mt-0.5 text-xs text-[#96a2b2]">
+                Todos los turnos asignados y libres · vista mensual
+              </p>
             </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-emerald-600">100%</span> turnos
-              cubiertos
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Choferes en ruta</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  1 activo
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-                <UserRound className="size-5" />
-              </div>
+            <div className="flex items-center gap-1 rounded-lg border border-[#e8edf4] bg-[#fcfdfe] p-1">
+              <button
+                type="button"
+                onClick={() => setMonth((prev) => Math.max(1, prev - 1))}
+                className="rounded-md p-1.5 text-[#7f8da1] hover:bg-[#f4f7fb]"
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="min-w-[130px] text-center text-xs font-bold text-[#172b4d]">
+                {monthNames[month - 1]} 2026
+              </span>
+              <button
+                type="button"
+                onClick={() => setMonth((prev) => Math.min(12, prev + 1))}
+                className="rounded-md p-1.5 text-[#7f8da1] hover:bg-[#f4f7fb]"
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-slate-700">2 asignados</span> para hoy
-            </p>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Vehículos en uso</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  3 unidades
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Truck className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-emerald-600">5 disponibles</span> en
-              base
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Franjas libres hoy</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  4 turnos
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                <Clock className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-violet-600">Turno tarde</span> con
-              capacidad
-            </p>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Barra de navegación de fecha y selector de vista */}
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-lg border border-slate-200 bg-white">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label="Día anterior"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="px-3 text-sm font-semibold text-slate-900">
-              Lunes, 24 de junio de 2024
+          {/* Leyenda */}
+          <div className="mb-5 flex flex-wrap gap-4 text-xs text-[#76869a]">
+            <span className="inline-flex items-center">
+              <i className="mr-1.5 inline-block size-2.5 rounded-full bg-[#2165d5]" />
+              Turno asignado
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label="Día siguiente"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            Hoy
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-            <button
-              type="button"
-              onClick={() => setVista("dia")}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
-                vista === "dia"
-                  ? "bg-white text-slate-950 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              Vista Día
-            </button>
-            <button
-              type="button"
-              onClick={() => setVista("semana")}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
-                vista === "semana"
-                  ? "bg-white text-slate-950 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              Vista Semana
-            </button>
+            <span className="inline-flex items-center">
+              <i className="mr-1.5 inline-block size-2.5 rounded-full bg-[#e7ebf1]" />
+              Día libre
+            </span>
+            <span className="inline-flex items-center">
+              <i className="mr-1.5 inline-block size-2.5 rounded-full bg-[#f0a04b]" />
+              Pendiente de confirmar
+            </span>
           </div>
 
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Filter className="size-3.5 text-slate-500" />
-            <span>Filtrar</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Grilla principal con turnos y panel lateral de disponibilidad */}
-      <div className="grid gap-7 lg:grid-cols-3">
-        {/* Cronograma de turnos del día */}
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <Card className="border-slate-200 shadow-none">
-            <CardHeader className="border-b border-slate-100 px-5 py-4">
-              <CardTitle className="text-base font-semibold text-slate-900">
-                Turnos programados
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="divide-y divide-slate-100 p-0">
-              {turnos.map((t) => (
-                <div
-                  key={`${t.hora}-${t.cliente}`}
-                  className="flex flex-col gap-3 p-5 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between"
+          {/* Días del mes */}
+          <div className="grid grid-cols-7 gap-2">
+            {monthDays.map(({ day, weekday, services: count }) => {
+              const isSelected = day === selectedDay;
+              return (
+                <button
+                  type="button"
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`min-h-[96px] rounded-xl border p-2.5 text-left transition-all ${
+                    isSelected
+                      ? "border-[#2165d5] bg-[#f4f8ff] ring-2 ring-[#2165d5]/20 shadow-sm"
+                      : "border-[#edf0f4] bg-white hover:border-[#9bbcf1] hover:bg-[#fafcff]"
+                  }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="flex flex-col items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-center">
-                      <span className="text-sm font-bold text-slate-900">{t.hora}</span>
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {t.duracion}
-                      </span>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-slate-900">{t.cliente}</h4>
-                        <Badge variant="outline" className={t.estadoBadge}>
-                          {t.estado}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {t.origen} → <span className="font-medium">{t.destino}</span>
-                      </p>
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-600">
-                        <CarFront className="size-3.5 text-slate-400" />
-                        <span>{t.vehiculo}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <div className="flex items-center gap-2">
-                      {t.iniciales === "—" ? (
-                        <div className="flex size-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-xs text-slate-400">
-                          —
-                        </div>
-                      ) : (
-                        <Avatar className="size-7">
-                          <AvatarFallback className="bg-slate-100 text-[10px] font-semibold text-slate-600">
-                            {t.iniciales}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <span
-                        className={`text-xs font-medium ${
-                          t.chofer === "Sin chofer asignado"
-                            ? "text-slate-400 italic"
-                            : "text-slate-800"
-                        }`}
-                      >
-                        {t.chofer}
-                      </span>
-                    </div>
-
-                    <Button variant="ghost" size="icon" aria-label="Opciones de turno">
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Panel lateral: Estado de choferes */}
-        <div className="flex flex-col gap-4">
-          <Card className="border-slate-200 shadow-none">
-            <CardHeader className="border-b border-slate-100 px-5 py-4">
-              <CardTitle className="text-base font-semibold text-slate-900">
-                Choferes en servicio
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="divide-y divide-slate-100 p-0">
-              {choferesDisponibilidad.map((c) => (
-                <div
-                  key={c.nombre}
-                  className="flex items-center justify-between px-5 py-3.5 text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {c.nombre
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
-                    <span className="font-medium text-slate-900">{c.nombre}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-[#9aa7b7]">
+                      {weekday}
+                    </span>
                     <span
-                      className={`size-2 rounded-full ${c.estadoColor}`}
-                      aria-hidden="true"
-                    />
-                    <span className="text-xs text-slate-600 font-medium">{c.estado}</span>
+                      className={`grid size-6 place-items-center rounded-full text-xs font-bold ${
+                        isSelected ? "bg-[#2165d5] text-white" : "text-[#53657d]"
+                      }`}
+                    >
+                      {day}
+                    </span>
+                  </div>
+
+                  {count > 0 ? (
+                    <div className="mt-3.5 rounded-md bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2165d5]">
+                      {count} {count === 1 ? "servicio" : "servicios"}
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-center text-[10px] font-medium text-[#c1c9d4]">
+                      Libre
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Panel lateral: Turnos del día seleccionado */}
+        <aside className="flex flex-col gap-5 rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#edf0f4] pb-4">
+            <div>
+              <h3 className="text-base font-bold text-[#172b4d]">Turnos de hoy</h3>
+              <p className="mt-0.5 text-xs text-[#96a2b2]">
+                Día {selectedDay} de {monthNames[month - 1].toLowerCase()}
+              </p>
+            </div>
+            <span className="rounded-full bg-[#edf4ff] px-2.5 py-1 text-xs font-bold text-[#2165d5]">
+              {services.length} turnos
+            </span>
+          </div>
+
+          <div className="flex flex-1 flex-col gap-3">
+            {services.map((service) => (
+              <div
+                key={service.time}
+                className="flex gap-3 rounded-xl border border-[#eff2f6] bg-[#fbfcfd] p-3 transition hover:border-[#d0dbe9]"
+              >
+                <div className="w-12 pt-0.5 text-xs font-bold text-[#172b4d]">
+                  {service.time}
+                </div>
+                <div className="min-w-0 flex-1 border-l border-[#e6ebf2] pl-3">
+                  <p className="truncate text-xs font-semibold text-[#172b4d]">
+                    {service.client}
+                  </p>
+                  <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-[#8a98aa]">
+                    <MapPin size={11} className="shrink-0" />
+                    <span>
+                      {service.from} → {service.to}
+                    </span>
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-[#5c6d83]">
+                    <span className="inline-flex items-center gap-1">
+                      <UserRound size={11} className="text-[#9aa7b7]" />
+                      {service.driver}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Truck size={11} className="text-[#9aa7b7]" />
+                      {service.vehicle}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+                <span
+                  className={`mt-1 size-2 shrink-0 rounded-full ${service.color}`}
+                  title={service.status}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setModalNuevoTurno(true)}
+            className="w-full rounded-xl border border-[#dfe6ef] py-2.5 text-xs font-bold text-[#2165d5] transition hover:bg-[#edf4ff]"
+          >
+            Agendar turno para este día
+          </button>
+        </aside>
       </div>
+
+      {/* Modal interactivo de agendamiento rápido */}
+      {modalNuevoTurno && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#172b4d]/40 p-4 backdrop-blur-xs">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-[#edf0f4] pb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#2165d5]">
+                  Agenda operativa
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-[#172b4d]">
+                  Agendar nuevo turno
+                </h3>
+                <p className="mt-0.5 text-xs text-[#8b99ab]">
+                  Para el {selectedDay} de {monthNames[month - 1]} de 2026.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNuevoTurno(false)}
+                className="rounded-lg p-1.5 text-[#8b99ab] hover:bg-[#f3f5f8]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setModalNuevoTurno(false);
+              }}
+              className="mt-5 flex flex-col gap-4"
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Horario
+                  <input
+                    type="time"
+                    defaultValue="09:00"
+                    required
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Cliente
+                  <input
+                    placeholder="Nombre o empresa"
+                    required
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Origen
+                  <input
+                    placeholder="Ej. Palermo"
+                    required
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Destino
+                  <input
+                    placeholder="Ej. Nordelta"
+                    required
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Chofer asignado
+                  <select className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 py-2 text-xs outline-none focus:border-[#2165d5]">
+                    <option>Lucas Ramírez · Disponible</option>
+                    <option>Sofía Martínez · Disponible</option>
+                    <option>Diego Acosta · Disponible</option>
+                    <option>Martín Soto · Disponible</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-[#62738a]">
+                  Vehículo
+                  <select className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 py-2 text-xs outline-none focus:border-[#2165d5]">
+                    <option>Camión chico (hasta 12 m³)</option>
+                    <option>Camión grande (hasta 30 m³)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2 border-t border-[#edf0f4] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoTurno(false)}
+                  className="rounded-lg border border-[#dfe6ef] px-4 py-2 text-xs font-semibold text-[#62738a] hover:bg-[#f7f9fc]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#2165d5] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#1857bd]"
+                >
+                  Confirmar turno
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

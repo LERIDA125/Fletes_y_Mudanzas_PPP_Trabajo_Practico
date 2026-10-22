@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Truck } from "lucide-react";
 
 import { BuscadorVehiculos } from "@/features/vehiculos/components/buscador-vehiculos";
 import { CabeceraListado } from "@/features/vehiculos/components/cabecera-listado";
@@ -23,16 +24,59 @@ export const metadata = {
 };
 
 export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos">) {
+  const fleetSample = [
+    {
+      name: "Móvil 01",
+      model: "Mercedes Benz Sprinter",
+      size: "Grande",
+      status: "Disponible",
+      statusColor: "bg-[#e9f8ef] text-[#248952]",
+      km: "156.240 km",
+    },
+    {
+      name: "Móvil 02",
+      model: "Iveco Daily",
+      size: "Grande",
+      status: "En viaje",
+      statusColor: "bg-[#e9f4ff] text-[#2879bd]",
+      km: "204.820 km",
+    },
+    {
+      name: "Móvil 03",
+      model: "Renault Master",
+      size: "Grande",
+      status: "Disponible",
+      statusColor: "bg-[#e9f8ef] text-[#248952]",
+      km: "98.430 km",
+    },
+    {
+      name: "Móvil 04",
+      model: "Fiat Ducato",
+      size: "Chico",
+      status: "Mantenimiento",
+      statusColor: "bg-[#f1edff] text-[#7951c9]",
+      km: "121.090 km",
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
+      {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-orange-600">Flota disponible</p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
+              Flota operativa
+            </p>
+            <span className="rounded-full bg-[#e9f8ef] px-2.5 py-0.5 text-[11px] font-bold text-[#248952]">
+              3 disponibles
+            </span>
+          </div>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
             Vehículos
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Flota habilitada, tipologías y capacidades de carga.
+          <p className="mt-1 text-xs text-[#7f8da1]">
+            Controlá tu flota, capacidad, estado y mantenimiento.
           </p>
         </div>
 
@@ -45,7 +89,41 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-none overflow-hidden p-6">
+      {/* Tarjetas resumen de unidades */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {fleetSample.map((v) => (
+          <article
+            key={v.name}
+            className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm transition hover:shadow-md"
+          >
+            <div className="flex items-start justify-between">
+              <div className="grid size-10 place-items-center rounded-xl bg-[#edf4ff] text-[#2165d5]">
+                <Truck size={18} />
+              </div>
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${v.statusColor}`}
+              >
+                {v.status}
+              </span>
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-[#172b4d]">{v.name}</h3>
+            <p className="mt-0.5 text-xs text-[#718096]">{v.model}</p>
+            <div className="mt-3 flex justify-between border-t border-[#f0f2f5] pt-2.5 text-xs">
+              <span className="text-[#96a2b2]">Tipo</span>
+              <span className="font-bold text-[#172b4d]">
+                Camión {v.size.toLowerCase()}
+              </span>
+            </div>
+            <div className="mt-1.5 flex justify-between text-xs">
+              <span className="text-[#96a2b2]">Kilometraje</span>
+              <span className="font-semibold text-[#5c6d83]">{v.km}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {/* Tabla completa de vehículos conectada a backend */}
+      <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm">
         <Suspense fallback={<Cargando />}>
           <Listado searchParams={searchParams} />
         </Suspense>
@@ -90,6 +168,7 @@ async function Listado({ searchParams }: { searchParams: SearchParams }) {
   return (
     <div className="flex flex-col gap-6">
       <CabeceraListado total={resultado.total} paginas={paginas} />
+
       <ListadoVehiculos vehiculos={resultado.items} />
 
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 pt-2">
@@ -139,7 +218,7 @@ function leerTexto(
 function leerNumero(
   params: Record<string, string | string[] | undefined>,
   clave: string,
-): number {
+) {
   const valor = leerTexto(params, clave);
   if (!/^\d+$/.test(valor)) {
     return 1;

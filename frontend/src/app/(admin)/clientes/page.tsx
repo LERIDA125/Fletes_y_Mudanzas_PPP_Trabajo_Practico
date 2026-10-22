@@ -24,15 +24,23 @@ export const metadata = {
 
 export default function PaginaClientes({ searchParams }: PageProps<"/clientes">) {
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
+      {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-orange-600">Padrón operativo</p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
+              Padrón operativo
+            </p>
+            <span className="rounded-full bg-[#edf4ff] px-2.5 py-0.5 text-[11px] font-bold text-[#2165d5]">
+              Clientes activos
+            </span>
+          </div>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
             Clientes
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Padrón oficial de clientes para asignación de servicios y facturación.
+          <p className="mt-1 text-xs text-[#7f8da1]">
+            Administrá contactos, historial y datos para cotizar más rápido.
           </p>
         </div>
 
@@ -45,7 +53,7 @@ export default function PaginaClientes({ searchParams }: PageProps<"/clientes">)
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-none overflow-hidden p-6">
+      <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm">
         <Suspense fallback={<Cargando />}>
           <Listado searchParams={searchParams} />
         </Suspense>

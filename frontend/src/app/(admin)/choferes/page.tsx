@@ -23,16 +23,24 @@ export const metadata = {
 };
 
 export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">) {
+  const truckRates = [
+    { type: "Camión chico", value: "$16.000", detail: "Hasta 12 m³ de capacidad" },
+    { type: "Camión grande", value: "$24.000", detail: "Hasta 30 m³ de capacidad" },
+  ];
+
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
+      {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-orange-600">Personal operativo</p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
+            Personal operativo
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
             Choferes
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Conductores registrados y asignación operativa de servicios.
+          <p className="mt-1 text-xs text-[#7f8da1]">
+            Gestioná tu equipo, disponibilidad y tarifas operativas.
           </p>
         </div>
 
@@ -45,7 +53,69 @@ export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">)
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-none overflow-hidden p-6">
+      {/* Tarjetas de Disponibilidad */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">Libres hoy</p>
+          <p className="mt-2 inline-flex rounded-lg bg-[#e9f8ef] px-2.5 py-1 text-xl font-bold text-[#248952]">
+            3
+          </p>
+          <p className="mt-2 text-[10px] text-[#9aa7b7]">de 6 choferes registrados</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">En viaje</p>
+          <p className="mt-2 inline-flex rounded-lg bg-[#e9f4ff] px-2.5 py-1 text-xl font-bold text-[#2879bd]">
+            2
+          </p>
+          <p className="mt-2 text-[10px] text-[#9aa7b7]">en servicios en curso</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">Licencia</p>
+          <p className="mt-2 inline-flex rounded-lg bg-[#f1edff] px-2.5 py-1 text-xl font-bold text-[#7951c9]">
+            1
+          </p>
+          <p className="mt-2 text-[10px] text-[#9aa7b7]">franco programado</p>
+        </div>
+      </div>
+
+      {/* Tarifario por vehículo */}
+      <section className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-base font-bold text-[#172b4d]">Tarifario por vehículo</h3>
+            <p className="mt-0.5 text-xs text-[#96a2b2]">
+              Base sugerida para calcular cada servicio
+            </p>
+          </div>
+          <span className="rounded-full bg-[#f4f8ff] px-3 py-1 text-xs font-semibold text-[#2165d5]">
+            Vigente desde septiembre 2026
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {truckRates.map((rate) => (
+            <div
+              key={rate.type}
+              className="flex items-center justify-between rounded-xl border border-[#edf0f4] bg-[#fbfcfd] p-4"
+            >
+              <div>
+                <p className="text-xs font-bold text-[#172b4d]">{rate.type}</p>
+                <p className="mt-0.5 text-[11px] text-[#96a2b2]">{rate.detail}</p>
+              </div>
+              <p className="text-base font-bold text-[#172b4d]">
+                {rate.value}
+                <span className="ml-1 text-[11px] font-normal text-[#96a2b2]">
+                  / servicio
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Tabla del equipo de choferes con datos reales */}
+      <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm">
         <Suspense fallback={<Cargando />}>
           <Listado searchParams={searchParams} />
         </Suspense>

@@ -1,329 +1,424 @@
 "use client";
 
-import {
-  CheckCircle2,
-  CircleDollarSign,
-  Download,
-  Filter,
-  MoreHorizontal,
-  Plus,
-  ReceiptText,
-  Search,
-  WalletCards,
-} from "lucide-react";
+import { ArrowDownToLine, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+type Rendicion = {
+  id: string;
+  chofer: string;
+  servicio: string;
+  fecha: string;
+  tarifa: string;
+  adelanto: string;
+  gastos: string;
+  saldo: string;
+  estado: "Pendiente" | "Aprobada" | "En revisión";
+  badgeColor: string;
+};
 
-const liquidaciones = [
+const rows: Rendicion[] = [
   {
-    chofer: "Lucas Ramírez",
-    dni: "38.291.442",
-    iniciales: "LR",
-    viajes: 2,
-    efectivo: 45000,
-    transferencias: 55000,
-    total: 100000,
-    rendido: 100000,
-    diferencia: 0,
-    estado: "Rendido",
-    badgeClase: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  {
-    chofer: "Sofía Martínez",
-    dni: "40.119.823",
-    iniciales: "SM",
-    viajes: 1,
-    efectivo: 35000,
-    transferencias: 0,
-    total: 35000,
-    rendido: 0,
-    diferencia: 35000,
+    id: "#REN-024",
+    chofer: "Carlos Méndez",
+    servicio: "María González (Palermo → Nordelta)",
+    fecha: "23 sep · 08:30",
+    tarifa: "$18.500",
+    adelanto: "$12.000",
+    gastos: "$2.500 (Peajes y combustible)",
+    saldo: "$4.000",
     estado: "Pendiente",
-    badgeClase: "border-amber-200 bg-amber-50 text-amber-700",
+    badgeColor: "bg-[#fff4e5] text-[#b86a16]",
   },
   {
-    chofer: "Diego Acosta",
-    dni: "35.882.109",
-    iniciales: "DA",
-    viajes: 2,
-    efectivo: 50000,
-    transferencias: 95000,
-    total: 145000,
-    rendido: 0,
-    diferencia: 145000,
-    estado: "En viaje",
-    badgeClase: "border-sky-200 bg-sky-50 text-sky-700",
+    id: "#REN-023",
+    chofer: "Lucía Fernández",
+    servicio: "Estudio Norte (Belgrano → San Isidro)",
+    fecha: "22 sep · 10:00",
+    tarifa: "$16.000",
+    adelanto: "$16.000",
+    gastos: "$0",
+    saldo: "$0",
+    estado: "Aprobada",
+    badgeColor: "bg-[#e9f8ef] text-[#248952]",
   },
   {
-    chofer: "Martín Soto",
-    dni: "33.742.610",
-    iniciales: "MS",
-    viajes: 2,
-    efectivo: 20000,
-    transferencias: 80000,
-    total: 100000,
-    rendido: 100000,
-    diferencia: 0,
-    estado: "Rendido",
-    badgeClase: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    id: "#REN-022",
+    chofer: "Diego Soto",
+    servicio: "Tomás Rivas (Villa Urquiza → Colegiales)",
+    fecha: "22 sep · 14:00",
+    tarifa: "$15.500",
+    adelanto: "$10.000",
+    gastos: "$1.800 (Estacionamiento)",
+    saldo: "$3.700",
+    estado: "En revisión",
+    badgeColor: "bg-[#e9f4ff] text-[#2879bd]",
+  },
+  {
+    id: "#REN-021",
+    chofer: "Sofía Acosta",
+    servicio: "Ana López (Caballito → Vicente López)",
+    fecha: "21 sep · 09:00",
+    tarifa: "$17.000",
+    adelanto: "$17.000",
+    gastos: "$0",
+    saldo: "$0",
+    estado: "Aprobada",
+    badgeColor: "bg-[#e9f8ef] text-[#248952]",
+  },
+  {
+    id: "#REN-020",
+    chofer: "Lucas Ramírez",
+    servicio: "Valentina Ruiz (Caballito → Haedo)",
+    fecha: "20 sep · 16:30",
+    tarifa: "$19.000",
+    adelanto: "$15.000",
+    gastos: "$1.500 (Peajes)",
+    saldo: "$2.500",
+    estado: "Aprobada",
+    badgeColor: "bg-[#e9f8ef] text-[#248952]",
   },
 ];
 
-const formatoMoneda = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
-
 export default function PaginaRendiciones() {
-  const [criterio, setCriterio] = useState("");
+  const [selectedRendicion, setSelectedRendicion] = useState<Rendicion | null>(null);
+  const [modalNuevaRendicion, setModalNuevaRendicion] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
-  const filtrados = liquidaciones.filter((l) =>
-    l.chofer.toLowerCase().includes(criterio.toLowerCase()),
+  const rendicionesFiltradas = rows.filter(
+    (r) =>
+      r.chofer.toLowerCase().includes(busqueda.toLowerCase()) ||
+      r.id.toLowerCase().includes(busqueda.toLowerCase()) ||
+      r.servicio.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
       {/* Encabezado */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-orange-600">
-            Control de caja y liquidaciones
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#2165d5]">
+            Control financiero
           </p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
-            Rendiciones y Cobranzas
+          <h2 className="text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+            Rendiciones
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Seguimiento de dinero recaudado por choferes y arqueo de caja diario.
+          <p className="mt-1 text-xs text-[#7f8da1]">
+            Revisá gastos, adelantos y cierres de cada servicio.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-1.5">
-            <Download className="size-4 text-slate-600" />
-            <span className="hidden sm:inline">Exportar reporte</span>
-          </Button>
-          <Button className="bg-orange-500 shadow-sm shadow-orange-200 hover:bg-orange-600 text-white font-medium">
-            <Plus className="size-4" />
-            Nueva rendición
-          </Button>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-xl border border-[#dfe6ef] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#62738a] shadow-xs hover:bg-[#f7f9fc]"
+          >
+            <ArrowDownToLine size={15} />
+            <span>Exportar CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalNuevaRendicion(true)}
+            className="flex items-center gap-2 rounded-xl bg-[#2165d5] px-4 py-2.5 text-xs font-bold text-white shadow-[0_5px_12px_rgba(33,101,213,0.18)] transition hover:bg-[#1857bd]"
+          >
+            <Plus size={16} />
+            <span>Nueva rendición</span>
+          </button>
         </div>
       </div>
 
-      {/* Tarjetas KPI económicas */}
-      <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Indicadores económicos"
-      >
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Recaudación del día</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  {formatoMoneda.format(380000)}
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <CircleDollarSign className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-emerald-600">7 servicios</span>{" "}
-              liquidados
-            </p>
-          </CardContent>
-        </Card>
+      {/* Tarjetas KPI Financieras */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">Pendiente de rendición</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+            $50.000
+          </p>
+          <p className="mt-1 text-xs font-medium text-[#b86a16]">
+            2 servicios por cerrar
+          </p>
+        </div>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Efectivo en choferes</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  {formatoMoneda.format(150000)}
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                <WalletCards className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-amber-600">2 choferes</span> con cobros
-              en mano
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">Aprobado este mes</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+            $186.500
+          </p>
+          <p className="mt-1 text-xs font-medium text-[#248952]">+12,4% vs. agosto</p>
+        </div>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Transferencias / Bancos</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  {formatoMoneda.format(230000)}
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-                <ReceiptText className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-sky-600">Acreditado</span> en cuenta
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm">
+          <p className="text-xs font-medium text-[#8b99ab]">Tiempo promedio</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-[#172b4d] sm:text-3xl">
+            1,8 días
+          </p>
+          <p className="mt-1 text-xs font-medium text-[#2165d5]">
+            Dentro del objetivo operativo
+          </p>
+        </div>
+      </div>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Diferencias de caja</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  $0
-                </p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                <CheckCircle2 className="size-5" />
-              </div>
-            </div>
-            <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
-              <span className="font-semibold text-emerald-600">Arqueo exacto</span> sin
-              faltantes
+      {/* Tabla de rendiciones */}
+      <section className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0f4] pb-4">
+          <div>
+            <h3 className="text-base font-bold text-[#172b4d]">
+              Rendiciones de choferes
+            </h3>
+            <p className="mt-0.5 text-xs text-[#96a2b2]">
+              Controlá adelantos, gastos informados y saldos a pagar.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-xl border border-[#dfe6ef] bg-[#fbfcfd] px-3 py-1.5">
+            <Search size={14} className="text-[#99a7b8]" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por chofer o código..."
+              className="w-48 bg-transparent text-xs text-[#172b4d] outline-none placeholder:text-[#aab4c1]"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[780px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-[#f0f2f5] text-[10px] font-bold uppercase tracking-wider text-[#a0adbd]">
+                <th className="px-3.5 py-3">Rendición</th>
+                <th className="px-3.5 py-3">Chofer</th>
+                <th className="px-3.5 py-3">Servicio</th>
+                <th className="px-3.5 py-3">Fecha</th>
+                <th className="px-3.5 py-3">Tarifa</th>
+                <th className="px-3.5 py-3">Adelanto</th>
+                <th className="px-3.5 py-3">Estado</th>
+                <th className="px-3.5 py-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rendicionesFiltradas.map((r) => (
+                <tr
+                  key={r.id}
+                  className="border-b border-[#f1f3f6] text-xs transition hover:bg-[#fafcff] last:border-0"
+                >
+                  <td className="px-3.5 py-4 font-bold text-[#2165d5]">{r.id}</td>
+                  <td className="px-3.5 py-4 font-semibold text-[#172b4d]">{r.chofer}</td>
+                  <td className="max-w-[220px] truncate px-3.5 py-4 text-[#718096]">
+                    {r.servicio}
+                  </td>
+                  <td className="px-3.5 py-4 text-[#718096]">{r.fecha}</td>
+                  <td className="px-3.5 py-4 font-semibold text-[#172b4d]">{r.tarifa}</td>
+                  <td className="px-3.5 py-4 text-[#718096]">{r.adelanto}</td>
+                  <td className="px-3.5 py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${r.badgeColor}`}
+                    >
+                      {r.estado}
+                    </span>
+                  </td>
+                  <td className="px-3.5 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRendicion(r)}
+                      className="font-bold text-[#2165d5] hover:underline"
+                    >
+                      Ver detalle
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {/* Tabla principal de liquidaciones */}
-      <Card className="border-slate-200 shadow-none overflow-hidden">
-        <CardHeader className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-base font-semibold text-slate-900">
-              Rendiciones por chofer
-            </CardTitle>
-            <p className="mt-1 text-sm text-slate-500">
-              Arqueo de cobros del día lunes, 24 de junio de 2024.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative flex items-center">
-              <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" />
-              <input
-                type="search"
-                value={criterio}
-                onChange={(e) => setCriterio(e.target.value)}
-                placeholder="Buscar chofer…"
-                className="w-full sm:w-60 rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-950"
-              />
+      {/* Modal detalle de rendición */}
+      {selectedRendicion && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#172b4d]/40 p-4 backdrop-blur-xs">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-[#edf0f4] pb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#2165d5]">
+                  Liquidación de viaje
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-[#172b4d]">
+                  Detalle de rendición {selectedRendicion.id}
+                </h3>
+                <p className="mt-0.5 text-xs text-[#8b99ab]">
+                  {selectedRendicion.chofer} · {selectedRendicion.fecha}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRendicion(null)}
+                className="rounded-lg p-1.5 text-[#8b99ab] hover:bg-[#f3f5f8]"
+              >
+                <X size={18} />
+              </button>
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Filter className="size-3.5 text-slate-500" />
-              <span>Estado</span>
-            </Button>
+
+            <div className="mt-5 flex flex-col gap-4 text-xs">
+              <div className="rounded-xl border border-[#e8edf4] bg-[#f8fbff] p-4">
+                <p className="font-semibold text-[#172b4d]">
+                  {selectedRendicion.servicio}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[#e8edf4] pt-3">
+                  <div>
+                    <span className="text-[#8b99ab]">Tarifa acordada:</span>
+                    <p className="text-sm font-bold text-[#172b4d]">
+                      {selectedRendicion.tarifa}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[#8b99ab]">Adelanto entregado:</span>
+                    <p className="text-sm font-bold text-[#172b4d]">
+                      {selectedRendicion.adelanto}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#edf0f4] p-4">
+                <p className="font-semibold text-[#172b4d]">Gastos informados:</p>
+                <p className="mt-1 text-[#62738a]">{selectedRendicion.gastos}</p>
+                <div className="mt-3 flex items-center justify-between border-t border-[#edf0f4] pt-3 font-semibold">
+                  <span>Saldo a liquidar al chofer:</span>
+                  <span className="text-sm font-bold text-[#2165d5]">
+                    {selectedRendicion.saldo}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-[#edf0f4] pt-4">
+              <button
+                type="button"
+                onClick={() => setSelectedRendicion(null)}
+                className="rounded-lg border border-[#dfe6ef] px-4 py-2 text-xs font-semibold text-[#62738a] hover:bg-[#f7f9fc]"
+              >
+                Cerrar
+              </button>
+              {selectedRendicion.estado !== "Aprobada" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedRendicion(null)}
+                  className="rounded-lg bg-[#248952] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#1e7244]"
+                >
+                  Aprobar rendición
+                </button>
+              )}
+            </div>
           </div>
-        </CardHeader>
+        </div>
+      )}
 
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
-                  <TableHead className="pl-5 sm:pl-6">Chofer</TableHead>
-                  <TableHead className="text-center">Viajes</TableHead>
-                  <TableHead className="text-right">Efectivo cobrado</TableHead>
-                  <TableHead className="text-right">Transferencias</TableHead>
-                  <TableHead className="text-right">Total a rendir</TableHead>
-                  <TableHead className="text-right">Rendido</TableHead>
-                  <TableHead className="text-center">Estado</TableHead>
-                  <TableHead className="pr-5 sm:pr-6 text-right">
-                    <span className="sr-only">Acciones</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtrados.map((item) => (
-                  <TableRow key={item.chofer} className="text-sm">
-                    <TableCell className="whitespace-nowrap pl-5 sm:pl-6 font-medium text-slate-900">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-8">
-                          <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">
-                            {item.iniciales}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-semibold text-slate-900">{item.chofer}</p>
-                          <p className="text-xs text-slate-500 font-normal">
-                            DNI {item.dni}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
+      {/* Modal nueva rendición */}
+      {modalNuevaRendicion && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#172b4d]/40 p-4 backdrop-blur-xs">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-[#edf0f4] pb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#2165d5]">
+                  Arqueo de caja
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-[#172b4d]">
+                  Registrar nueva rendición
+                </h3>
+                <p className="mt-0.5 text-xs text-[#8b99ab]">
+                  Ingresá la liquidación entregada por el chofer al finalizar el servicio.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNuevaRendicion(false)}
+                className="rounded-lg p-1.5 text-[#8b99ab] hover:bg-[#f3f5f8]"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-                    <TableCell className="text-center whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                        {item.viajes} viajes
-                      </span>
-                    </TableCell>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setModalNuevaRendicion(false);
+              }}
+              className="mt-5 flex flex-col gap-4 text-xs"
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="font-semibold text-[#62738a]">
+                  Chofer
+                  <select className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 py-2 text-xs outline-none focus:border-[#2165d5]">
+                    <option>Carlos Méndez</option>
+                    <option>Lucía Fernández</option>
+                    <option>Diego Soto</option>
+                    <option>Sofía Acosta</option>
+                  </select>
+                </label>
+                <label className="font-semibold text-[#62738a]">
+                  Servicio asignado
+                  <select className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 py-2 text-xs outline-none focus:border-[#2165d5]">
+                    <option>SRV-101 · María González</option>
+                    <option>SRV-102 · Estudio Norte</option>
+                    <option>SRV-103 · Tomás Rivas</option>
+                  </select>
+                </label>
+              </div>
 
-                    <TableCell className="whitespace-nowrap text-right tabular-nums text-slate-700">
-                      {formatoMoneda.format(item.efectivo)}
-                    </TableCell>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="font-semibold text-[#62738a]">
+                  Monto recaudado en efectivo
+                  <input
+                    type="text"
+                    defaultValue="$ 18.500"
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+                <label className="font-semibold text-[#62738a]">
+                  Adelanto previo
+                  <input
+                    type="text"
+                    defaultValue="$ 12.000"
+                    className="mt-1.5 w-full rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                  />
+                </label>
+              </div>
 
-                    <TableCell className="whitespace-nowrap text-right tabular-nums text-slate-700">
-                      {formatoMoneda.format(item.transferencias)}
-                    </TableCell>
+              <label className="font-semibold text-[#62738a]">
+                Gastos informados (peajes, combustible, otros)
+                <textarea
+                  rows={2}
+                  placeholder="Detallar comprobantes y gastos..."
+                  className="mt-1.5 w-full resize-none rounded-lg border border-[#dfe6ef] px-3 py-2 text-xs outline-none focus:border-[#2165d5]"
+                />
+              </label>
 
-                    <TableCell className="whitespace-nowrap text-right font-bold text-slate-950 tabular-nums">
-                      {formatoMoneda.format(item.total)}
-                    </TableCell>
-
-                    <TableCell className="whitespace-nowrap text-right font-semibold text-emerald-600 tabular-nums">
-                      {formatoMoneda.format(item.rendido)}
-                    </TableCell>
-
-                    <TableCell className="text-center whitespace-nowrap">
-                      <Badge variant="outline" className={item.badgeClase}>
-                        {item.estado}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="pr-5 text-right sm:pr-6 whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Opciones de ${item.chofer}`}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              <div className="flex justify-end gap-2 border-t border-[#edf0f4] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevaRendicion(false)}
+                  className="rounded-lg border border-[#dfe6ef] px-4 py-2 text-xs font-semibold text-[#62738a] hover:bg-[#f7f9fc]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#2165d5] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#1857bd]"
+                >
+                  Guardar rendición
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-xs text-slate-500 sm:px-6">
-            <span>Mostrando {filtrados.length} liquidaciones</span>
-            <span className="font-medium text-slate-700">
-              Total efectivo auditado: {formatoMoneda.format(150000)}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
