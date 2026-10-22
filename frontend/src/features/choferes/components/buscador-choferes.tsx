@@ -74,11 +74,11 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
   }
 
   return (
-    <form role="search" onSubmit={alConfirmar} className="w-full sm:max-w-sm">
+    <form role="search" onSubmit={alConfirmar} className="w-full sm:w-72">
       <label htmlFor="buscador-choferes" className="sr-only">
         Buscar choferes por nombre
       </label>
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center">
         <input
           id="buscador-choferes"
           type="search"
@@ -86,13 +86,13 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
           onChange={alTeclear}
           placeholder="Buscar por nombre"
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-[4px] border border-papel/25 bg-papel/5 px-3 py-2 text-[0.9375rem] text-papel placeholder:text-papel/55"
+          className="w-full rounded-lg border border-[#c6c6cd] bg-white px-3 py-2 text-sm text-[#0b1c30] placeholder:text-[#545f73] focus:border-[#131b2e] focus:outline-none focus:ring-1 focus:ring-[#131b2e]"
         />
         {texto ? (
           <button
             type="button"
             onClick={limpiar}
-            className="shrink-0 rounded-[4px] px-2 py-2 text-[0.875rem] font-medium text-papel/80 hover:text-papel"
+            className="absolute right-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[#545f73] hover:text-[#0b1c30]"
           >
             Limpiar
           </button>

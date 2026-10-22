@@ -10,7 +10,6 @@ import { ListadoClientes } from "@/features/clientes/components/listado-clientes
 import { Paginacion } from "@/features/clientes/components/paginacion";
 import { listarClientes, TAMANO_DE_PAGINA } from "@/lib/api/clientes";
 import { ErrorApi } from "@/lib/api/http";
-import { cn } from "@/lib/utils/cn";
 import {
   primeraFilaDeLaPagina,
   totalPaginas,
@@ -23,50 +22,32 @@ export const metadata = {
   title: "Clientes",
 };
 
-const RUTAS = [
-  { href: "/", etiqueta: "Clientes" },
-  { href: "/choferes", etiqueta: "Choferes" },
-  { href: "/vehiculos", etiqueta: "Vehículos" },
-  { href: "/servicios", etiqueta: "Servicios" },
-];
-
 export default function PaginaClientes({ searchParams }: PageProps<"/">) {
   return (
-    <>
-      <header className="banda bg-tinta text-papel">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6">
-          <p className="text-[0.8125rem] font-medium text-papel/70">
-            Fletes y Mudanzas Express
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#0b1c30] sm:text-3xl">
+            Clientes
+          </h1>
+          <p className="mt-1 text-sm text-[#545f73]">
+            Padrón oficial de clientes para asignación de servicios y facturación.
           </p>
-          <nav aria-label="Secciones" className="flex flex-wrap gap-x-5 gap-y-2">
-            {RUTAS.map((ruta) => (
-              <Link
-                key={ruta.href}
-                href={ruta.href}
-                aria-current={ruta.href === "/" ? "page" : undefined}
-                className={cn(
-                  "text-[0.9375rem] font-medium",
-                  ruta.href === "/"
-                    ? "text-papel underline decoration-2 underline-offset-8"
-                    : "text-papel/65 hover:text-papel",
-                )}
-              >
-                {ruta.etiqueta}
-              </Link>
-            ))}
-          </nav>
-          <Suspense fallback={<div className="h-10 w-full max-w-sm" />}>
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <Suspense fallback={<div className="h-10 w-full sm:w-72" />}>
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto w-full max-w-5xl py-8 sm:px-6">
+      <div className="overflow-hidden rounded-xl border border-[#c6c6cd]/50 bg-white p-6 shadow-xs">
         <Suspense fallback={<Cargando />}>
           <Listado searchParams={searchParams} />
         </Suspense>
-      </main>
-    </>
+      </div>
+    </section>
   );
 }
 

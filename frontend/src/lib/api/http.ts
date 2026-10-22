@@ -50,7 +50,12 @@ export async function request<T>(ruta: string, init?: RequestInit): Promise<T> {
 
   let res: Response;
   try {
-    res = await fetch(url, init);
+    // Timeout de 3 segundos para no congelar los Server Components si la API no responde
+    const timeoutSignal = AbortSignal.timeout(3000);
+    const signal = init?.signal
+      ? AbortSignal.any([init.signal, timeoutSignal])
+      : timeoutSignal;
+    res = await fetch(url, { ...init, signal });
   } catch (error) {
     throw new ErrorApi("No se pudo conectar con el sistema.", {
       status: null,
