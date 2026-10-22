@@ -21,12 +21,12 @@ import { useState, type ReactNode } from "react";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Agenda", href: "/servicios", icon: CalendarDays },
+  { label: "Agenda", href: "/agenda", icon: CalendarDays },
   { label: "Clientes", href: "/clientes", icon: UsersRound },
   { label: "Choferes", href: "/choferes", icon: UserRound },
   { label: "Vehículos", href: "/vehiculos", icon: Truck },
   { label: "Cotizaciones", href: "/servicios", icon: FileText, badge: "4" },
-  { label: "Rendiciones", href: "/servicios", icon: ReceiptText },
+  { label: "Rendiciones", href: "/rendiciones", icon: ReceiptText },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
