@@ -41,6 +41,7 @@ services:
       # publicado de la API.
       API_URL: http://backend:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      HOSTNAME: "0.0.0.0"
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
