@@ -160,18 +160,11 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-panel-primario px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul"
+        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-[#0b1c30] px-4 py-2 text-sm font-semibold text-white shadow-xs transition-all hover:bg-slate-800 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul"
       >
-        <svg
-          aria-hidden="true"
-          className="size-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2.5"
-        >
-          <path strokeLinecap="round" d="M12 5v14m-7-7h14" />
-        </svg>
+        <span className="text-base font-bold leading-none" aria-hidden="true">
+          +
+        </span>
         <span>Nuevo servicio</span>
       </button>
 
