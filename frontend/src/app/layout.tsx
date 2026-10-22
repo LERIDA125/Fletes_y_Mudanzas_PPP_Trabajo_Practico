@@ -11,10 +11,11 @@ const archivo = Archivo({
 
 export const metadata: Metadata = {
   title: {
-    default: "Clientes · Fletes y Mudanzas Express",
-    template: "%s · Fletes y Mudanzas Express",
+    default: "MoviFlow | Gestión de fletes y mudanzas",
+    template: "%s · MoviFlow",
   },
-  description: "Gestión de clientes, servicios y cobros de Fletes y Mudanzas Express.",
+  description:
+    "Dashboard operativo para gestionar servicios, choferes, vehículos y cobranzas.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

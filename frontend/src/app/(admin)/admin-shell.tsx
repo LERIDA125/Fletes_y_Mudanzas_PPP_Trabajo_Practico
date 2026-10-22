@@ -20,9 +20,9 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 const navItems = [
-  { label: "Dashboard", href: "/servicios", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Agenda", href: "/servicios", icon: CalendarDays },
-  { label: "Clientes", href: "/", icon: UsersRound },
+  { label: "Clientes", href: "/clientes", icon: UsersRound },
   { label: "Choferes", href: "/choferes", icon: UserRound },
   { label: "Vehículos", href: "/vehiculos", icon: Truck },
   { label: "Cotizaciones", href: "/servicios", icon: FileText, badge: "4" },
@@ -33,10 +33,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  function esActivo(href: string, label: string) {
-    if (label === "Dashboard") {
-      return false; // El ítem Cotizaciones cubre /servicios
-    }
+  function esActivo(href: string) {
     if (href === "/") {
       return pathname === "/";
     }
@@ -61,9 +58,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Truck className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-bold tracking-tight text-slate-950">
-                Fletes y Mudanzas
-              </p>
+              <p className="text-sm font-bold tracking-tight text-slate-950">MoviFlow</p>
               <p className="text-[11px] text-slate-500">Gestión operativa</p>
             </div>
           </Link>
@@ -88,7 +83,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </p>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = esActivo(item.href, item.label);
+            const active = esActivo(item.href);
 
             return (
               <Link
@@ -152,7 +147,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Menu className="size-5" />
             </button>
             <div>
-              <p className="text-xs text-slate-500">Panel administrativo</p>
+              <p className="text-xs text-slate-500">Lunes, 24 de junio de 2024</p>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">
                 Buen día, equipo
               </h1>
@@ -165,7 +160,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
             >
               <Plus className="size-4 text-slate-600" />
-              <span>Nuevo servicio / Cotizar</span>
+              <span>Nuevo Servicio / Cotizar</span>
             </Link>
 
             <button
