@@ -1,4 +1,11 @@
-import Link from "next/link";
+import {
+  CircleDollarSign,
+  ClipboardList,
+  MoreHorizontal,
+  Search,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
 import { Suspense } from "react";
 
 import { FormularioServicio } from "@/features/servicios/components/formulario-servicio";
@@ -29,20 +36,21 @@ export const metadata = {
 
 export default function PaginaServicios({ searchParams }: PageProps<"/servicios">) {
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#0b1c30] sm:text-3xl">
+          <p className="mb-1 text-sm font-medium text-orange-600">Resumen operativo</p>
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-slate-950">
             Servicios
-          </h1>
-          <p className="mt-1 text-sm text-[#545f73]">
-            Consultá los viajes registrados y solicitá una cotización oficial.
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Este es el estado de tu operación para hoy.
           </p>
         </div>
 
         <Suspense
           fallback={
-            <span className="inline-flex min-h-10 items-center rounded-lg bg-white px-4 text-sm font-medium text-[#545f73]">
+            <span className="inline-flex min-h-10 items-center rounded-lg bg-white px-4 text-sm font-medium text-slate-500">
               Cargando formulario…
             </span>
           }
@@ -54,7 +62,7 @@ export default function PaginaServicios({ searchParams }: PageProps<"/servicios"
       <Suspense fallback={<Cargando />}>
         <ListadoConPagina searchParams={searchParams} />
       </Suspense>
-    </section>
+    </div>
   );
 }
 
@@ -95,70 +103,133 @@ async function ListadoConPagina({ searchParams }: { searchParams: SearchParams }
   }
 
   const paginas = totalPaginas(resultado.total, resultado.size);
-  if (resultado.items.length === 0) {
-    if (resultado.total === 0) {
-      return (
-        <div className="overflow-hidden rounded-xl border border-[#c6c6cd]/60 bg-white shadow-xs">
-          <CabeceraListado total={0} paginas={0} />
-          <EstadoVacio />
-        </div>
-      );
-    }
-    return <PaginaFueraDeRango pagina={pagina} />;
-  }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#c6c6cd]/60 bg-white shadow-xs">
-      <CabeceraListado total={resultado.total} paginas={paginas} />
-      <ListadoServicios servicios={resultado.items} />
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-[#c6c6cd]/50 bg-white px-5 py-3.5">
-        <p className="order-2 text-xs tabular-nums text-[#545f73] sm:order-1">
-          {`Mostrando ${primeraFilaDeLaPagina(resultado.page, resultado.size)}–${ultimaFilaDeLaPagina(
-            resultado.page,
-            resultado.size,
-            resultado.total,
-          )} de ${resultado.total}`}
-        </p>
-        <div className="order-1 sm:order-2">
-          <Paginacion paginaActual={resultado.page} paginas={paginas} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CabeceraListado({ total, paginas }: { total: number; paginas: number }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-[#c6c6cd]/40 bg-white px-5 py-4">
-      <h2 className="text-sm font-semibold tracking-wide text-[#0b1c30]">
-        Registro de servicios
-      </h2>
-      <p className="text-xs text-[#545f73]">
-        {total === 1 ? "1 en total" : `${total} en total`}
-        {paginas > 1 ? ` · ${paginas} páginas` : ""}
-      </p>
-    </div>
-  );
-}
-
-function PaginaFueraDeRango({ pagina }: { pagina: number }) {
-  return (
-    <div
-      role="status"
-      className="rounded-xl border border-[#c6c6cd]/60 bg-white p-10 text-center shadow-xs"
-    >
-      <p className="text-base font-semibold text-[#0b1c30]">
-        La página {pagina} no tiene servicios.
-      </p>
-      <p className="mt-2 text-sm text-[#545f73]">
-        El listado no llega tan lejos. Volvé a empezar desde el principio.
-      </p>
-      <Link
-        href="/servicios"
-        className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c6c6cd] bg-white px-4 text-sm font-medium text-[#0b1c30] shadow-xs transition-colors hover:bg-[#eff4ff]"
+    <div className="flex flex-col gap-7">
+      {/* Indicadores clave (KPIs del prototipo) */}
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Indicadores clave"
       >
-        Ir a la primera página
-      </Link>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-none">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Servicios registrados</p>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                {resultado.total}
+              </p>
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+              <ClipboardList className="size-5" />
+            </div>
+          </div>
+          <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
+            <span className="font-semibold text-emerald-600">+12,5%</span> vs. semana
+            pasada
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-none">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Choferes disponibles</p>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">3</p>
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+              <UserRound className="size-5" />
+            </div>
+          </div>
+          <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
+            <span className="font-semibold text-slate-700">de 12</span> en la flota activa
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-none">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Dinero por cobrar hoy</p>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                $150.000
+              </p>
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <CircleDollarSign className="size-5" />
+            </div>
+          </div>
+          <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
+            <span className="font-semibold text-emerald-600">+8,2%</span> vs. ayer
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-none">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Pendiente de rendición</p>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                $50.000
+              </p>
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <WalletCards className="size-5" />
+            </div>
+          </div>
+          <p className="mt-4 flex items-center gap-1 text-xs text-slate-500">
+            <span className="font-semibold text-violet-600">2 servicios</span> requieren
+            revisión
+          </p>
+        </div>
+      </section>
+
+      {/* Tarjeta contenedora de la tabla */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-none overflow-hidden">
+        <div className="flex flex-row items-center justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-6">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Próximos Servicios</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Servicios programados y asignaciones operativas en curso.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs hover:bg-slate-50"
+            >
+              <Search className="size-3.5 text-slate-500" />
+              <span>Buscar</span>
+            </button>
+            <button
+              type="button"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Más opciones"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        {resultado.items.length === 0 ? (
+          <div className="p-6">
+            <EstadoVacio />
+          </div>
+        ) : (
+          <>
+            <ListadoServicios servicios={resultado.items} />
+            <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-slate-100 px-5 py-4 text-xs text-slate-500 sm:px-6">
+              <span>
+                {`Mostrando ${primeraFilaDeLaPagina(
+                  resultado.page,
+                  resultado.size,
+                )}–${ultimaFilaDeLaPagina(
+                  resultado.page,
+                  resultado.size,
+                  resultado.total,
+                )} de ${resultado.total} servicios`}
+              </span>
+              <Paginacion paginaActual={resultado.page} paginas={paginas} />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

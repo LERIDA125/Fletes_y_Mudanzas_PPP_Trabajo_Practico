@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -15,9 +16,6 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
   const [texto, setTexto] = useState(criterioInicial);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // El único useEffect del árbol. Limpia el temporizador si el usuario se va antes de
-  // que venza, y realinea el campo con la URL cuando se navega con atrás/adelante.
-  // Nunca solicita datos: el criterio viaja a la URL y el Server Component hace el fetch.
   useEffect(() => {
     if (temporizador.current === null) {
       setTexto(criterioInicial);
@@ -33,8 +31,6 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
   }, []);
 
   function aplicar(termino: string) {
-    // Un criterio nuevo siempre vuelve a la página 1: si no, se buscaría desde la
-    // página anterior, que rara vez tiene coincidencias (FR-014).
     if (termino) {
       router.push(`${pathname}?q=${encodeURIComponent(termino)}`);
     } else {
@@ -79,6 +75,7 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
         Buscar choferes por nombre
       </label>
       <div className="relative flex items-center">
+        <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" />
         <input
           id="buscador-choferes"
           type="search"
@@ -86,13 +83,13 @@ export function BuscadorChoferes({ criterioInicial }: Propiedades) {
           onChange={alTeclear}
           placeholder="Buscar por nombre"
           autoComplete="off"
-          className="w-full rounded-lg border border-[#c6c6cd] bg-white px-3 py-2 text-sm text-[#0b1c30] placeholder:text-[#545f73] focus:border-[#131b2e] focus:outline-none focus:ring-1 focus:ring-[#131b2e]"
+          className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-8 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-950"
         />
         {texto ? (
           <button
             type="button"
             onClick={limpiar}
-            className="absolute right-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[#545f73] hover:text-[#0b1c30]"
+            className="absolute right-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-slate-500 hover:text-slate-900"
           >
             Limpiar
           </button>

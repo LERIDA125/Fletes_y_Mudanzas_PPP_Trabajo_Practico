@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -74,6 +75,7 @@ export function BuscadorVehiculos({ criterioInicial }: Propiedades) {
         Buscar vehículos por patente
       </label>
       <div className="relative flex items-center">
+        <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" />
         <input
           id="buscador-vehiculos"
           type="search"
@@ -81,13 +83,13 @@ export function BuscadorVehiculos({ criterioInicial }: Propiedades) {
           onChange={alTeclear}
           placeholder="Buscar por patente"
           autoComplete="off"
-          className="w-full rounded-lg border border-[#c6c6cd] bg-white px-3 py-2 text-sm text-[#0b1c30] placeholder:text-[#545f73] focus:border-[#131b2e] focus:outline-none focus:ring-1 focus:ring-[#131b2e]"
+          className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-8 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-950"
         />
         {texto ? (
           <button
             type="button"
             onClick={limpiar}
-            className="absolute right-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[#545f73] hover:text-[#0b1c30]"
+            className="absolute right-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-slate-500 hover:text-slate-900"
           >
             Limpiar
           </button>
