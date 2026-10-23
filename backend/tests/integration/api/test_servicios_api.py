@@ -69,3 +69,38 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
         headers=admin,
     )
     assert respuesta_manipulada.status_code == 422
+
+    ruta_cancelacion = f"/api/servicios/{servicio['id_servicio']}/cancelar"
+    sin_motivo = cliente.patch(ruta_cancelacion, json={"motivo": "   "}, headers=admin)
+    assert sin_motivo.status_code == 422
+
+    cancelacion = cliente.patch(
+        ruta_cancelacion,
+        json={"motivo": "  El cliente reprogramó el viaje  "},
+        headers=admin,
+    )
+    assert cancelacion.status_code == 200
+    cancelado = cancelacion.json()
+    assert cancelado["estado"] == "cancelado"
+    assert cancelado["motivo_cancelacion"] == "El cliente reprogramó el viaje"
+    assert cancelado["hora_fin"] is not None
+
+    repetida = cliente.patch(
+        ruta_cancelacion,
+        json={"motivo": "Segundo intento"},
+        headers=admin,
+    )
+    assert repetida.status_code == 409
+
+    inexistente = cliente.patch(
+        "/api/servicios/999999/cancelar",
+        json={"motivo": "No existe"},
+        headers=admin,
+    )
+    assert inexistente.status_code == 404
+
+    listado_cancelado = cliente.get("/api/servicios?page=1&size=10", headers=admin)
+    item_cancelado = listado_cancelado.json()["items"][0]
+    assert item_cancelado["estado"] == "cancelado"
+    assert item_cancelado["motivo_cancelacion"] == "El cliente reprogramó el viaje"
+    assert item_cancelado["hora_fin"] is not None

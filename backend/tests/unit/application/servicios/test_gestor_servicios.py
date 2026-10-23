@@ -10,6 +10,9 @@ from app.domain.chofer import Chofer
 from app.domain.cliente import Cliente
 from app.domain.errores import (
     ClienteInvalido,
+    MotivoCancelacionObligatorio,
+    ServicioNoCancelable,
+    ServicioNoEncontrado,
     TransicionEstadoServicioInvalida,
     VehiculoTipoIncompatible,
 )
@@ -67,12 +70,10 @@ class FakeVehiculoRepository:
 class FakeServicioRepository:
     def __init__(self) -> None:
         self.guardado: Servicio | None = None
+        self.items: dict[int, Servicio] = {}
 
-    def crear(self, servicio: Servicio) -> ServicioListadoItem:
-        servicio.id = 1
-        servicio.creado_en = datetime.now(UTC)
-        servicio.actualizado_en = servicio.creado_en
-        self.guardado = servicio
+    @staticmethod
+    def _item(servicio: Servicio) -> ServicioListadoItem:
         return ServicioListadoItem(
             servicio=servicio,
             razon_social_cliente="Cliente de Prueba",
@@ -80,6 +81,24 @@ class FakeServicioRepository:
             nombre_chofer=None,
             patente_vehiculo=None,
         )
+
+    def crear(self, servicio: Servicio) -> ServicioListadoItem:
+        servicio.id = 1
+        servicio.creado_en = datetime.now(UTC)
+        servicio.actualizado_en = servicio.creado_en
+        self.guardado = servicio
+        self.items[servicio.id] = servicio
+        return self._item(servicio)
+
+    def obtener_por_id(self, servicio_id: int) -> ServicioListadoItem | None:
+        servicio = self.items.get(servicio_id)
+        return self._item(servicio) if servicio is not None else None
+
+    def actualizar(self, servicio: Servicio) -> ServicioListadoItem:
+        self.guardado = servicio
+        if servicio.id is not None:
+            self.items[servicio.id] = servicio
+        return self._item(servicio)
 
     def listar(self, offset: int, limit: int) -> list[ServicioListadoItem]:
         return []
@@ -174,3 +193,66 @@ def test_gestor_rechaza_vehiculo_de_otro_tipo() -> None:
         )
 
     assert repo.guardado is None
+
+
+def _crear_servicio(gestor: GestorServicios) -> ServicioListadoItem:
+    return gestor.crear(
+        id_cliente=8,
+        id_tipo_vehiculo=3,
+        id_chofer=None,
+        id_vehiculo=None,
+        fecha=date(2026, 10, 25),
+        hora_inicio=time(9, 30),
+        horas_estimadas=Decimal("2"),
+        distancia_ida_km=Decimal("15"),
+    )
+
+
+def test_gestor_cancela_con_motivo_recortado_y_hora_inyectada() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor)
+
+    cancelado = gestor.cancelar(
+        id_servicio=item.servicio.id,
+        motivo="  El cliente reprogramó el viaje  ",
+        ahora=datetime(2026, 10, 22, 16, 45, 30, 123456),
+    )
+
+    assert cancelado.servicio.estado == "cancelado"
+    assert cancelado.servicio.motivo_cancelacion == "El cliente reprogramó el viaje"
+    assert cancelado.servicio.hora_fin == time(16, 45, 30)
+    assert repo.guardado is cancelado.servicio
+    assert repo.items[item.servicio.id].estado == "cancelado"
+
+
+def test_gestor_rechaza_cancelacion_sin_motivo() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor)
+
+    with pytest.raises(MotivoCancelacionObligatorio):
+        gestor.cancelar(id_servicio=item.servicio.id, motivo="   ")
+
+    assert repo.guardado is not None
+    assert repo.guardado.estado == "pendiente"
+    assert repo.guardado.motivo_cancelacion is None
+    assert repo.guardado.hora_fin is None
+
+
+def test_gestor_rechaza_cancelacion_de_servicio_finalizado() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor)
+    item.servicio.estado = "finalizado"
+
+    with pytest.raises(ServicioNoCancelable):
+        gestor.cancelar(id_servicio=item.servicio.id, motivo="Cliente desiste")
+
+    assert repo.guardado is not None
+    assert repo.guardado.estado == "finalizado"
+    assert repo.guardado.motivo_cancelacion is None
+
+
+def test_gestor_rechaza_cancelacion_de_servicio_inexistente() -> None:
+    gestor, _, _ = _crear_gestor()
+
+    with pytest.raises(ServicioNoEncontrado):
+        gestor.cancelar(id_servicio=999, motivo="Cliente desiste")

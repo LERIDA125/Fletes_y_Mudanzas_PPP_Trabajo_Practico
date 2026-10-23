@@ -1,6 +1,6 @@
 """Casos de uso de Servicios; las reglas se ejecutan antes de persistir."""
 
-from datetime import date, time
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from app.application.cotizacion.calculadora import CalculadoraCotizacion, Cotizacion
@@ -14,6 +14,7 @@ from app.application.servicios.puertos import (
 from app.domain.errores import (
     ChoferInvalido,
     ClienteInvalido,
+    ServicioNoEncontrado,
     VehiculoInvalido,
     VehiculoTipoIncompatible,
 )
@@ -99,6 +100,21 @@ class GestorServicios:
             precio_total=cotizacion.resultado.precio_final,
         )
         return self._repo.crear(servicio)
+
+    def cancelar(
+        self,
+        *,
+        id_servicio: int,
+        motivo: str,
+        ahora: datetime | None = None,
+    ) -> ServicioListadoItem:
+        actual = self._repo.obtener_por_id(id_servicio)
+        if actual is None:
+            raise ServicioNoEncontrado(id_servicio)
+
+        hora_fin = (ahora or datetime.now()).time().replace(microsecond=0)
+        actual.servicio.cancelar(motivo=motivo, hora_fin=hora_fin)
+        return self._repo.actualizar(actual.servicio)
 
     def listar(self, *, offset: int, limit: int) -> tuple[list[ServicioListadoItem], int]:
         total = self._repo.contar()

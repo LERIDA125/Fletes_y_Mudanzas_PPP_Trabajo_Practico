@@ -39,6 +39,7 @@ class ServicioORM(Base):
     )
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
     hora_inicio: Mapped[time | None] = mapped_column(Time, nullable=True)
+    hora_fin: Mapped[time | None] = mapped_column(Time, nullable=True)
     horas_estimadas: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     distancia_ida_km: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     distancia_total_km: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
@@ -50,6 +51,7 @@ class ServicioORM(Base):
     estado: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pendiente'")
     )
+    motivo_cancelacion: Mapped[str | None] = mapped_column(String(255), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -69,8 +71,14 @@ class ServicioORM(Base):
             name="ck_servicios_importes_no_negativos",
         ),
         CheckConstraint(
-            "estado IN ('pendiente', 'confirmado', 'en curso', 'finalizado', 'cobrado')",
+            "estado IN ('pendiente', 'confirmado', 'en curso', 'finalizado', 'cobrado', "
+            "'cancelado')",
             name="ck_servicios_estado_valido",
+        ),
+        CheckConstraint(
+            "estado <> 'cancelado' OR (motivo_cancelacion IS NOT NULL "
+            "AND length(trim(motivo_cancelacion)) > 0 AND hora_fin IS NOT NULL)",
+            name="ck_servicios_cancelacion_completa",
         ),
         Index("ix_servicios_id_cliente", "id_cliente"),
         Index("ix_servicios_id_vehiculo", "id_vehiculo"),

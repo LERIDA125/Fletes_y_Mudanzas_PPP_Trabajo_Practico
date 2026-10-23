@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-21
 
-**Status**: Backend implementado; frontend aprobado para demo local sin login
+**Status**: Backend implementado con cancelación; frontend aprobado para demo local sin login
 
 **Input**: Implementar listado, cotización y alta frontend para `/servicios`. La autenticación se
 pospone fuera del MVP; la demo asume admin solo en el entorno local de desarrollo.
@@ -37,7 +37,10 @@ precios ni valores derivados del cálculo.
 - Cliente y tipo de vehículo deben existir y estar activos. Chofer y vehículo son opcionales; si
   se informan deben existir y estar activos. El vehículo asignado debe corresponder al tipo
   cotizado. No se validan disponibilidad, solapamientos ni márgenes de agenda.
-- Todo servicio nuevo inicia en estado `pendiente`. Esta fase no implementa transiciones.
+- Todo servicio nuevo inicia en estado `pendiente`. La cancelación es la única transición expuesta
+  en esta fase: pasa el servicio a `cancelado`, exige un motivo y registra la hora de finalización.
+- Un servicio puede cancelarse desde `pendiente`, `confirmado` o `en curso`. No puede cancelarse
+  desde `finalizado`, `cobrado` ni desde un servicio ya `cancelado`.
 - Pagos, cuenta corriente y rendiciones quedan fuera de alcance.
 - **Excepción de demo aprobada**: sin login en el MVP, el backend asume `admin` solo cuando
   `ENVIRONMENT=dev` y `DEV_ASSUME_ADMIN=true`. En cualquier otro entorno falla cerrado con 401;
@@ -141,6 +144,36 @@ remota, confirmación, alta, revalidación y errores usando API simulada.
 7. **Dado** que no existe sesión/autorización admin en el frontend, **cuando** se intenta usar la
    ruta, **entonces** no se simula un rol privilegiado; el gate de autorización permanece visible.
 
+### User Story 5 — Cancelar un servicio (Priority: P1)
+
+Como administrador, quiero cancelar un servicio registrando el motivo y la hora de finalización,
+para dejar trazabilidad de una cancelación sin borrar el registro ni su historial.
+
+**Independent Test**: Crear un servicio, invocar `PATCH /api/servicios/{id}/cancelar` con un motivo
+válido y verificar que queda en estado `cancelado`, con motivo y hora de finalización persistidos.
+
+**Acceptance Scenarios**:
+
+1. **Dado** un servicio en `pendiente`, `confirmado` o `en curso`, **cuando** se cancela con motivo,
+   **entonces** pasa a `cancelado` y se guardan el motivo y la hora de finalización del servidor.
+2. **Dado** un body sin motivo, con motivo vacío o solo espacios, **cuando** se cancela, **entonces**
+   la API responde 422 y el servicio no cambia.
+3. **Dado** un servicio `finalizado`, `cobrado`, ya `cancelado` o inexistente, **cuando** se intenta
+   cancelar, **entonces** la API responde 409 (o 404 si no existe) y no modifica el registro.
+4. **Dado** que la cancelación se completa, **cuando** se consulta el listado, **entonces** el
+   servicio aparece con estado `cancelado`, su motivo y su hora de finalización.
+
+## Modelo de datos de Servicio (actualizado)
+
+| Campo | Tipo | Nulable | Regla |
+|---|---|---|---|
+| `hora_fin` | `TIME` | Sí | Se completa únicamente al cancelar, con la hora del servidor. |
+| `motivo_cancelacion` | `VARCHAR(255)` | Sí | Obligatorio al cancelar; se recorta y no puede quedar vacío. |
+| `estado` | `VARCHAR(20)` | No | Valores válidos: `pendiente`, `confirmado`, `en curso`, `finalizado`, `cobrado`, `cancelado`. |
+
+La base de datos refuerza la consistencia: si `estado = 'cancelado'`, entonces
+`motivo_cancelacion` no es nulo ni vacío y `hora_fin` no es nulo.
+
 ## Functional Requirements
 
 - **FR-001**: `POST /api/servicios/cotizar` MUST aceptar tipo de vehículo, horas estimadas y
@@ -191,6 +224,16 @@ remota, confirmación, alta, revalidación y errores usando API simulada.
 - **FR-020 (decisión aprobada; cotización)**: La cotización se presenta como estimación; el alta
   puede recalcular un importe distinto con las tarifas vigentes. La interfaz debe advertirlo y
   presentar el importe definitivo devuelto por la respuesta de creación.
+- **FR-021**: `PATCH /api/servicios/{id}/cancelar` MUST requerir rol `admin`, recibir únicamente
+  `motivo` y delegar la operación a un método de Aplicación.
+- **FR-022**: La cancelación MUST exigir un `motivo` no vacío de hasta 255 caracteres; el backend
+  MUST recortar espacios y rechazar un motivo vacío con 422.
+- **FR-023**: Al cancelar, el backend MUST registrar `hora_fin` con la hora del servidor y persistir
+  `estado = 'cancelado'`, `motivo_cancelacion` y `hora_fin` en una sola operación.
+- **FR-024**: La cancelación MUST permitirse solo desde `pendiente`, `confirmado` o `en curso`.
+  Desde `finalizado`, `cobrado` o `cancelado` MUST responder 409; si el servicio no existe, 404.
+- **FR-025**: La respuesta de cancelación y el listado MUST exponer `motivo_cancelacion` y
+  `hora_fin`, nulos mientras el servicio no esté cancelado.
 
 ## API Contract
 
@@ -216,13 +259,23 @@ importe ARS, estado y auditoría.
 
 Query params `page` (default 1, mínimo 1) y `size` (default 20, 1–100). Respuesta `items`, `total`,
 `page`, `size`; orden ascendente estable por ID. Incluye cliente, tipo, estado, nombre de chofer y
-patente de vehículo; nombres de asignaciones opcionales pueden ser nulos.
+patente de vehículo; nombres de asignaciones opcionales pueden ser nulos. Cada item incluye
+`motivo_cancelacion` y `hora_fin` (nulos si el servicio no fue cancelado).
+
+### `PATCH /api/servicios/{id}/cancelar` — admin
+
+Entrada: `motivo` (string, 1–255, se recorta; obligatorio). No se acepta `hora_fin` ni `estado`
+desde el request. El backend inyecta la hora de finalización y persiste la cancelación.
+
+Salida: el servicio actualizado con `estado = 'cancelado'`, `motivo_cancelacion`, `hora_fin` y
+auditoría. Errores: 404 si el servicio no existe, 409 si no es cancelable, 422 si el motivo es
+inválido.
 
 ## Out of Scope
 
 - La autenticación JWT y el login quedan fuera del MVP. El modo demo local no equivale a
   autenticación ni debe desplegarse.
-- Edición, baja, cancelación o transición de estado.
+- Edición, baja y transiciones de estado distintas de la cancelación.
 - Disponibilidad/calendario, prevención de solapamientos y margen entre servicios.
 - Pagos, medios de cobro, cuenta corriente, saldos y rendiciones.
 - Login, JWT y gestión de cuentas; se posponen a la historia 009.
@@ -243,3 +296,6 @@ patente de vehículo; nombres de asignaciones opcionales pueden ser nulos.
   desde la UI ni se simula autorización mediante un header hardcodeado.
 - **SC-008 (propuesto)**: Los campos del cotizador cambian y el estado de cotización se invalida
   automáticamente; no puede confirmarse una cotización correspondiente a entradas anteriores.
+- **SC-009**: Cancelar un servicio persistido devuelve 200 con `estado = 'cancelado'`, un
+  `motivo_cancelacion` recortado y `hora_fin` no nulo; repetir la cancelación devuelve 409 y no
+  altera el registro original.

@@ -96,15 +96,12 @@ código real de `backend/`; los que quedan sin marcar requieren decisión del Te
 - **CHK015** — La validación por cantidad de dígitos está implementada y bien probada: en el dominio
   (`domain/chofer.py:76-81`, cuenta `d.isdigit()` y no la longitud de la cadena) y replicada en el
   schema (`schemas/chofer.py:55-64`); los formatos con `+`, espacios y guiones están cubiertos por
-  test (`test_h3_choferes.py:29`). **Pero el contrato de longitud no cierra**: el schema no declara
-  `max_length` (`schemas/chofer.py:40-47`) y la columna es `VARCHAR(20)` (`models/chofer.py:21`,
-  migración `0003:28`). Un teléfono de 20 dígitos separados por espacios (39 caracteres) pasa el
-  schema **y** el dominio y revienta en el `INSERT` con
-  `psycopg.errors.DataError: value too long for type character varying(20)`; al no haber handler de
-  `DataError`/`IntegrityError` en `main.py:38-67`, sale como **HTTP 500 en vez de 422**. Es el
-  **mismo patrón** que `patente` `VARCHAR(10)` vs `max_length=15` en H4 (ver `specs/003-gestion-vehiculos`).
-  Nota: `nombre_completo` sí tiene `max_length` que coincide con `VARCHAR(120)` (`schemas/chofer.py:34-39`),
-  así que la asimetría es intra-historia.
+  test (`test_h3_choferes.py:29`). **Resuelto el 2026-10-22**: el schema declara `max_length=20` y
+  el dominio valida la longitud del texto, alineados con `VARCHAR(20)` (`models/chofer.py:21`,
+  migración `0003:28`). Un teléfono de 20 dígitos separados por espacios (39 caracteres) ahora se
+  rechaza con **HTTP 422** antes del `INSERT`, en lugar del `DataError` → 500 que producía
+  `sqlalchemy.exc.DataError: value too long for type character varying(20)`.
+  Nota: `nombre_completo` ya tenía `max_length` coincidente con `VARCHAR(120)`.
 - **CHK018** — Hay 2 tests unitarios de Aplicación (`test_h3_choferes.py:60-108`, con
   `FakeChoferRepo` en `tests/unit/application/choferes/fakes.py`) que comprimen los 21 criterios de
   aceptación. No hay unitarios del repositorio en sí. Además el doble **aliasea objetos** en vez de

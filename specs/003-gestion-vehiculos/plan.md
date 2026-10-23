@@ -285,11 +285,10 @@ patente FROM vehiculos WHERE id = :id`) y que tras el `DELETE` el `GET` da 404.
 Verificados contra el código en la revisión retrospectiva del 2026-10-21:
 
 1. **`patente` tiene longitudes inconsistentes: el schema permite 6–15 caracteres pero la columna es
-   `VARCHAR(10)`.** Una patente de 11 a 15 caracteres pasa la validación de Pydantic y revienta con
-   un `DataError` de PostgreSQL → **HTTP 500 en lugar de 422**. Es el único punto donde un dato
-   inválido produce un error de servidor en todo el backend. Las patentes válidas más largas
-   (`AA 123 ABC` = 9) entran bien, así que el bug no se manifiesta con datos reales — por eso nadie
-   lo notó.
+   `VARCHAR(10)`.** Verificado el 2026-10-22: una patente de 11 a 15 caracteres **no llega al
+   `INSERT`** porque `Vehiculo.__post_init__` la rechaza primero con `ReglaNegocioError` → **422**.
+   La inconsistencia de longitudes sigue existiendo, pero no produce el 500 antes documentado. Las
+   patentes válidas más largas (`AA 123 ABC` = 9) entran bien.
 2. **Prefijo de ruta inconsistente**: `/api/tipos-vehiculo` (guion) contra `/api/vehiculos`, y los
    módulos Python usan `tipos_vehiculo` (underscore). Conviene elegir un criterio y aplicarlo a
    todos los routers.

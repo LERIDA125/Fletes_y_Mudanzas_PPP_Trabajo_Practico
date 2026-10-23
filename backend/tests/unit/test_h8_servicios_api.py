@@ -152,6 +152,47 @@ def test_asume_admin_en_demo_y_falla_cerrado_fuera_de_dev(
     assert listado.status_code == 401
 
 
+def test_cancela_servicio_con_motivo_y_hora_del_servidor(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "fecha": "2026-10-25",
+            "horas_estimadas": 1,
+            "distancia_ida_km": 0,
+        },
+    )
+    assert alta.status_code == 201
+    servicio_id = alta.json()["id_servicio"]
+    ruta = f"/api/servicios/{servicio_id}/cancelar"
+
+    sin_motivo = cliente_api.patch(ruta, headers=admin, json={"motivo": "   "})
+    assert sin_motivo.status_code == 422
+    assert cliente_api.get("/api/servicios", headers=admin).json()["items"][0]["estado"] == (
+        "pendiente"
+    )
+
+    cancelacion = cliente_api.patch(ruta, headers=admin, json={"motivo": "  Cliente reprogramó  "})
+    assert cancelacion.status_code == 200
+    assert cancelacion.json()["estado"] == "cancelado"
+    assert cancelacion.json()["motivo_cancelacion"] == "Cliente reprogramó"
+    assert cancelacion.json()["hora_fin"] is not None
+
+    assert cliente_api.patch(ruta, headers=admin, json={"motivo": "Otra vez"}).status_code == 409
+    assert (
+        cliente_api.patch(
+            "/api/servicios/999999/cancelar", headers=admin, json={"motivo": "No existe"}
+        ).status_code
+        == 404
+    )
+
+
 def test_asociaciones_legibles_y_bajas_bloqueadas_por_historial(
     cliente_api: TestClient,
 ) -> None:

@@ -82,7 +82,10 @@ def test_vehiculos_api_ciclo_completo_admin(
     )
     assert vehiculo_sin_chofer.status_code == 201
     listado_sin_chofer = cliente.get("/api/vehiculos?q=AB", headers=admin).json()
-    assert listado_sin_chofer["items"][0]["nombre_chofer_habitual"] is None
+    item_sin_chofer = next(
+        v for v in listado_sin_chofer["items"] if v["id"] == vehiculo_sin_chofer.json()["id"]
+    )
+    assert item_sin_chofer["nombre_chofer_habitual"] is None
 
     # 4. Detalle y modificación
     resp_det = cliente.get(f"/api/vehiculos/{veh_id}", headers=admin)
@@ -100,6 +103,12 @@ def test_vehiculos_api_ciclo_completo_admin(
     # 5. Baja lógica de vehículo y luego de tipo
     assert cliente.delete(f"/api/vehiculos/{veh_id}", headers=admin).status_code == 204
     assert cliente.get(f"/api/vehiculos/{veh_id}", headers=admin).status_code == 404
+    assert (
+        cliente.delete(
+            f"/api/vehiculos/{vehiculo_sin_chofer.json()['id']}", headers=admin
+        ).status_code
+        == 204
+    )
 
     assert cliente.delete(f"/api/tipos-vehiculo/{tipo_id}", headers=admin).status_code == 204
     assert cliente.get(f"/api/tipos-vehiculo/{tipo_id}", headers=admin).status_code == 404

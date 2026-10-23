@@ -6,11 +6,12 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.schemas.comun import Pagina
 from app.application.cotizacion.calculadora import Cotizacion
 from app.application.servicios.puertos import ServicioListadoItem
+from app.domain.servicio import MOTIVO_CANCELACION_MAX
 
 
 class CotizacionRequest(BaseModel):
@@ -75,6 +76,25 @@ class ServicioCreate(CotizacionRequest):
     hora_inicio: time | None = None
 
 
+class ServicioCancelar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: str = Field(
+        min_length=1,
+        max_length=MOTIVO_CANCELACION_MAX,
+        description="Motivo de la cancelación; se recortan los espacios de los extremos.",
+        examples=["El cliente reprogramó el viaje"],
+    )
+
+    @field_validator("motivo")
+    @classmethod
+    def _motivo_no_vacio(cls, valor: str) -> str:
+        limpio = valor.strip()
+        if not limpio:
+            raise ValueError("El motivo de cancelación es obligatorio")
+        return limpio
+
+
 class ServicioRead(BaseModel):
     id_servicio: int
     id_cliente: int
@@ -87,6 +107,7 @@ class ServicioRead(BaseModel):
     patente_vehiculo: str | None
     fecha: date
     hora_inicio: time | None
+    hora_fin: time | None
     horas_estimadas: Decimal
     distancia_ida_km: Decimal
     distancia_total_km: Decimal
@@ -97,6 +118,7 @@ class ServicioRead(BaseModel):
     precio_total: Decimal
     moneda: Literal["ARS"] = "ARS"
     estado: str
+    motivo_cancelacion: str | None
     creado_en: datetime
     actualizado_en: datetime
 
@@ -118,6 +140,7 @@ class ServicioRead(BaseModel):
             patente_vehiculo=item.patente_vehiculo,
             fecha=servicio.fecha,
             hora_inicio=servicio.hora_inicio,
+            hora_fin=servicio.hora_fin,
             horas_estimadas=servicio.horas_estimadas,
             distancia_ida_km=servicio.distancia_ida_km,
             distancia_total_km=servicio.distancia_total_km,
@@ -127,6 +150,7 @@ class ServicioRead(BaseModel):
             tarifa_km_aplicada=servicio.tarifa_km_aplicada,
             precio_total=servicio.precio_total,
             estado=servicio.estado,
+            motivo_cancelacion=servicio.motivo_cancelacion,
             creado_en=servicio.creado_en,
             actualizado_en=servicio.actualizado_en,
         )

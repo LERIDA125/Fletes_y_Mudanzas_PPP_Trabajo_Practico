@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.application.servicios.puertos import ServicioListadoItem
-from app.domain.errores import ReferenciasServicioInvalidas
+from app.domain.errores import ReferenciasServicioInvalidas, ServicioNoEncontrado
 from app.domain.servicio import Servicio
 from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
@@ -23,6 +23,7 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         id_vehiculo=orm.id_vehiculo,
         fecha=orm.fecha,
         hora_inicio=orm.hora_inicio,
+        hora_fin=orm.hora_fin,
         horas_estimadas=orm.horas_estimadas,
         distancia_ida_km=orm.distancia_ida_km,
         distancia_total_km=orm.distancia_total_km,
@@ -32,6 +33,7 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         tarifa_km_aplicada=orm.tarifa_km_aplicada,
         precio_total=orm.precio_total,
         estado=orm.estado,
+        motivo_cancelacion=orm.motivo_cancelacion,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
     )
@@ -46,6 +48,7 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         id_vehiculo=servicio.id_vehiculo,
         fecha=servicio.fecha,
         hora_inicio=servicio.hora_inicio,
+        hora_fin=servicio.hora_fin,
         horas_estimadas=servicio.horas_estimadas,
         distancia_ida_km=servicio.distancia_ida_km,
         distancia_total_km=servicio.distancia_total_km,
@@ -55,6 +58,7 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         tarifa_km_aplicada=servicio.tarifa_km_aplicada,
         precio_total=servicio.precio_total,
         estado=servicio.estado,
+        motivo_cancelacion=servicio.motivo_cancelacion,
         creado_en=servicio.creado_en,
         actualizado_en=servicio.actualizado_en,
     )
@@ -67,6 +71,46 @@ class ServicioRepo:
     def crear(self, servicio: Servicio) -> ServicioListadoItem:
         orm = a_orm(servicio)
         self._db.add(orm)
+        try:
+            self._db.commit()
+        except IntegrityError as error:
+            self._db.rollback()
+            raise ReferenciasServicioInvalidas() from error
+        self._db.refresh(orm)
+        fila = self._db.execute(self._consulta_con_nombres().where(ServicioORM.id == orm.id)).one()
+        return self._a_item(fila)
+
+    def obtener_por_id(self, servicio_id: int) -> ServicioListadoItem | None:
+        consulta = self._consulta_con_nombres().where(ServicioORM.id == servicio_id)
+        fila = self._db.execute(consulta).one_or_none()
+        return self._a_item(fila) if fila is not None else None
+
+    def actualizar(self, servicio: Servicio) -> ServicioListadoItem:
+        if servicio.id is None:
+            raise ValueError("No se puede actualizar un servicio sin identidad")
+
+        orm = self._db.get(ServicioORM, servicio.id)
+        if orm is None:
+            raise ServicioNoEncontrado(servicio.id)
+
+        orm.id_cliente = servicio.id_cliente
+        orm.id_tipo_vehiculo = servicio.id_tipo_vehiculo
+        orm.id_chofer = servicio.id_chofer
+        orm.id_vehiculo = servicio.id_vehiculo
+        orm.fecha = servicio.fecha
+        orm.hora_inicio = servicio.hora_inicio
+        orm.hora_fin = servicio.hora_fin
+        orm.horas_estimadas = servicio.horas_estimadas
+        orm.distancia_ida_km = servicio.distancia_ida_km
+        orm.distancia_total_km = servicio.distancia_total_km
+        orm.km_franquicia = servicio.km_franquicia
+        orm.km_excedente = servicio.km_excedente
+        orm.tarifa_hora_aplicada = servicio.tarifa_hora_aplicada
+        orm.tarifa_km_aplicada = servicio.tarifa_km_aplicada
+        orm.precio_total = servicio.precio_total
+        orm.estado = servicio.estado
+        orm.motivo_cancelacion = servicio.motivo_cancelacion
+
         try:
             self._db.commit()
         except IntegrityError as error:

@@ -39,3 +39,15 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 - [x] **T016**: Redactar **SSD (System Sequence Diagrams)** en `specs/008-frontend-gestion-servicios/ssd.md` con diagramas de interacción en sintaxis Mermaid.
 - [x] **T017**: Crear `feature.json` y `quickstart.md` en `specs/008-frontend-gestion-servicios/`.
 - [x] **T018**: Ejecutar validación completa `npm run verificar` (ESLint 0 errores, Prettier 100%, TypeScript 0 errores, 52 tests de Vitest pasando).
+
+---
+
+## Fase 5 — Cambio de requisitos: cancelación de servicios
+
+- [x] **T019**: Actualizar `spec.md` con el modelo de cancelación, el estado `cancelado`, la regla de negocio y los criterios de aceptación.
+- [x] **T020**: Actualizar `plan.md` con el impacto por capas, la migración `0005` y la estrategia de tests.
+- [x] **T021**: Agregar `hora_fin` y `motivo_cancelacion` al ORM y al schema Pydantic; ampliar el CHECK de estados y agregar el CHECK de cancelación completa en migración `0005`.
+- [x] **T022**: Implementar `Servicio.cancelar` en Dominio y `GestorServicios.cancelar` con motivo obligatorio y hora inyectada.
+- [x] **T023**: Implementar `PATCH /api/servicios/{id}/cancelar` y las operaciones `obtener_por_id`/`actualizar` del repositorio.
+- [x] **T024**: Cubrir el flujo con tests unitarios y de integración (cancelación válida, motivo inválido, servicio inexistente, estado no cancelable).
+- [x] **T025**: Ejecutar Ruff y la suite de tests del backend.

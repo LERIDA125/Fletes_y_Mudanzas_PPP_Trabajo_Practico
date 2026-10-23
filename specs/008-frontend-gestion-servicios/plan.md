@@ -2,11 +2,12 @@
 
 **Branch**: `008-frontend-gestion-servicios` | **Date**: 2026-10-21 | **Spec**: [spec.md](./spec.md)
 
-**Status**: Backend implementado; frontend aprobado para demo local sin login.
+**Status**: Backend implementado con cancelación; frontend aprobado para demo local sin login.
 
 ## Resumen
 
-El backend implementado ofrece cotización, alta con snapshot calculado en servidor y listado.
+El backend implementado ofrece cotización, alta con snapshot calculado en servidor, listado y
+cancelación con motivo y hora de finalización.
 Construir `/servicios` y el cotizador de dos pasos en Next.js, sin lógica financiera local. La demo
 omite login y asume admin solo con configuración dev local explícita; nunca desplegar ese modo.
 
@@ -56,8 +57,8 @@ vigencia de una cotización entre solicitudes.
 
 | Archivo | Responsabilidad |
 |---|---|
-| `backend/app/domain/servicio.py` | Entidad y fábrica `Servicio.crear`; valida invariantes, estado inicial `pendiente`, entradas y snapshot. No importa ORM/Pydantic/FastAPI. |
-| `backend/app/domain/errores.py` | Agregar errores tipados para servicio/tipo/cliente/chofer/vehículo inválidos y relación vehículo-tipo inconsistente, heredando clases HTTP ya manejadas. |
+| `backend/app/domain/servicio.py` | Entidad, fábrica `Servicio.crear` y método `Servicio.cancelar`; valida invariantes, estado inicial `pendiente`, transición a `cancelado`, motivo obligatorio y `hora_fin`. No importa ORM/Pydantic/FastAPI. |
+| `backend/app/domain/errores.py` | Agregar errores tipados para servicio/tipo/cliente/chofer/vehículo inválidos, relación vehículo-tipo inconsistente, servicio inexistente, cancelación no permitida y motivo obligatorio, heredando clases HTTP ya manejadas. |
 
 ### Aplicación
 
@@ -67,16 +68,17 @@ vigencia de una cotización entre solicitudes.
 | `backend/app/application/cotizacion/estrategias/por_hora_y_km.py` | Estrategia pura con fórmula y `Decimal/ROUND_HALF_UP`; sin lecturas ni constantes de tarifas. La franquicia fija de 10 km es la regla aprobada de esta estrategia. |
 | `backend/app/application/cotizacion/calculadora.py` | Caso de uso/selector de la estrategia de cotización, dependiente del puerto de tarifas. |
 | `backend/app/application/servicios/puertos.py` | Protocols para repositorio de Servicios y consultas de entidades activas requeridas al alta. |
-| `backend/app/application/servicios/gestor_servicios.py` | Métodos `cotizar`, `crear` y `listar`; validar referencias/asignación tipo-vehículo, llamar calculadora y persistir por puerto. |
+| `backend/app/application/servicios/gestor_servicios.py` | Métodos `cotizar`, `crear`, `listar` y `cancelar`; validar referencias/asignación tipo-vehículo, delegar la transición al dominio, inyectar la hora del servidor y persistir por puerto. |
 
 ### Infraestructura
 
 | Archivo | Responsabilidad |
 |---|---|
-| `backend/app/infrastructure/models/servicio.py` | ORM `servicios`, FK a cliente/tipo/chofer/vehículo; campos de viaje, snapshot tarifario, precio, estado y auditoría. |
+| `backend/app/infrastructure/models/servicio.py` | ORM `servicios`, FK a cliente/tipo/chofer/vehículo; campos de viaje, snapshot tarifario, precio, estado, `motivo_cancelacion`, `hora_fin` y auditoría. |
 | `backend/app/infrastructure/models/__init__.py` | Registrar `ServicioORM` para metadata de Alembic y tests. |
-| `backend/app/infrastructure/repositories/servicio_repo.py` | Persistir servicios; obtener tarifa activa; validar y consultar relaciones; listar con JOINs paginados, total y orden estable; consultas de historial de clientes/vehículos. |
+| `backend/app/infrastructure/repositories/servicio_repo.py` | Persistir servicios; obtener por id; actualizar la cancelación; listar con JOINs paginados, total y orden estable; consultas de historial de clientes/vehículos. |
 | `backend/alembic/versions/0004_crear_servicios.py` | Migración aditiva enlazada a `0003`, tabla, FKs, constraints, índices y estado inicial de aplicación. |
+| `backend/alembic/versions/0005_cancelacion_servicios.py` | Agrega `hora_fin` y `motivo_cancelacion`; amplía el CHECK de estados con `cancelado` y agrega el CHECK de cancelación completa. |
 | `backend/app/infrastructure/repositories/consulta_stub.py` | No usar el stub de “sin servicios” para consultas que ahora pueden responderse. Eliminarlo solo si queda sin referencias; no conservar resultado ficticio. |
 
 Los importes/tarifas usan `Numeric(12, 2)`. Distancias y horas admiten dos decimales y mínimo no
@@ -89,8 +91,8 @@ historia: usar campo acotado y constraint para los estados definidos. No se expo
 
 | Archivo | Responsabilidad |
 |---|---|
-| `backend/app/api/schemas/servicio.py` | Reemplazar schemas preliminares con `CotizacionRequest/Read`, `ServicioCreate`, `ServicioRead`, `ServicioListado`; entrada estricta `extra="forbid"`, campos calculados solo en salida. |
-| `backend/app/api/servicios.py` | Router `/api/servicios`: `POST /cotizar`, `POST ""` con 201, `GET ""` paginado. Las dos operaciones de escritura/cotización requieren `admin`; handlers solo validan schema/dependencia y delegan. |
+| `backend/app/api/schemas/servicio.py` | `CotizacionRequest/Read`, `ServicioCreate`, `ServicioCancelar`, `ServicioRead`, `ServicioListado`; entrada estricta `extra="forbid"`, campos calculados solo en salida y `motivo_cancelacion`/`hora_fin` en la lectura. |
+| `backend/app/api/servicios.py` | Router `/api/servicios`: `POST /cotizar`, `POST ""` con 201, `GET ""` paginado y `PATCH /{id}/cancelar`. Todas las operaciones requieren `admin`; handlers solo validan schema/dependencia y delegan. |
 | `backend/app/core/dependencias.py` | Construir repositorio/gestor de servicios y calculadora con repositorio de tarifas; reemplazar adaptadores stub de historial de Cliente y servicios por Vehículo por consultas reales, sin dependencias circulares. |
 | `backend/app/main.py` | Registrar router de servicios. Los handlers globales actuales traducen errores de dominio a 404/409/422. |
 
@@ -100,14 +102,19 @@ a chofer y vehículo. Cotización devuelve tarifas, inputs, distancia derivada, 
 excedente y precio en ARS.
 Alta recalcula tarifa/precio dentro del gestor antes de persistir; request prohíbe datos calculados.
 
+Contrato PATCH: requiere rol admin; body `{"motivo": "..."}` con 1–255 caracteres recortados. El
+router delega en `GestorServicios.cancelar`, que busca el servicio, delega la transición en
+`Servicio.cancelar` y le inyecta `hora_fin` con la hora del servidor. Responde 200 con el servicio
+actualizado; 404 si no existe, 409 si el estado no admite cancelación y 422 si el motivo es inválido.
+
 ### Tests
 
 | Archivo | Cobertura |
 |---|---|
 | `backend/tests/unit/application/cotizacion/test_calculadora.py` | Fórmula, franquicia cero/positiva, decimales y empates `ROUND_HALF_UP`, validaciones de horas/distancia. |
-| `backend/tests/unit/application/servicios/test_gestor_servicios.py` | Tipo/cliente/referencias inválidas, consistencia de vehículo/tipo, estado inicial y snapshots. |
+| `backend/tests/unit/application/servicios/test_gestor_servicios.py` | Tipo/cliente/referencias inválidas, consistencia de vehículo/tipo, estado inicial, snapshots y cancelación con hora inyectada, motivo obligatorio y estados no cancelables. |
 | `backend/tests/unit/infrastructure/test_servicio_repo.py` | Crear, listado estable/paginado, JOINs opcionales, conteo e historial de clientes/vehículos. |
-| `backend/tests/integration/api/test_servicios_api.py` | Cotizar y crear como admin, rechazos de rol/validación, resistencia a precio manipulado, respuesta/listado y páginas. |
+| `backend/tests/integration/api/test_servicios_api.py` | Cotizar y crear como admin, rechazos de rol/validación, resistencia a precio manipulado, respuesta/listado, páginas y cancelación (200, 404, 409, 422) contra PostgreSQL. |
 | Tests existentes de Clientes/Vehículos | Mantener el comportamiento de baja: una vez que hay servicios asociados no se puede dar de baja la entidad. |
 
 `backend/tests/integration/conftest.py` usa `Base.metadata.create_all` y PostgreSQL real; registrar
@@ -120,9 +127,11 @@ usar la fixture existente de PostgreSQL; unitarios de Aplicación usan fakes y n
 2. Añadir entidad de dominio, ports y gestor con tests unitarios.
 3. Crear ORM, migración y repositorio con tests; sustituir únicamente consultas stub relacionadas
    que ahora deban reconocer historial real.
-4. Definir schemas y router, cablear dependencias y registrar el router.
-5. Ejecutar Ruff, tests unitarios, integración de Servicios y regresión de Clientes/Vehículos.
-6. Regenerar el contrato de TypeScript con `npm run gen:api` desde `frontend/`: exporta OpenAPI
+4. Agregar campos y constraint de cancelación al ORM y la migración `0005`; implementar
+   `obtener_por_id` y `actualizar` en el repositorio.
+5. Definir schemas y router, cablear dependencias y registrar el endpoint de cancelación.
+6. Ejecutar Ruff, tests unitarios, integración de Servicios y regresión de Clientes/Vehículos.
+7. Regenerar el contrato de TypeScript con `npm run gen:api` desde `frontend/`: exporta OpenAPI
    desde FastAPI y actualiza `src/types/openapi.d.ts`. Esto mantiene CI alineado y no implementa
    ni modifica componentes React/Next.js.
 
@@ -134,7 +143,14 @@ usar la fixture existente de PostgreSQL; unitarios de Aplicación usan fakes y n
 - La duración para cotizar es `horas_estimadas`, no se deriva de `hora_inicio`/`hora_fin`.
 - Se almacenan snapshots para preservar el precio histórico aunque las tarifas del tipo cambien.
 - No se crea una tabla de cotizaciones: crear vuelve a calcular con la tarifa vigente.
-- Los estados de esta entrega: servicio nuevo `pendiente`; no hay endpoint para transiciones.
+- Estados válidos: `pendiente`, `confirmado`, `en curso`, `finalizado`, `cobrado`, `cancelado`.
+  El alta inicia en `pendiente`; la única transición expuesta es la cancelación.
+- Cancelación: se permite desde `pendiente`, `confirmado` o `en curso`; desde `finalizado`,
+  `cobrado` o `cancelado` responde 409. El motivo es obligatorio (1–255, recortado) y `hora_fin` se
+  inyecta con la hora local del servidor; el request no puede enviar hora ni estado.
+- `hora_fin` es `TIME` para alinearse con el ERD y con `hora_inicio`; la fecha del servicio sigue en
+  `fecha`. No se agrega una columna de timestamp de cancelación en esta fase.
+- La base refuerza la consistencia con un CHECK: `cancelado` implica motivo no vacío y `hora_fin`.
 
 ## Enmienda Frontend — propuesta
 

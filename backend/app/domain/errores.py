@@ -125,6 +125,23 @@ class TransicionEstadoServicioInvalida(DatoInvalido):
         self.estado_solicitado = estado_solicitado
 
 
+class ServicioNoEncontrado(RecursoNoEncontrado):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(f"No existe un servicio con id {servicio_id}")
+        self.servicio_id = servicio_id
+
+
+class ServicioNoCancelable(ConflictoOperacion):
+    def __init__(self, estado_actual: str) -> None:
+        super().__init__(f"Un servicio en estado {estado_actual!r} no se puede cancelar")
+        self.estado_actual = estado_actual
+
+
+class MotivoCancelacionObligatorio(DatoInvalido):
+    def __init__(self) -> None:
+        super().__init__("El motivo de cancelación es obligatorio")
+
+
 class ReferenciasServicioInvalidas(DatoInvalido):
     def __init__(self) -> None:
         super().__init__(

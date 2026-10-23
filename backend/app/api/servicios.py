@@ -2,11 +2,12 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.api.schemas.servicio import (
     CotizacionRead,
     CotizacionRequest,
+    ServicioCancelar,
     ServicioCreate,
     ServicioListado,
     ServicioRead,
@@ -85,6 +86,38 @@ def crear_servicio(
         horas_estimadas=datos.horas_estimadas,
         distancia_ida_km=datos.distancia_ida_km,
     )
+    return ServicioRead.de_item(item)
+
+
+@router.patch(
+    "/{id_servicio}/cancelar",
+    response_model=ServicioRead,
+    summary="Cancelar un servicio",
+    description=(
+        "Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y "
+        "registra la hora de finalización con la hora del servidor; no acepta hora ni estado."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El servicio está finalizado, cobrado o ya cancelado."
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "El motivo es obligatorio o supera la longitud permitida."
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def cancelar_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    datos: ServicioCancelar,
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+) -> ServicioRead:
+    item = gestor.cancelar(id_servicio=id_servicio, motivo=datos.motivo)
     return ServicioRead.de_item(item)
 
 

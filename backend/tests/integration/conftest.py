@@ -55,6 +55,9 @@ def engine_test() -> Iterator[Engine]:
         admin.dispose()
 
     engine = create_engine(_url_de_test(), pool_pre_ping=True)
+    # `fletes_test` es exclusiva de la suite: recrear el esquema garantiza que una base
+    # preexistente incorpore columnas/constraints nuevos sin depender de migraciones manuales.
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()

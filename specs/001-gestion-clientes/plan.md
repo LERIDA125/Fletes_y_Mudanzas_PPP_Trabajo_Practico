@@ -238,7 +238,7 @@ por defecto es `chofer`** → sin header, POST/PUT/DELETE devuelven 403.
 
 | Schema | Base | Notas |
 |---|---|---|
-| `ClienteCreate` | `BaseModel` | `extra="forbid"`. `razon_social` (3–120), `telefono` (sin min/max: el conteo es de dígitos), `direccion_habitual` (5–250), `tiene_cuenta_corriente` (default `False`). |
+| `ClienteCreate` | `BaseModel` | `extra="forbid"`. `razon_social` (3–120), `telefono` (7–20 dígitos y máximo 20 caracteres, el largo de la columna), `direccion_habitual` (5–250), `tiene_cuenta_corriente` (default `False`). |
 | `ClienteUpdate` | `ClienteCreate` | **No redefine nada.** Hereda los 4 campos obligatorios y `extra="forbid"`. Es DD-5: la edición es un `PUT` completo, no un `PATCH`. |
 | `ClienteRead` | `BaseModel` | `from_attributes=True`, **sin** `extra="forbid"`. 8 campos + `de_cliente(cliente)`classmethod. |
 | `ClienteListado` | `Pagina[ClienteRead]` | Genérica de `app/api/schemas/comun.py`. |

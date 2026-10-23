@@ -108,7 +108,8 @@ que siempre responde "no existe". Esta historia:
 ### 3.4 Presentación — `app/api/`
 
 - **`schemas/chofer.py` (nuevo)**: `ChoferCreate` / `ChoferUpdate` (nombre 3–120, teléfono 7–20
-  dígitos; `extra="forbid"` para que el usuario no pueda mandar `saldo_a_favor` ni `activo`,
+  dígitos y máximo 20 caracteres, el largo de la columna; `extra="forbid"` para que el usuario no
+  pueda mandar `saldo_a_favor` ni `activo`,
   FR-006/FR-012), `ChoferRead` (con `id`, `activo`, `saldo_a_favor`, fechas y `de_chofer()`) y
   `ChoferListado(Pagina[ChoferRead])`.
 - **`choferes.py` (nuevo)**: router `/api/choferes` con las 5 rutas, `dependencies=[Depends(require_rol(ROL_ADMIN))]`

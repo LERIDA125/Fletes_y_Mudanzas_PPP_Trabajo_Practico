@@ -60,6 +60,19 @@ uvicorn app.main:app --reload --port 8000
 | `/clientes` | **Padrón de clientes** | Contador de clientes activos y tabla con búsqueda y paginación oficial. |
 | `/rendiciones` | **Control financiero** | Métricas de liquidación, tabla de arqueo (`#REN-024`) y modal de detalle de gastos y saldo. |
 
+### Cancelar un servicio
+
+Con un servicio ya creado, la cancelación se prueba desde Swagger o con `curl`:
+
+```bash
+curl -X PATCH http://localhost:8000/api/servicios/1/cancelar \
+  -H "Content-Type: application/json" \
+  -d '{"motivo":"El cliente reprogramó el viaje"}'
+```
+
+La respuesta devuelve `estado: "cancelado"`, el motivo recortado y `hora_fin` con la hora del
+servidor. Sin motivo responde 422; un servicio finalizado, cobrado o ya cancelado responde 409.
+
 ---
 
 ## 4. Modo Oscuro (Dark Mode)
