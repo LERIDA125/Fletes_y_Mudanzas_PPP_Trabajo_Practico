@@ -23,6 +23,7 @@ export const metadata = {
   title: "Choferes",
 };
 
+// actualización de interfaz
 export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">) {
   return (
     <div className="flex flex-col gap-6">
