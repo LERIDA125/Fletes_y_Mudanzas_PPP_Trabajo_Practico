@@ -18,8 +18,8 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 - [x] **T005**: Implementar **Agenda mensual interactiva** (`frontend/src/app/(admin)/agenda/page.tsx`) con selector de mes, grilla de 31 días, indicadores de turnos asignados/libres, panel de turnos de hoy y modal de nuevo turno.
 - [x] **T006**: Implementar **Cotizador comercial** (`frontend/src/app/(admin)/cotizaciones/page.tsx`) con cálculo en tiempo real por tipo de camión, kilometraje, extras (escaleras, embalaje), desglose y cotizaciones recientes.
 - [x] **T007**: Implementar **Rendiciones y arqueo de choferes** (`frontend/src/app/(admin)/rendiciones/page.tsx`) con métricas financieras, tabla de rendición `#REN-024` y modales de detalle de liquidación y nueva rendición.
-- [x] **T008**: Integrar tarjetas de disponibilidad y tarifario sugerido en **Choferes** (`frontend/src/app/(admin)/choferes/page.tsx`) preservando la conexión con el backend real y el buscador con debounce.
-- [x] **T009**: Integrar tarjetas de estado de flota y kilometraje en **Vehículos** (`frontend/src/app/(admin)/vehiculos/page.tsx`) preservando el listado backend.
+- [x] **T008**: **Choferes**: quitar las tarjetas ficticias de disponibilidad y el tarifario sugerido; dejar el listado real con buscador y el alta/edición mediante `DialogoChofer`.
+- [x] **T009**: **Vehículos**: quitar las tarjetas ficticias de flota; dejar las tarifas reales por tipo (`PanelTarifas`), el listado real y el alta/edición mediante `DialogoVehiculo`.
 - [x] **T010**: Enriquecer **Clientes** (`frontend/src/app/(admin)/clientes/page.tsx`) con badge de clientes activos y tokens visuales.
 - [x] **T011**: Conectar y estilizar **Servicios** (`frontend/src/app/(admin)/servicios/page.tsx`) manteniendo la cotización oficial y el alta contra la API FastAPI.
 
@@ -51,3 +51,19 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 - [x] **T023**: Implementar `PATCH /api/servicios/{id}/cancelar` y las operaciones `obtener_por_id`/`actualizar` del repositorio.
 - [x] **T024**: Cubrir el flujo con tests unitarios y de integración (cancelación válida, motivo inválido, servicio inexistente, estado no cancelable).
 - [x] **T025**: Ejecutar Ruff y la suite de tests del backend.
+
+---
+
+## Fase 6 — Enmienda de integración frontend (demo)
+
+- [x] **T026**: Actualizar `spec.md` y `plan.md` con disponibilidad informativa, alta con cliente nuevo y el resto del alcance de integración.
+- [x] **T027**: Implementar `GET /api/servicios/disponibilidad` en puertos, gestor, repositorios y router; documentar el supuesto temporal de solapamiento.
+- [x] **T028**: Permitir `id_cliente` **o** `nuevo_cliente` en `POST /api/servicios`, creando o reutilizando el cliente activo por razón social normalizada.
+- [x] **T029**: Resolver la URL de la API por entorno en `frontend/src/lib/api/http.ts` y documentar `API_URL` / `NEXT_PUBLIC_API_URL`.
+- [x] **T030**: Agregar alta y edición de choferes y vehículos con diálogos conectados a la API y revalidación.
+- [x] **T031**: Exponer la edición de tarifas por tipo de vehículo en `/vehiculos` y revalidar las vistas dependientes.
+- [x] **T032**: Conectar `/cotizaciones` al backend y eliminar el cálculo local de importes.
+- [x] **T033**: Integrar cliente nuevo y selección de recursos disponibles en el formulario de `/servicios`, incluida la apertura con `?nuevo=1`.
+- [x] **T034**: Cubrir backend con tests de cliente nuevo y disponibilidad; actualizar tests RTL del formulario y listado.
+- [x] **T035**: Desacoplar el encabezado y los modales de la carga de catálogos, reintentar hosts en servidor y pedir catálogos al abrir cada diálogo.
+- [ ] **T036**: Ejecutar `npm run verificar` en un entorno con Node/npm disponibles (pendiente en el entorno actual).

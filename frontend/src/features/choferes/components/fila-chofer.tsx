@@ -1,6 +1,7 @@
 import { fechaCorta, formatearSaldo } from "@/lib/utils/formato";
 
 import type { Chofer } from "../types";
+import { DialogoChofer } from "./dialogo-chofer";
 
 export function FilaChofer({ chofer }: { chofer: Chofer }) {
   return (
@@ -21,6 +22,9 @@ export function FilaChofer({ chofer }: { chofer: Chofer }) {
       <td className="px-4 py-1 text-right text-[0.875rem] text-tinta-media tabular-nums sm:inline-block sm:px-0 sm:py-4">
         <span className="text-tinta-media sm:hidden">Alta: </span>
         {fechaCorta(chofer.creado_en)}
+      </td>
+      <td className="px-4 py-1 text-right sm:px-0 sm:py-3">
+        <DialogoChofer chofer={chofer} />
       </td>
     </tr>
   );

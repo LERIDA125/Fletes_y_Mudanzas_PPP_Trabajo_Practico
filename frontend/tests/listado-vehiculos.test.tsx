@@ -12,6 +12,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
+vi.mock("@/features/vehiculos/actions", () => ({
+  guardarVehiculo: vi.fn(),
+  guardarTarifasTipo: vi.fn(),
+  obtenerCatalogosVehiculo: vi.fn(),
+}));
+
 function vehiculoDePrueba(sobrescritura: Partial<Vehiculo> = {}): Vehiculo {
   return {
     id: 1,
@@ -56,7 +62,9 @@ describe("ListadoVehiculos", () => {
       </table>,
     );
 
-    expect(screen.getByText("Sin chofer habitual")).toBeInTheDocument();
+    expect(
+      screen.getByText("Sin chofer habitual", { selector: "td" }),
+    ).toBeInTheDocument();
   });
 });
 

@@ -2,17 +2,24 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-import { registrarServicio, solicitarCotizacion } from "@/features/servicios/actions";
+import {
+  consultarDisponibilidadServicio,
+  obtenerCatalogosServicio,
+  registrarServicio,
+  solicitarCotizacion,
+} from "@/features/servicios/actions";
 import type {
   ClienteOpcion,
   Cotizacion,
+  Disponibilidad,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 import {
   esquemaFormularioServicio,
+  type EntradaFormularioServicio,
   type ValoresFormularioServicio,
 } from "@/features/servicios/schemas/servicio";
 
@@ -24,9 +31,32 @@ const formatoMoneda = new Intl.NumberFormat("es-AR", {
 });
 
 type Propiedades = {
-  clientes: ClienteOpcion[];
-  tiposVehiculo: TipoVehiculoOpcion[];
+  // Si no se pasan, el formulario los pide al abrirse. Así la página puede
+  // renderizar el botón de alta sin esperar a la API.
+  clientes?: ClienteOpcion[];
+  tiposVehiculo?: TipoVehiculoOpcion[];
+  abrirInicial?: boolean;
 };
+
+const VALORES_INICIALES: ValoresFormularioServicio = {
+  modo_cliente: "existente",
+  id_cliente: "",
+  razon_social: "",
+  telefono: "",
+  direccion_habitual: "",
+  tiene_cuenta_corriente: false,
+  id_tipo_vehiculo: "",
+  fecha: "", // Se completa con la fecha local al abrir el modal (evita `new Date()` en el prerender).
+  hora_inicio: "",
+  horas_estimadas: "1",
+  distancia_ida_km: "0",
+  id_chofer: "",
+  id_vehiculo: "",
+};
+
+function valoresIniciales(): ValoresFormularioServicio {
+  return { ...VALORES_INICIALES };
+}
 
 function fechaLocal(): string {
   const fecha = new Date();
@@ -47,38 +77,175 @@ function cotizacionCoincide(
   );
 }
 
-export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
+const TIEMPO_DE_ESPERA_MS = 350;
+
+export function FormularioServicio({
+  clientes: clientesIniciales,
+  tiposVehiculo: tiposIniciales,
+  abrirInicial = false,
+}: Propiedades) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const aperturaAplicada = useRef(false);
+  const solicitudDisponibilidad = useRef(0);
+  const cargaDeCatalogosEnCurso = useRef(false);
+  const debeCargarAlAbrir =
+    clientesIniciales === undefined || tiposIniciales === undefined;
+  const [clientes, setClientes] = useState<ClienteOpcion[]>(clientesIniciales ?? []);
+  const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculoOpcion[]>(
+    tiposIniciales ?? [],
+  );
+  const [catalogosCargados, setCatalogosCargados] = useState(!debeCargarAlAbrir);
+  const [cargandoCatalogos, setCargandoCatalogos] = useState(false);
+  const [errorCatalogos, setErrorCatalogos] = useState("");
   const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
   const [mensaje, setMensaje] = useState("");
   const [servicioCreado, setServicioCreado] = useState<string | null>(null);
   const [estaCotizando, setEstaCotizando] = useState(false);
   const [estaRegistrando, setEstaRegistrando] = useState(false);
+  const [disponibilidad, setDisponibilidad] = useState<Disponibilidad | null>(null);
+  const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
+  const [errorDisponibilidad, setErrorDisponibilidad] = useState("");
 
   const {
     register,
     control,
     getValues,
+    setValue,
     trigger,
     reset,
+    clearErrors,
     formState: { errors },
-  } = useForm<ValoresFormularioServicio>({
+  } = useForm<EntradaFormularioServicio, unknown, ValoresFormularioServicio>({
     resolver: zodResolver(esquemaFormularioServicio),
-    defaultValues: {
-      id_cliente: "",
-      id_tipo_vehiculo: "",
-      fecha: fechaLocal(),
-      hora_inicio: "",
-      horas_estimadas: "1",
-      distancia_ida_km: "0",
-    },
+    defaultValues: valoresIniciales(),
   });
 
   const valores = useWatch({ control });
   const cotizacionVigente =
     cotizacion !== null && cotizacionCoincide(cotizacion, valores);
-  const catalogosDisponibles = clientes.length > 0 && tiposVehiculo.length > 0;
+  // Con "cliente nuevo" no hace falta que exista un cliente previo: solo se
+  // exige al menos un tipo de vehículo activo para poder cotizar.
+  const clienteNuevo = valores.modo_cliente === "nuevo";
+  const catalogosDisponibles =
+    tiposVehiculo.length > 0 && (clienteNuevo || clientes.length > 0);
+
+  // Los catálogos se piden recién al abrir el modal. Si fallan, el formulario
+  // sigue visible y muestra el error; al reabrir se vuelve a intentar.
+  const cargarCatalogos = useCallback(async () => {
+    if (catalogosCargados || cargaDeCatalogosEnCurso.current) {
+      return;
+    }
+    cargaDeCatalogosEnCurso.current = true;
+    setCargandoCatalogos(true);
+    setErrorCatalogos("");
+    try {
+      const respuesta = await obtenerCatalogosServicio();
+      if (!respuesta.ok) {
+        setErrorCatalogos(respuesta.mensaje);
+        return;
+      }
+      setClientes(respuesta.dato.clientes);
+      setTiposVehiculo(respuesta.dato.tiposVehiculo);
+      setCatalogosCargados(true);
+    } catch {
+      setErrorCatalogos(
+        "No pudimos cargar los catálogos. Cerrá y volvé a abrir el formulario.",
+      );
+    } finally {
+      cargaDeCatalogosEnCurso.current = false;
+      setCargandoCatalogos(false);
+    }
+  }, [catalogosCargados]);
+
+  useEffect(() => {
+    if (!abrirInicial || aperturaAplicada.current) {
+      return;
+    }
+    aperturaAplicada.current = true;
+    if (!getValues("fecha")) {
+      setValue("fecha", fechaLocal());
+    }
+    dialogRef.current?.showModal();
+    void cargarCatalogos();
+  }, [abrirInicial, cargarCatalogos, getValues, setValue]);
+
+  useEffect(() => {
+    const idTipo = Number(valores.id_tipo_vehiculo);
+    const horas = Number(valores.horas_estimadas);
+    const fecha = valores.fecha;
+    const horaInicio = valores.hora_inicio;
+    const idSolicitud = solicitudDisponibilidad.current + 1;
+    solicitudDisponibilidad.current = idSolicitud;
+
+    // Todo el trabajo (incluidos los setState) ocurre dentro del temporizador:
+    // así el efecto no dispara renders en cascada y el debounce sigue vigente.
+    const temporizador = setTimeout(async () => {
+      if (!fecha || !idTipo || !Number.isFinite(horas) || horas < 1) {
+        setDisponibilidad(null);
+        setErrorDisponibilidad("");
+        setCargandoDisponibilidad(false);
+        return;
+      }
+
+      setCargandoDisponibilidad(true);
+      try {
+        const respuesta = await consultarDisponibilidadServicio({
+          fecha,
+          id_tipo_vehiculo: idTipo,
+          horas_estimadas: horas,
+          hora_inicio: horaInicio || null,
+        });
+        if (solicitudDisponibilidad.current !== idSolicitud) {
+          return;
+        }
+        setCargandoDisponibilidad(false);
+        if (respuesta.ok) {
+          setDisponibilidad(respuesta.dato);
+          setErrorDisponibilidad("");
+          return;
+        }
+        setDisponibilidad(null);
+        setErrorDisponibilidad(respuesta.mensaje);
+      } catch {
+        if (solicitudDisponibilidad.current !== idSolicitud) {
+          return;
+        }
+        setCargandoDisponibilidad(false);
+        setDisponibilidad(null);
+        setErrorDisponibilidad("No pudimos consultar la disponibilidad.");
+      }
+    }, TIEMPO_DE_ESPERA_MS);
+
+    return () => clearTimeout(temporizador);
+  }, [
+    valores.fecha,
+    valores.id_tipo_vehiculo,
+    valores.horas_estimadas,
+    valores.hora_inicio,
+  ]);
+
+  useEffect(() => {
+    if (!disponibilidad) {
+      return;
+    }
+    const choferElegido = getValues("id_chofer");
+    if (
+      choferElegido &&
+      !disponibilidad.choferes.some((chofer) => String(chofer.id) === choferElegido)
+    ) {
+      setValue("id_chofer", "");
+    }
+    const vehiculoElegido = getValues("id_vehiculo");
+    if (
+      vehiculoElegido &&
+      !disponibilidad.vehiculos.some(
+        (vehiculo) => String(vehiculo.id) === vehiculoElegido,
+      )
+    ) {
+      setValue("id_vehiculo", "");
+    }
+  }, [disponibilidad, getValues, setValue]);
 
   async function pedirCotizacion() {
     setMensaje("");
@@ -122,8 +289,25 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
     const actual = getValues();
     setEstaRegistrando(true);
     try {
+      const asignaciones = {
+        ...(actual.id_chofer ? { id_chofer: Number(actual.id_chofer) } : {}),
+        ...(actual.id_vehiculo ? { id_vehiculo: Number(actual.id_vehiculo) } : {}),
+      };
+      const cliente =
+        actual.modo_cliente === "nuevo"
+          ? {
+              nuevo_cliente: {
+                razon_social: actual.razon_social.trim(),
+                telefono: actual.telefono.trim(),
+                direccion_habitual: actual.direccion_habitual.trim(),
+                tiene_cuenta_corriente: actual.tiene_cuenta_corriente ?? false,
+              },
+            }
+          : { id_cliente: Number(actual.id_cliente) };
+
       const respuesta = await registrarServicio({
-        id_cliente: Number(actual.id_cliente),
+        ...cliente,
+        ...asignaciones,
         id_tipo_vehiculo: Number(actual.id_tipo_vehiculo),
         fecha: actual.fecha,
         hora_inicio: actual.hora_inicio || null,
@@ -141,25 +325,32 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
         )}.`,
       );
       setCotizacion(null);
-      reset({
-        id_cliente: "",
-        id_tipo_vehiculo: "",
-        fecha: fechaLocal(),
-        hora_inicio: "",
-        horas_estimadas: "1",
-        distancia_ida_km: "0",
-      });
+      setDisponibilidad(null);
+      reset({ ...valoresIniciales(), fecha: fechaLocal() });
       router.refresh();
     } finally {
       setEstaRegistrando(false);
     }
   }
 
+  function cambiarModoCliente(modo: "existente" | "nuevo") {
+    clearErrors(["id_cliente", "razon_social", "telefono", "direccion_habitual"]);
+    setValue("modo_cliente", modo);
+  }
+
+  function abrirFormulario() {
+    if (!getValues("fecha")) {
+      setValue("fecha", fechaLocal());
+    }
+    dialogRef.current?.showModal();
+    void cargarCatalogos();
+  }
+
   return (
     <>
       <button
         type="button"
-        onClick={() => dialogRef.current?.showModal()}
+        onClick={abrirFormulario}
         className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-orange-200 transition-all hover:bg-orange-600 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
       >
         <span className="text-base font-bold leading-none" aria-hidden="true">
@@ -227,15 +418,113 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
           noValidate
           onSubmit={(evento) => evento.preventDefault()}
         >
-          <div className="sm:col-span-2 rounded-lg bg-blue-50/80 border border-blue-100 p-3 text-xs text-blue-900 leading-relaxed">
+          <div className="sm:col-span-2 rounded-lg bg-blue-50/80 border border-blue-100 p-3 text-xs text-blue-900 leading-relaxed dark:bg-[#12233d] dark:border-[#1e3a5f] dark:text-[#bfdbfe]">
             Completá los datos del viaje para obtener el importe tarifado oficial. Luego
             podrás confirmar el alta definitiva.
           </div>
 
-          {clientes.length === 0 ? (
-            <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
-              No hay clientes activos para seleccionar.
+          {cargandoCatalogos ? (
+            <p role="status" className="sm:col-span-2 text-xs text-panel-secundario">
+              Cargando clientes y tipos de vehículo…
             </p>
+          ) : null}
+
+          {errorCatalogos ? (
+            <p
+              role="alert"
+              className="sm:col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-[#7f1d1d] dark:bg-[#3b1416] dark:text-red-300"
+            >
+              {errorCatalogos}
+            </p>
+          ) : null}
+
+          <fieldset className="sm:col-span-2">
+            <legend className="block text-xs font-semibold uppercase tracking-wider text-panel-secundario">
+              Cliente
+            </legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => cambiarModoCliente("existente")}
+                aria-pressed={!clienteNuevo}
+                disabled={clientes.length === 0}
+                className={botonModo(!clienteNuevo)}
+              >
+                Cliente existente
+              </button>
+              <button
+                type="button"
+                onClick={() => cambiarModoCliente("nuevo")}
+                aria-pressed={clienteNuevo}
+                className={botonModo(clienteNuevo)}
+              >
+                Cliente nuevo
+              </button>
+            </div>
+          </fieldset>
+
+          {clienteNuevo ? (
+            <>
+              <p className="sm:col-span-2 text-xs text-panel-secundario">
+                El sistema crea el cliente y lo vincula al servicio. Si ya existe uno con
+                la misma razón social, reutiliza ese registro.
+              </p>
+              <Campo
+                id="razon_social"
+                etiqueta="Razón social"
+                error={errors.razon_social?.message}
+              >
+                <input
+                  id="razon_social"
+                  aria-invalid={Boolean(errors.razon_social)}
+                  aria-describedby={
+                    errors.razon_social ? "razon_social-error" : undefined
+                  }
+                  {...register("razon_social")}
+                  className={claseControl}
+                />
+              </Campo>
+              <Campo id="telefono" etiqueta="Teléfono" error={errors.telefono?.message}>
+                <input
+                  id="telefono"
+                  type="tel"
+                  inputMode="tel"
+                  aria-invalid={Boolean(errors.telefono)}
+                  aria-describedby={errors.telefono ? "telefono-error" : undefined}
+                  {...register("telefono")}
+                  className={claseControl}
+                />
+              </Campo>
+              <Campo
+                id="direccion_habitual"
+                etiqueta="Dirección habitual"
+                error={errors.direccion_habitual?.message}
+              >
+                <input
+                  id="direccion_habitual"
+                  aria-invalid={Boolean(errors.direccion_habitual)}
+                  aria-describedby={
+                    errors.direccion_habitual ? "direccion_habitual-error" : undefined
+                  }
+                  {...register("direccion_habitual")}
+                  className={claseControl}
+                />
+              </Campo>
+              <label className="flex items-end gap-2 pb-2 text-xs font-semibold text-panel-secundario">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-panel-azul"
+                  {...register("tiene_cuenta_corriente")}
+                />
+                <span>Tiene cuenta corriente</span>
+              </label>
+            </>
+          ) : clientes.length === 0 ? (
+            catalogosCargados ? (
+              <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
+                No hay clientes activos para seleccionar. Podés cargar uno nuevo.
+              </p>
+            ) : null
           ) : (
             <Campo id="id_cliente" etiqueta="Cliente" error={errors.id_cliente?.message}>
               <select
@@ -256,9 +545,11 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
           )}
 
           {tiposVehiculo.length === 0 ? (
-            <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
-              No hay tipos de vehículo activos para cotizar.
-            </p>
+            catalogosCargados ? (
+              <p role="status" className="text-sm text-panel-secundario sm:col-span-2">
+                No hay tipos de vehículo activos para cotizar.
+              </p>
+            ) : null
           ) : (
             <Campo
               id="id_tipo_vehiculo"
@@ -344,10 +635,68 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
             />
           </Campo>
 
+          <fieldset className="sm:col-span-2 rounded-xl border border-panel-borde/70 bg-panel-suave/30 p-3">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-panel-secundario">
+              Asignación operativa (opcional)
+            </legend>
+            <p className="text-[11px] text-panel-secundario">
+              Solo se muestran choferes y vehículos libres en la fecha y el horario
+              elegidos.
+            </p>
+
+            {errorDisponibilidad ? (
+              <p role="alert" className="mt-2 text-xs font-medium text-alerta">
+                {errorDisponibilidad}
+              </p>
+            ) : null}
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Campo id="id_chofer" etiqueta="Chofer">
+                <select
+                  id="id_chofer"
+                  disabled={cargandoDisponibilidad || !disponibilidad}
+                  {...register("id_chofer")}
+                  className={claseControl}
+                >
+                  <option value="">Sin asignar</option>
+                  {disponibilidad?.choferes.map((chofer) => (
+                    <option key={chofer.id} value={chofer.id}>
+                      {chofer.nombre_completo}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+
+              <Campo id="id_vehiculo" etiqueta="Vehículo">
+                <select
+                  id="id_vehiculo"
+                  disabled={cargandoDisponibilidad || !disponibilidad}
+                  {...register("id_vehiculo")}
+                  className={claseControl}
+                >
+                  <option value="">Sin asignar</option>
+                  {disponibilidad?.vehiculos.map((vehiculo) => (
+                    <option key={vehiculo.id} value={vehiculo.id}>
+                      {vehiculo.patente}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+            </div>
+
+            <p aria-live="polite" className="mt-2 text-[11px] text-panel-secundario">
+              {cargandoDisponibilidad
+                ? "Consultando disponibilidad…"
+                : disponibilidad
+                  ? `${disponibilidad.choferes.length} choferes y ${disponibilidad.vehiculos.length} vehículos disponibles.`
+                  : "Elegí fecha, tipo de vehículo y horas para ver la disponibilidad."}
+            </p>
+          </fieldset>
+
           {mensaje ? (
             <p
               role="alert"
-              className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm font-medium text-red-700 sm:col-span-2"
+              className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm font-medium text-red-700 sm:col-span-2 dark:bg-[#3b1416] dark:border-[#7f1d1d] dark:text-red-300"
             >
               {mensaje}
             </p>
@@ -356,7 +705,7 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
           {servicioCreado ? (
             <p
               role="status"
-              className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-800 sm:col-span-2"
+              className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-800 sm:col-span-2 dark:bg-[#0f2e22] dark:border-[#14532d] dark:text-emerald-300"
             >
               {servicioCreado}
             </p>
@@ -394,8 +743,14 @@ export function FormularioServicio({ clientes, tiposVehiculo }: Propiedades) {
   );
 }
 
+function botonModo(activo: boolean): string {
+  return activo
+    ? "inline-flex min-h-9 items-center justify-center rounded-lg bg-panel-primario px-3 text-xs font-bold text-white shadow-sm"
+    : "inline-flex min-h-9 items-center justify-center rounded-lg border border-panel-borde bg-white px-3 text-xs font-semibold text-panel-texto transition-colors hover:bg-panel-suave dark:bg-[#0d1626] dark:text-white dark:hover:bg-[#16253d]";
+}
+
 const claseControl =
-  "mt-1 block min-h-10 w-full rounded-lg border border-panel-borde/80 bg-white px-3 py-2 text-sm text-panel-texto shadow-xs transition-colors focus:border-panel-azul focus:ring-2 focus:ring-panel-azul/20 focus-visible:outline-none";
+  "mt-1 block min-h-10 w-full rounded-lg border border-panel-borde/80 bg-white px-3 py-2 text-sm text-panel-texto shadow-xs transition-colors focus:border-panel-azul focus:ring-2 focus:ring-panel-azul/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#0d1626] dark:text-white";
 
 const claseBoton =
   "inline-flex min-h-10 items-center justify-center rounded-lg border border-panel-borde bg-panel-suave/80 px-4 text-sm font-semibold text-panel-texto transition-all hover:bg-panel-suave hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul disabled:cursor-not-allowed disabled:opacity-50";

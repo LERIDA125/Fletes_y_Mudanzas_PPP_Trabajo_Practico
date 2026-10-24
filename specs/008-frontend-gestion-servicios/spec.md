@@ -36,7 +36,13 @@ precios ni valores derivados del cálculo.
   envía precio, tarifas aplicadas, distancia total, franquicia ni km excedente.
 - Cliente y tipo de vehículo deben existir y estar activos. Chofer y vehículo son opcionales; si
   se informan deben existir y estar activos. El vehículo asignado debe corresponder al tipo
-  cotizado. No se validan disponibilidad, solapamientos ni márgenes de agenda.
+  cotizado. El alta **no** bloquea solapamientos: la disponibilidad se ofrece como consulta
+  informativa (ver *Enmienda de alcance*), pero el alta sigue aceptando cualquier combinación
+  válida de recursos.
+- El alta puede recibir `id_cliente` **o** `nuevo_cliente`, nunca ambos. Si llega `nuevo_cliente`,
+  el backend crea el cliente y lo vincula al servicio; si ya existe un cliente activo con la misma
+  razón social normalizada, reutiliza ese registro. Un cliente inactivo con la misma razón social
+  se rechaza como duplicado.
 - Todo servicio nuevo inicia en estado `pendiente`. La cancelación es la única transición expuesta
   en esta fase: pasa el servicio a `cancelado`, exige un motivo y registra la hora de finalización.
 - Un servicio puede cancelarse desde `pendiente`, `confirmado` o `en curso`. No puede cancelarse
@@ -271,12 +277,71 @@ Salida: el servicio actualizado con `estado = 'cancelado'`, `motivo_cancelacion`
 auditoría. Errores: 404 si el servicio no existe, 409 si no es cancelable, 422 si el motivo es
 inválido.
 
+### `GET /api/servicios/disponibilidad` — admin
+
+Query params obligatorios: `fecha` (date), `id_tipo_vehiculo` (int activo), `horas_estimadas`
+(≥ 1). Opcional: `hora_inicio` (time). Devuelve `id_tipo_vehiculo`, `fecha`, `hora_inicio`,
+`hora_fin`, `choferes` y `vehiculos` activos y libres en la ventana pedida.
+
+## Enmienda de alcance — integración frontend (aprobada)
+
+Esta enmienda amplía el alcance original para cerrar la integración de la demo y queda sujeta a
+las decisiones pendientes del cliente (AGENTS.md §6):
+
+1. **Alta con cliente nuevo**: `POST /api/servicios` acepta exactamente uno de `id_cliente` o
+   `nuevo_cliente`. Con `nuevo_cliente`, el backend crea y vincula el cliente en la misma
+   operación. Si ya existe un cliente activo con la misma `razon_social_key`, lo reutiliza. Si el
+   registro existente está inactivo, responde 409 (`RazonSocialDuplicada`).
+2. **Disponibilidad informativa**: `GET /api/servicios/disponibilidad` filtra choferes y vehículos
+   por solapamiento con servicios no cancelados del mismo día. La UI solo ofrece los recursos
+   libres; el alta no bloquea solapamientos porque la política de agenda no está confirmada.
+   **Supuesto temporal**: se comparan ventanas `[hora_inicio, hora_inicio + horas_estimadas)`;
+   si el servicio pedido o uno existente del día no informa `hora_inicio`, el recurso se considera
+   ocupado todo el día. No se aplica margen entre servicios.
+3. **Gestión de choferes y vehículos**: `/choferes` y `/vehiculos` incorporan alta y edición
+   mediante modales conectados a la API, con revalidación posterior de las rutas afectadas.
+4. **Tarifas**: la administración de tarifa por hora y por km excedente se expone en `/vehiculos`
+   y edita el `TipoVehiculo` activo (única fuente de tarifas del cotizador), no al chofer ni al
+   vehículo.
+5. **Cotizador real**: `/cotizaciones` deja de calcular localmente y consume
+   `POST /api/servicios/cotizar`, mostrando únicamente el desglose y el importe devueltos.
+6. **Acceso directo**: la acción “Nuevo servicio” del Dashboard abre `/servicios?nuevo=1` y el
+   formulario se presenta abierto.
+
+### Requisitos funcionales de la enmienda
+
+- **FR-026**: `GET /api/servicios/disponibilidad` MUST delegar en Aplicación, validar que el tipo
+  esté activo y devolver solo recursos activos sin solapamiento con servicios no cancelados.
+- **FR-027**: `POST /api/servicios` MUST aceptar exactamente uno de `id_cliente` o
+  `nuevo_cliente` y rechazar ambos o ninguno con 422.
+- **FR-028**: Si se envía `nuevo_cliente`, el backend MUST crear o reutilizar un cliente activo
+  con la misma razón social normalizada y vincularlo al servicio antes de persistirlo.
+- **FR-029**: La UI de `/servicios` MUST ofrecer selección de chofer y vehículo limitada a la
+  respuesta de disponibilidad para la fecha, hora y horas estimadas elegidas, y MUST limpiar una
+  asignación que deje de estar disponible.
+- **FR-030**: `/choferes` y `/vehiculos` MUST permitir alta y edición contra la API y refrescar el
+  listado tras el éxito, sin estado optimista que oculte errores del servidor.
+- **FR-031**: La edición de tarifas MUST enviar `descripcion`, `capacidad_carga_kg`,
+  `tarifa_hora_base` y `tarifa_km_excedente` al `TipoVehiculo` correspondiente y revalidar
+  `/vehiculos`, `/servicios` y `/cotizaciones`.
+- **FR-032**: `/cotizaciones` MUST mostrar solo valores devueltos por el backend; MUST NOT
+  multiplicar tarifas ni sumar adicionales en el navegador.
+- **FR-033**: El frontend MUST resolver la URL de la API desde `API_URL` en servidor y
+  `NEXT_PUBLIC_API_URL` en navegador, sin cachear respuestas de datos (`no-store`). Si el host
+  configurado no responde por un fallo de red, el servidor MUST reintentar contra
+  `http://backend:8000` y `http://localhost:8000`; MUST NOT reintentar un `POST` tras un
+  timeout para no duplicar altas.
+- **FR-034**: Los botones de alta y sus modales en `/choferes`, `/vehiculos` y `/servicios`
+  MUST renderizarse aunque la API falle o devuelva catálogos vacíos. El formulario de servicio
+  MUST abrirse automáticamente al navegar con `?nuevo=1`.
+
 ## Out of Scope
 
 - La autenticación JWT y el login quedan fuera del MVP. El modo demo local no equivale a
   autenticación ni debe desplegarse.
 - Edición, baja y transiciones de estado distintas de la cancelación.
-- Disponibilidad/calendario, prevención de solapamientos y margen entre servicios.
+- Bloqueo de solapamientos al crear: la consulta de disponibilidad es informativa y el alta no
+  rechaza recursos ocupados (regla de agenda aún no confirmada por el cliente).
 - Pagos, medios de cobro, cuenta corriente, saldos y rendiciones.
 - Login, JWT y gestión de cuentas; se posponen a la historia 009.
 - Una tabla persistida de cotizaciones o vigencia/aceptación de ofertas.

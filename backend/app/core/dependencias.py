@@ -209,4 +209,6 @@ def get_gestor_servicios(
         consulta_clientes=clientes,
         consulta_choferes=choferes,
         consulta_vehiculos=vehiculos,
+        consulta_tipos=tipos,
+        registro_clientes=clientes,
     )

@@ -87,6 +87,33 @@ class VehiculoRepo:
         consulta = self._consulta_filtrada(busqueda).with_only_columns(func.count())
         return self._db.scalar(consulta) or 0
 
+    def listar_activos_por_tipo(self, tipo_vehiculo_id: int) -> list[VehiculoListadoItem]:
+        """Catálogo de vehículos activos de un tipo, para la pantalla de Servicios."""
+        consulta = (
+            select(
+                VehiculoORM,
+                TipoVehiculoORM.descripcion,
+                TipoVehiculoORM.capacidad_carga_kg,
+                ChoferORM.nombre_completo,
+            )
+            .join(TipoVehiculoORM, VehiculoORM.id_tipo_vehiculo == TipoVehiculoORM.id)
+            .outerjoin(ChoferORM, VehiculoORM.id_chofer_habitual == ChoferORM.id)
+            .where(
+                VehiculoORM.activo.is_(True),
+                VehiculoORM.id_tipo_vehiculo == tipo_vehiculo_id,
+            )
+            .order_by(VehiculoORM.patente, VehiculoORM.id)
+        )
+        return [
+            VehiculoListadoItem(
+                vehiculo=a_dominio(vehiculo),
+                descripcion_tipo_vehiculo=descripcion,
+                capacidad_carga_kg=capacidad,
+                nombre_chofer_habitual=nombre_chofer,
+            )
+            for vehiculo, descripcion, capacidad, nombre_chofer in self._db.execute(consulta)
+        ]
+
     def actualizar(self, vehiculo: Vehiculo) -> Vehiculo:
         orm = self._db.get(VehiculoORM, vehiculo.id)
         if orm is None:

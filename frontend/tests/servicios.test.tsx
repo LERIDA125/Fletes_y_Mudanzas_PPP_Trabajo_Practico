@@ -11,15 +11,25 @@ import type {
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 
-const { registrarServicio, solicitarCotizacion, refresh } = vi.hoisted(() => ({
+const {
+  registrarServicio,
+  solicitarCotizacion,
+  consultarDisponibilidadServicio,
+  obtenerCatalogosServicio,
+  refresh,
+} = vi.hoisted(() => ({
   registrarServicio: vi.fn(),
   solicitarCotizacion: vi.fn(),
+  consultarDisponibilidadServicio: vi.fn(),
+  obtenerCatalogosServicio: vi.fn(),
   refresh: vi.fn(),
 }));
 
 vi.mock("@/features/servicios/actions", () => ({
   registrarServicio,
   solicitarCotizacion,
+  consultarDisponibilidadServicio,
+  obtenerCatalogosServicio,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -77,6 +87,7 @@ function servicioCreado(): Servicio {
     patente_vehiculo: null,
     fecha: "2026-10-25",
     hora_inicio: null,
+    hora_fin: null,
     horas_estimadas: "2",
     distancia_ida_km: "15",
     distancia_total_km: "30",
@@ -87,10 +98,20 @@ function servicioCreado(): Servicio {
     precio_total: "9000.00",
     moneda: "ARS",
     estado: "pendiente",
+    motivo_cancelacion: null,
     creado_en: "2026-10-21T12:00:00Z",
     actualizado_en: "2026-10-21T12:00:00Z",
   };
 }
+
+const disponibilidad = {
+  id_tipo_vehiculo: 3,
+  fecha: "2026-10-25",
+  hora_inicio: null,
+  hora_fin: null,
+  choferes: [],
+  vehiculos: [],
+};
 
 async function completarDatos() {
   await userEvent.selectOptions(screen.getByLabelText("Cliente"), "8");
@@ -107,6 +128,38 @@ describe("FormularioServicio", () => {
     vi.clearAllMocks();
     solicitarCotizacion.mockResolvedValue({ ok: true, dato: cotizacion });
     registrarServicio.mockResolvedValue({ ok: true, dato: servicioCreado() });
+    consultarDisponibilidadServicio.mockResolvedValue({
+      ok: true,
+      dato: disponibilidad,
+    });
+    obtenerCatalogosServicio.mockResolvedValue({
+      ok: true,
+      dato: { clientes, tiposVehiculo },
+    });
+  });
+
+  it("abre el formulario automáticamente cuando llega abrirInicial", async () => {
+    render(
+      <FormularioServicio
+        clientes={clientes}
+        tiposVehiculo={tiposVehiculo}
+        abrirInicial
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveAttribute("open"));
+  });
+
+  it("pide los catálogos al abrir cuando la página no los precarga", async () => {
+    const usuario = userEvent.setup();
+    render(<FormularioServicio />);
+
+    expect(screen.queryByLabelText("Tipo de vehículo")).not.toBeInTheDocument();
+    await usuario.click(screen.getByText("Nuevo servicio"));
+
+    await waitFor(() => expect(obtenerCatalogosServicio).toHaveBeenCalledOnce());
+    expect(await screen.findByLabelText("Tipo de vehículo")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cliente")).toBeInTheDocument();
   });
 
   it("cotiza con el backend y solo crea después de confirmar la estimación", async () => {
@@ -146,6 +199,50 @@ describe("FormularioServicio", () => {
       "Servicio #41 registrado. Precio final: $ 9.000,00.",
     );
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("permite registrar el servicio con un cliente nuevo", async () => {
+    const usuario = userEvent.setup();
+    render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
+
+    await usuario.click(screen.getByText("Nuevo servicio"));
+    await usuario.click(screen.getByRole("button", { name: "Cliente nuevo" }));
+    await usuario.type(screen.getByLabelText("Razón social"), "Mudanzas Sur");
+    await usuario.type(screen.getByLabelText("Teléfono"), "3515550199");
+    await usuario.type(screen.getByLabelText("Dirección habitual"), "Av. Colón 100");
+    await usuario.selectOptions(screen.getByLabelText("Tipo de vehículo"), "3");
+    fireEvent.change(screen.getByLabelText("Fecha"), {
+      target: { value: "2026-10-25" },
+    });
+    fireEvent.change(screen.getByLabelText("Horas estimadas"), {
+      target: { value: "2" },
+    });
+    fireEvent.change(screen.getByLabelText("Distancia de ida (km)"), {
+      target: { value: "15" },
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Cotizar viaje" }));
+    await screen.findByText(
+      (texto, elemento) => elemento?.tagName === "STRONG" && texto.includes("9.000,00"),
+    );
+    await usuario.click(
+      screen.getByRole("button", { name: "Confirmar y registrar servicio" }),
+    );
+
+    await waitFor(() => expect(registrarServicio).toHaveBeenCalledOnce());
+    expect(registrarServicio).toHaveBeenCalledWith({
+      nuevo_cliente: {
+        razon_social: "Mudanzas Sur",
+        telefono: "3515550199",
+        direccion_habitual: "Av. Colón 100",
+        tiene_cuenta_corriente: false,
+      },
+      id_tipo_vehiculo: 3,
+      fecha: "2026-10-25",
+      hora_inicio: null,
+      horas_estimadas: 2,
+      distancia_ida_km: 15,
+    });
   });
 
   it("invalida la cotización y bloquea el alta si cambian los datos", async () => {

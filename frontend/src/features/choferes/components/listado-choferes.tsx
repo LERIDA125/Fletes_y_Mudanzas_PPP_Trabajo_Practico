@@ -21,9 +21,15 @@ export function ListadoChoferes({ choferes }: { choferes: Chofer[] }) {
           </th>
           <th
             scope="col"
-            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
+            className="py-2 pr-4 text-right text-[0.8125rem] font-medium text-tinta-media"
           >
             Alta
+          </th>
+          <th
+            scope="col"
+            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
+          >
+            Acciones
           </th>
         </tr>
       </thead>

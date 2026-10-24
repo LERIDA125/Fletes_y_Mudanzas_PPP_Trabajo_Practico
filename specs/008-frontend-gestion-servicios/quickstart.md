@@ -23,6 +23,13 @@ docker compose up -d --build
 - **Frontend**: `http://localhost:3000`
 - **Backend Swagger**: `http://localhost:8000/docs`
 
+> El servicio `frontend` espera a que el backend responda `/health` antes de arrancar. Las
+> llamadas Server-Side usan `API_URL=http://backend:8000`; si esa variable falta, el cliente
+> HTTP reintenta contra `http://backend:8000` y `http://localhost:8000`. Aunque la API falle,
+> los botones “Nuevo …” y sus modales siguen visibles en `/choferes`, `/vehiculos` y
+> `/servicios`. El modal de servicio se abre solo al entrar desde el Dashboard con
+> `/servicios?nuevo=1`.
+
 ### Opción B — Frontend local
 
 ```bash
@@ -53,10 +60,10 @@ uvicorn app.main:app --reload --port 8000
 |---|---|---|
 | `/` | **Dashboard principal** | Resumen operativo del día: KPIs (*Servicios del día*, *Choferes disponibles*, *Dinero por cobrar*, *Pendiente de rendición*) y tabla de próximos servicios. |
 | `/agenda` | **Agenda operativa** | Grilla mensual de 31 días. Clickeá en cualquier día para filtrar turnos y abrir el modal "Nuevo turno". |
-| `/cotizaciones` | **Cotizador comercial** | Ingresá tipo de camión (chico/grande), km de distancia, activá extras (escaleras, embalaje) y observá el cálculo del total estimado en tiempo real. |
-| `/servicios` | **Servicios (Backend Real)** | Conectado a FastAPI. Formulario de cotización oficial contra backend, listado de servicios persistidos y paginación. |
-| `/choferes` | **Equipo de choferes** | Tarjetas de disponibilidad (*Libres hoy*, *En viaje*, *Licencia*), tarifario sugerido y listado conectado a backend con buscador debounced. |
-| `/vehiculos` | **Flota de vehículos** | Tarjetas de estado de flota (Sprinter, Daily, Master, Ducato) y tabla completa conectada a la base de datos. |
+| `/cotizaciones` | **Cotizador comercial** | Elegí tipo de vehículo, horas estimadas y distancia; el importe se calcula en el backend con las tarifas vigentes. |
+| `/servicios` | **Servicios (Backend Real)** | Alta con cliente existente o nuevo, cotización oficial, disponibilidad de choferes/vehículos y listado paginado. |
+| `/choferes` | **Equipo de choferes** | Listado real con buscador y paginación; alta y edición de choferes desde el botón "+ Nuevo chofer". |
+| `/vehiculos` | **Flota de vehículos** | Tarifas reales por tipo de vehículo con edición, y listado real con alta/edición desde "+ Nuevo vehículo". |
 | `/clientes` | **Padrón de clientes** | Contador de clientes activos y tabla con búsqueda y paginación oficial. |
 | `/rendiciones` | **Control financiero** | Métricas de liquidación, tabla de arqueo (`#REN-024`) y modal de detalle de gastos y saldo. |
 

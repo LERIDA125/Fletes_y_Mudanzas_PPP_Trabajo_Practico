@@ -1,7 +1,19 @@
-import type { Vehiculo } from "../types";
+import type { Chofer } from "@/features/choferes/types";
+
+import type { TipoVehiculo, Vehiculo } from "../types";
 import { FilaVehiculo } from "./fila-vehiculo";
 
-export function ListadoVehiculos({ vehiculos }: { vehiculos: Vehiculo[] }) {
+type Propiedades = {
+  vehiculos: Vehiculo[];
+  tiposVehiculo?: TipoVehiculo[];
+  choferes?: Chofer[];
+};
+
+export function ListadoVehiculos({
+  vehiculos,
+  tiposVehiculo = [],
+  choferes = [],
+}: Propiedades) {
   return (
     <table className="w-full border-collapse text-left max-sm:block">
       <caption className="sr-only">Vehículos activos de la empresa</caption>
@@ -27,15 +39,26 @@ export function ListadoVehiculos({ vehiculos }: { vehiculos: Vehiculo[] }) {
           </th>
           <th
             scope="col"
-            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
+            className="py-2 pr-4 text-right text-[0.8125rem] font-medium text-tinta-media"
           >
             Alta
+          </th>
+          <th
+            scope="col"
+            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
+          >
+            Acciones
           </th>
         </tr>
       </thead>
       <tbody className="max-sm:block">
         {vehiculos.map((vehiculo) => (
-          <FilaVehiculo key={vehiculo.id} vehiculo={vehiculo} />
+          <FilaVehiculo
+            key={vehiculo.id}
+            vehiculo={vehiculo}
+            tiposVehiculo={tiposVehiculo}
+            choferes={choferes}
+          />
         ))}
       </tbody>
     </table>

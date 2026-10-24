@@ -1,10 +1,12 @@
 """Único punto de acceso SQLAlchemy para Servicios."""
 
+from datetime import date
+
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.application.servicios.puertos import ServicioListadoItem
+from app.application.servicios.puertos import AsignacionDia, ServicioListadoItem
 from app.domain.errores import ReferenciasServicioInvalidas, ServicioNoEncontrado
 from app.domain.servicio import Servicio
 from app.infrastructure.models.chofer import ChoferORM
@@ -134,6 +136,32 @@ class ServicioRepo:
     def tiene_servicios(self, vehiculo_id: int) -> bool:
         consulta = select(ServicioORM.id).where(ServicioORM.id_vehiculo == vehiculo_id)
         return self._db.scalar(consulta.limit(1)) is not None
+
+    def listar_asignaciones_del_dia(self, fecha: date) -> list[AsignacionDia]:
+        """Servicios no cancelados de una fecha, para detectar recursos ocupados.
+
+        No se filtra por estado finalizado/cobrado porque un servicio de ese día
+        puede seguir consumiendo la franja estimada; la regla se documenta en la
+        spec 008. Los cancelados no bloquean recursos.
+        """
+        consulta = select(
+            ServicioORM.id_chofer,
+            ServicioORM.id_vehiculo,
+            ServicioORM.hora_inicio,
+            ServicioORM.horas_estimadas,
+        ).where(
+            ServicioORM.fecha == fecha,
+            ServicioORM.estado != "cancelado",
+        )
+        return [
+            AsignacionDia(
+                id_chofer=id_chofer,
+                id_vehiculo=id_vehiculo,
+                hora_inicio=hora_inicio,
+                horas_estimadas=horas_estimadas,
+            )
+            for id_chofer, id_vehiculo, hora_inicio, horas_estimadas in self._db.execute(consulta)
+        ]
 
     @staticmethod
     def _consulta_con_nombres():

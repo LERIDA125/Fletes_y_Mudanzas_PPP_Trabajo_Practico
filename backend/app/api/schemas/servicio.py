@@ -6,9 +6,12 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.api.schemas.chofer import ChoferRead
+from app.api.schemas.cliente import ClienteCreate
 from app.api.schemas.comun import Pagina
+from app.api.schemas.vehiculo import VehiculoListadoRead
 from app.application.cotizacion.calculadora import Cotizacion
 from app.application.servicios.puertos import ServicioListadoItem
 from app.domain.servicio import MOTIVO_CANCELACION_MAX
@@ -67,13 +70,41 @@ class CotizacionRead(BaseModel):
 class ServicioCreate(CotizacionRequest):
     model_config = ConfigDict(extra="forbid")
 
-    id_cliente: int = Field(gt=0, description="Cliente que solicita el servicio.")
+    id_cliente: int | None = Field(
+        default=None,
+        gt=0,
+        description="Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.",
+    )
+    nuevo_cliente: ClienteCreate | None = Field(
+        default=None,
+        description=(
+            "Datos de un cliente nuevo. El backend lo crea y lo vincula al servicio; si ya "
+            "existe uno activo con la misma razón social, reutiliza ese registro."
+        ),
+    )
     id_chofer: int | None = Field(default=None, gt=0, description="Chofer asignado, si se conoce.")
     id_vehiculo: int | None = Field(
         default=None, gt=0, description="Vehículo asignado; debe pertenecer al tipo seleccionado."
     )
     fecha: date
     hora_inicio: time | None = None
+
+    @model_validator(mode="after")
+    def _cliente_excluyente(self) -> ServicioCreate:
+        if (self.id_cliente is None) == (self.nuevo_cliente is None):
+            raise ValueError("Indicá `id_cliente` o `nuevo_cliente`, pero no ambos")
+        return self
+
+
+class DisponibilidadRead(BaseModel):
+    """Disponibilidad calculada para una ventana de servicio."""
+
+    id_tipo_vehiculo: int
+    fecha: date
+    hora_inicio: time | None
+    hora_fin: time | None
+    choferes: list[ChoferRead]
+    vehiculos: list[VehiculoListadoRead]
 
 
 class ServicioCancelar(BaseModel):

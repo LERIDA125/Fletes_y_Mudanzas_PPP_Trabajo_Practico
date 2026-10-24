@@ -78,6 +78,15 @@ class ChoferRepo:
         consulta = select(ChoferORM.id).where(ChoferORM.id == chofer_id, ChoferORM.activo.is_(True))
         return self._db.scalar(consulta.limit(1)) is not None
 
+    def listar_activos(self) -> list[Chofer]:
+        """Catálogo completo de choferes activos para calcular disponibilidad."""
+        consulta = (
+            select(ChoferORM)
+            .where(ChoferORM.activo.is_(True))
+            .order_by(ChoferORM.nombre_completo, ChoferORM.id)
+        )
+        return [a_dominio(orm) for orm in self._db.scalars(consulta)]
+
     def _consulta_filtrada(self, busqueda: str | None):
         consulta = select(ChoferORM).where(ChoferORM.activo.is_(True))
         if busqueda:

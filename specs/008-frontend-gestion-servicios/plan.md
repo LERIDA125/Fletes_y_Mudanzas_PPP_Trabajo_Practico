@@ -2,7 +2,8 @@
 
 **Branch**: `008-frontend-gestion-servicios` | **Date**: 2026-10-21 | **Spec**: [spec.md](./spec.md)
 
-**Status**: Backend implementado con cancelación; frontend aprobado para demo local sin login.
+**Status**: Backend implementado con cancelación y consulta de disponibilidad; frontend integrado
+para demo local sin login.
 
 ## Resumen
 
@@ -217,11 +218,122 @@ esta configuración en una red compartida o despliegue.
 La dirección conserva las decisiones visuales de 005/006 en vez de introducir otra paleta o
 tipografía para una pantalla perteneciente a la misma aplicación.
 
+## Enmienda de alcance aprobada — integración de la demo
+
+Esta sección reemplaza el alcance “solo listado + cotizador” de la propuesta anterior. Fue
+aprobada para cerrar la integración punta a punta de la demo y queda registrada en
+`spec.md` (*Enmienda de alcance*, FR-026 a FR-033).
+
+### Resolución de la API en el frontend
+
+- `frontend/src/lib/api/http.ts` resuelve la base en servidor con `API_URL` y en navegador con
+  `NEXT_PUBLIC_API_URL`. Si `API_URL` falta o no responde, el servidor reintenta contra
+  `http://backend:8000` (nombre del servicio en Docker Compose) y luego
+  `http://localhost:8000`; el navegador solo usa la URL pública y cae a localhost. Los
+  reintentos son solo ante fallos de red: nunca ante una respuesta HTTP de error ni ante un
+  timeout de un `POST` (para no duplicar altas). Normaliza barras finales, aplica timeout de
+  10 s por intento y usa `cache: "no-store"` en toda lectura de datos.
+- `frontend/.env.example` documenta ambas variables. Docker Compose ya publica
+  `API_URL=http://backend:8000` y `NEXT_PUBLIC_API_URL=http://localhost:8000`.
+- El encabezado de `/choferes`, `/vehiculos` y `/servicios` no espera a la API: el botón de
+  alta y su diálogo se renderizan siempre. `/vehiculos` y el formulario de servicio piden sus
+  catálogos recién al abrir el modal y muestran el error dentro del diálogo si la API falla;
+  el listado y las tarifas conservan su propio estado de error sin ocultar la acción.
+- Los errores de FastAPI se traducen a `ErrorApi` con clase (`sin-respuesta`,
+  `sesion-expirada`, `sin-permisos`, `error-de-servicio`) y se extrae `detail`, incluida la
+  lista de errores de validación. Las acciones de servidor devuelven mensajes explícitos.
+- El frontend sigue sin enviar `X-Rol`; la demo local depende de `ENVIRONMENT=dev` y
+  `DEV_ASSUME_ADMIN=true` en el backend.
+
+### Disponibilidad informativa
+
+- Nuevo endpoint `GET /api/servicios/disponibilidad` con `fecha`, `id_tipo_vehiculo`,
+  `horas_estimadas` y `hora_inicio` opcional. Devuelve `id_tipo_vehiculo`, `fecha`,
+  `hora_inicio`, `hora_fin`, `choferes` y `vehiculos` activos y libres.
+- El cálculo vive en `GestorServicios` y se apoya en puertos de repositorio; el router solo
+  valida y delega. Los recursos se filtran por solapamiento con servicios no cancelados del
+  día.
+- **Supuesto temporal** (pendiente de confirmación del cliente, AGENTS.md §6): se comparan
+  ventanas `[hora_inicio, hora_inicio + horas_estimadas)`; si el servicio pedido o uno
+  existente del día no informa `hora_inicio`, el recurso se considera ocupado todo el día. No
+  se aplica margen entre servicios.
+- El alta **no** bloquea solapamientos: la consulta es informativa y el backend sigue
+  aceptando cualquier combinación válida. La UI limpia una asignación que deja de estar
+  disponible cuando cambian fecha, hora, tipo u horas.
+
+### Alta con cliente nuevo
+
+- `POST /api/servicios` acepta exactamente uno de `id_cliente` o `nuevo_cliente`; ambos o
+  ninguno responden 422. `nuevo_cliente` usa el schema `ClienteCreate`.
+- Si se envía `nuevo_cliente`, el backend normaliza la razón social con la misma regla de
+  H1 (`razon_social_key`), reutiliza un cliente activo equivalente o crea uno nuevo y lo
+  vincula al servicio antes de persistirlo. Un registro inactivo con la misma razón social
+  responde 409.
+- La UI ofrece un selector “Cliente existente / Cliente nuevo”. En modo nuevo valida razón
+  social, teléfono (7–20 dígitos) y dirección; el payload envía `nuevo_cliente` y nunca
+  `id_cliente`. Tras crear se revalidan `/servicios`, `/clientes`, `/agenda` y `/`.
+
+### Gestión de choferes y vehículos
+
+- `/choferes` incorpora `+ Nuevo chofer` y edición por fila mediante `DialogoChofer`
+  (`POST /api/choferes` y `PUT /api/choferes/{id}`).
+- `/vehiculos` incorpora `+ Nuevo vehículo` y edición por fila mediante `DialogoVehiculo`
+  (`POST /api/vehiculos` y `PUT /api/vehiculos/{id}`), con catálogos de tipos y choferes
+  habituales.
+- Ambos diálogos usan React Hook Form + Zod, muestran errores de servidor sin cerrar el
+  formulario, cierran solo tras éxito y llaman `router.refresh()`; las acciones revalidan las
+  rutas afectadas.
+- Se eliminaron tarjetas y tarifarios ficticios de ambas pantallas.
+
+### Tarifas por tipo de vehículo
+
+- `PanelTarifas` en `/vehiculos` edita `descripcion`, `capacidad_carga_kg`,
+  `tarifa_hora_base` y `tarifa_km_excedente` del `TipoVehiculo` activo mediante
+  `PUT /api/tipos-vehiculo/{id}`. Es la única fuente de tarifas del cotizador.
+- Tras guardar se revalidan `/vehiculos`, `/servicios`, `/cotizaciones` y `/`.
+
+### Cotizador real
+
+- `/cotizaciones` deja de calcular localmente. La página carga los tipos activos en servidor y
+  `Cotizador` llama a `POST /api/servicios/cotizar` a través de una Server Action.
+- Solo se muestran los valores devueltos (`descripcion_tipo_vehiculo`, horas, distancia total,
+  km excedente, tarifas y `precio_final`). No se multiplican ni suman importes en el
+  navegador. Cambiar cualquier entrada borra el resultado anterior.
+
+### Archivos de la enmienda
+
+| Archivo | Responsabilidad |
+|---|---|
+| `frontend/src/lib/api/http.ts` | Base URL por entorno, timeout, `no-store` y traducción de errores. |
+| `frontend/src/lib/api/servicios.ts` | Listar, cotizar, crear, catálogos y `consultarDisponibilidad`. |
+| `frontend/src/lib/api/choferes.ts` / `vehiculos.ts` | Altas, ediciones y actualización de tarifas. |
+| `frontend/src/features/servicios/schemas/servicio.ts` | Zod del formulario, incluido el modo cliente nuevo. |
+| `frontend/src/features/servicios/actions.ts` | Cotizar, disponibilidad y alta con revalidación. |
+| `frontend/src/features/servicios/components/formulario-servicio.tsx` | Alta, cliente nuevo, disponibilidad y apertura por `?nuevo=1`. |
+| `frontend/src/features/choferes/components/dialogo-chofer.tsx` | Alta/edición de chofer. |
+| `frontend/src/features/vehiculos/components/dialogo-vehiculo.tsx` | Alta/edición de vehículo. |
+| `frontend/src/features/vehiculos/components/panel-tarifas.tsx` | Edición de tarifas por tipo. |
+| `frontend/src/features/cotizaciones/components/cotizador.tsx` | Cotizador conectado al backend. |
+| `frontend/src/app/(admin)/{choferes,vehiculos,servicios,cotizaciones}/page.tsx` | Cableado server-rendered y acceso directo desde Dashboard. |
+| `frontend/src/types/openapi.d.ts` | `ServicioCreate` con `nuevo_cliente`, `DisponibilidadRead` y el path de disponibilidad. |
+
+### Tests de la enmienda
+
+- `backend/tests/unit/application/servicios`: creación/reutilización de cliente, rechazo de
+  duplicado inactivo y filtrado por solapamiento.
+- `backend/tests/unit/test_h8_servicios_api.py`: alta con `nuevo_cliente`, exclusión mutua y
+  endpoint de disponibilidad.
+- `frontend/tests/servicios.test.tsx`: cotización, confirmación, alta con cliente existente y
+  nuevo, invalidación y errores.
+- `frontend/tests/listado-vehiculos.test.tsx`: listado con catálogos y acciones mockeadas.
+- Pendiente recomendado: RTL de `DialogoChofer`, `DialogoVehiculo`, `PanelTarifas` y del
+  filtrado de disponibilidad con recursos excluidos.
+
 ## Complejidad / exclusiones
 
 | Elemento | Decisión |
 |---|---|
-| React Hook Form/Zod/Server Actions | Alcance frontend aprobado; implementación pendiente de resolver autorización. |
+| React Hook Form/Zod/Server Actions | Implementados; la autorización de la demo se resuelve con `ENVIRONMENT=dev` + `DEV_ASSUME_ADMIN=true`, sin JWT. |
 | Tabla de cotizaciones | Excluida; cotizar es cálculo no persistido y crear recalcula. |
-| Disponibilidad y agenda | Excluidas por falta de regla aprobada; no se agregan validaciones de solapamiento. |
+| Disponibilidad y agenda | Consulta informativa implementada (FR-026, FR-029). El alta no bloquea solapamientos ni se define margen entre servicios: regla pendiente del cliente. |
 | Pagos, cuenta corriente, rendiciones | Excluidos; no existen operaciones backend listas para integrarse. |

@@ -101,6 +101,17 @@ class ClienteRepo:
             consulta = consulta.where(ClienteORM.id != excluir_id)
         return self._db.scalar(consulta.limit(1)) is not None
 
+    def obtener_por_razon_social(self, razon_social_key: str) -> Cliente | None:
+        """Busca por clave normalizada, incluidos los inactivos.
+
+        Servicios usa esta consulta para reutilizar un cliente ya cargado en vez de
+        duplicarlo; si el cliente está dado de baja se informa el conflicto de unicidad.
+        """
+        orm = self._db.scalar(
+            select(ClienteORM).where(ClienteORM.razon_social_key == razon_social_key).limit(1)
+        )
+        return a_dominio(orm) if orm is not None else None
+
     def _consulta_filtrada(self, busqueda: str | None):
         consulta = select(ClienteORM).where(ClienteORM.activo.is_(True))
         if busqueda:

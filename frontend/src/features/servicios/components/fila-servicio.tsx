@@ -46,7 +46,7 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
     <tr className="transition-colors hover:bg-slate-50/70">
       <td className="whitespace-nowrap py-3.5 pl-5 sm:pl-6">
         <span className="block font-semibold text-slate-900">
-          {servicio.hora_inicio ?? "08:30"}
+          {servicio.hora_inicio ?? "—"}
         </span>
         <span className="block text-xs text-slate-500">
           {fechaLegible(servicio.fecha)}

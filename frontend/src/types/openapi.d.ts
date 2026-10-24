@@ -68,6 +68,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/servicios/disponibilidad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar choferes y vehículos disponibles
+         * @description Devuelve los choferes activos y los vehículos activos del tipo indicado que no están ocupados por otro servicio no cancelado en la ventana solicitada. Si el servicio nuevo no informa hora de inicio, o un servicio existente del día tampoco la informa, el recurso se considera ocupado durante todo el día (supuesto conservador hasta que el cliente confirme la regla de agenda).
+         */
+        get: operations["consultar_disponibilidad_api_servicios_disponibilidad_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/servicios/cotizar": {
         parameters: {
             query?: never;
@@ -110,6 +130,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cancelar un servicio
+         * @description Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y registra la hora de finalización con la hora del servidor; no acepta hora ni estado.
+         */
+        patch: operations["cancelar_servicio_api_servicios__id_servicio__cancelar_patch"];
         trace?: never;
     };
     "/api/choferes": {
@@ -288,7 +328,7 @@ export interface components {
             nombre_completo: string;
             /**
              * Telefono
-             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos.
+             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos y que el texto no supere los 20 caracteres que admite la columna.
              * @example 351 555 0100
              */
             telefono: string;
@@ -366,7 +406,7 @@ export interface components {
             nombre_completo: string;
             /**
              * Telefono
-             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos.
+             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos y que el texto no supere los 20 caracteres que admite la columna.
              * @example 351 555 0100
              */
             telefono: string;
@@ -384,7 +424,7 @@ export interface components {
             razon_social: string;
             /**
              * Telefono
-             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos.
+             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos y que el texto no supere los 20 caracteres que admite la columna.
              * @example 351 555 0100
              */
             telefono: string;
@@ -476,7 +516,7 @@ export interface components {
             razon_social: string;
             /**
              * Telefono
-             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos.
+             * @description Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; solo se exige que tenga entre 7 y 20 dígitos y que el texto no supere los 20 caracteres que admite la columna.
              * @example 351 555 0100
              */
             telefono: string;
@@ -540,10 +580,40 @@ export interface components {
              */
             distancia_ida_km: number | string;
         };
+        /**
+         * DisponibilidadRead
+         * @description Disponibilidad calculada para una ventana de servicio.
+         */
+        DisponibilidadRead: {
+            /** Id Tipo Vehiculo */
+            id_tipo_vehiculo: number;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Hora Inicio */
+            hora_inicio: string | null;
+            /** Hora Fin */
+            hora_fin: string | null;
+            /** Choferes */
+            choferes: components["schemas"]["ChoferRead"][];
+            /** Vehiculos */
+            vehiculos: components["schemas"]["VehiculoListadoRead"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ServicioCancelar */
+        ServicioCancelar: {
+            /**
+             * Motivo
+             * @description Motivo de la cancelación; se recortan los espacios de los extremos.
+             * @example El cliente reprogramó el viaje
+             */
+            motivo: string;
         };
         /** ServicioCreate */
         ServicioCreate: {
@@ -564,9 +634,11 @@ export interface components {
             distancia_ida_km: number | string;
             /**
              * Id Cliente
-             * @description Cliente que solicita el servicio.
+             * @description Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.
              */
-            id_cliente: number;
+            id_cliente?: number | null;
+            /** @description Datos de un cliente nuevo. El backend lo crea y lo vincula al servicio; si ya existe uno activo con la misma razón social, reutiliza ese registro. */
+            nuevo_cliente?: components["schemas"]["ClienteCreate"] | null;
             /**
              * Id Chofer
              * @description Chofer asignado, si se conoce.
@@ -635,6 +707,8 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio: string | null;
+            /** Hora Fin */
+            hora_fin: string | null;
             /** Horas Estimadas */
             horas_estimadas: string;
             /** Distancia Ida Km */
@@ -659,6 +733,8 @@ export interface components {
             moneda: "ARS";
             /** Estado */
             estado: string;
+            /** Motivo Cancelacion */
+            motivo_cancelacion: string | null;
             /**
              * Creado En
              * Format: date-time
@@ -1254,6 +1330,59 @@ export interface operations {
             };
         };
     };
+    consultar_disponibilidad_api_servicios_disponibilidad_get: {
+        parameters: {
+            query: {
+                /** @description Fecha del servicio a programar. */
+                fecha: string;
+                /** @description Tipo de vehículo que se va a asignar. */
+                id_tipo_vehiculo: number;
+                /** @description Duración estimada del servicio; mínimo 1 hora. */
+                horas_estimadas: number | string;
+                /** @description Hora de inicio; si falta se bloquea el día completo. */
+                hora_inicio?: string | null;
+            };
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisponibilidadRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La fecha, el tipo o las horas son inválidos. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     cotizar_servicio_api_servicios_cotizar_post: {
         parameters: {
             query?: never;
@@ -1386,6 +1515,71 @@ export interface operations {
                 content?: never;
             };
             /** @description Los datos o las referencias activas del servicio son inválidos. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cancelar_servicio_api_servicios__id_servicio__cancelar_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServicioCancelar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio está finalizado, cobrado o ya cancelado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El motivo es obligatorio o supera la longitud permitida. */
             422: {
                 headers: {
                     [name: string]: unknown;

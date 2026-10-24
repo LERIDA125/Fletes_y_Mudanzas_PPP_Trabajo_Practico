@@ -29,6 +29,17 @@ services:
     volumes:
       - ./backend:/app
     command: sh -c "alembic upgrade head && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    healthcheck:
+      # Espera a que terminen las migraciones y uvicorn responda /health.
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,7 +62,8 @@ services:
       - frontend_node_modules:/app/node_modules
     command: npm run dev
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:

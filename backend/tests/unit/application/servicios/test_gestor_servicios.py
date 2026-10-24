@@ -5,7 +5,8 @@ import pytest
 
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.application.servicios.puertos import ServicioListadoItem
+from app.application.servicios.puertos import AsignacionDia, ServicioListadoItem
+from app.application.vehiculos.puertos import VehiculoListadoItem
 from app.domain.chofer import Chofer
 from app.domain.cliente import Cliente
 from app.domain.errores import (
@@ -44,33 +45,89 @@ class FakeClienteRepository:
             direccion_habitual="Av. Siempre Viva 123",
             tiene_cuenta_corriente=False,
         )
+        self.creados: list[Cliente] = []
+        self._siguiente_id = 20
 
     def obtener_por_id(self, cliente_id: int) -> Cliente | None:
-        return self.cliente if self.cliente.id == cliente_id else None
+        if self.cliente.id == cliente_id:
+            return self.cliente
+        return next((cliente for cliente in self.creados if cliente.id == cliente_id), None)
+
+    def obtener_por_razon_social(self, razon_social_key: str) -> Cliente | None:
+        candidatos = [self.cliente, *self.creados]
+        return next(
+            (cliente for cliente in candidatos if cliente.razon_social_key == razon_social_key),
+            None,
+        )
+
+    def crear(self, cliente: Cliente) -> Cliente:
+        cliente.id = self._siguiente_id
+        self._siguiente_id += 1
+        self.creados.append(cliente)
+        return cliente
 
 
 class FakeChoferRepository:
+    def __init__(self) -> None:
+        self.choferes = [
+            Chofer(id=1, nombre_completo="Chofer Uno", telefono="3515550101"),
+            Chofer(id=2, nombre_completo="Chofer Dos", telefono="3515550102"),
+        ]
+
     def obtener_por_id(self, chofer_id: int) -> Chofer | None:
-        return Chofer(id=chofer_id, nombre_completo="Chofer de Prueba", telefono="3515550101")
+        return next((chofer for chofer in self.choferes if chofer.id == chofer_id), None)
+
+    def listar_activos(self) -> list[Chofer]:
+        return list(self.choferes)
 
 
 class FakeVehiculoRepository:
     def __init__(self, tipo_id: int = 3) -> None:
         self.tipo_id = tipo_id
+        self.vehiculos = [
+            Vehiculo(
+                id=21,
+                patente="AA 123 ABC",
+                id_tipo_vehiculo=tipo_id,
+                id_chofer_habitual=None,
+            ),
+            Vehiculo(
+                id=22,
+                patente="BB 456 DEF",
+                id_tipo_vehiculo=tipo_id,
+                id_chofer_habitual=None,
+            ),
+        ]
 
     def obtener_por_id(self, vehiculo_id: int) -> Vehiculo | None:
-        return Vehiculo(
-            id=vehiculo_id,
-            patente="AA 123 ABC",
-            id_tipo_vehiculo=self.tipo_id,
-            id_chofer_habitual=None,
+        return next(
+            (vehiculo for vehiculo in self.vehiculos if vehiculo.id == vehiculo_id),
+            Vehiculo(
+                id=vehiculo_id,
+                patente="AA 123 ABC",
+                id_tipo_vehiculo=self.tipo_id,
+                id_chofer_habitual=None,
+            ),
         )
+
+    def listar_activos_por_tipo(self, tipo_vehiculo_id: int) -> list[VehiculoListadoItem]:
+        return [
+            VehiculoListadoItem(
+                vehiculo=vehiculo,
+                descripcion_tipo_vehiculo="Camioneta",
+                capacidad_carga_kg=Decimal("1500"),
+                nombre_chofer_habitual=None,
+            )
+            for vehiculo in self.vehiculos
+            if vehiculo.id_tipo_vehiculo == tipo_vehiculo_id
+        ]
 
 
 class FakeServicioRepository:
     def __init__(self) -> None:
         self.guardado: Servicio | None = None
         self.items: dict[int, Servicio] = {}
+        self.asignaciones: list[AsignacionDia] = []
 
     @staticmethod
     def _item(servicio: Servicio) -> ServicioListadoItem:
@@ -112,6 +169,9 @@ class FakeServicioRepository:
     def tiene_servicios(self, vehiculo_id: int) -> bool:
         return False
 
+    def listar_asignaciones_del_dia(self, fecha: date) -> list[AsignacionDia]:
+        return list(self.asignaciones)
+
 
 def _crear_gestor(
     *,
@@ -126,6 +186,8 @@ def _crear_gestor(
         consulta_clientes=clientes,
         consulta_choferes=FakeChoferRepository(),
         consulta_vehiculos=FakeVehiculoRepository(vehiculo_tipo_id),
+        consulta_tipos=tipos,
+        registro_clientes=clientes,
     )
     return gestor, repo, clientes
 
@@ -256,3 +318,97 @@ def test_gestor_rechaza_cancelacion_de_servicio_inexistente() -> None:
 
     with pytest.raises(ServicioNoEncontrado):
         gestor.cancelar(id_servicio=999, motivo="Cliente desiste")
+
+
+def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:
+    gestor, repo, clientes = _crear_gestor()
+    nuevo = Cliente.crear(
+        razon_social="Mudanzas Nueva",
+        telefono="3515559999",
+        direccion_habitual="Av. Nueva 456",
+    )
+
+    item = gestor.crear(
+        id_cliente=None,
+        nuevo_cliente=nuevo,
+        id_tipo_vehiculo=3,
+        id_chofer=None,
+        id_vehiculo=None,
+        fecha=date(2026, 10, 25),
+        hora_inicio=time(9, 30),
+        horas_estimadas=Decimal("2"),
+        distancia_ida_km=Decimal("15"),
+    )
+
+    assert item.servicio.id_cliente == 20
+    assert repo.guardado is not None
+    assert len(clientes.creados) == 1
+
+    gestor.crear(
+        id_cliente=None,
+        nuevo_cliente=Cliente.crear(
+            razon_social="  mudanzas   NUEVA ",
+            telefono="3515559999",
+            direccion_habitual="Av. Nueva 456",
+        ),
+        id_tipo_vehiculo=3,
+        id_chofer=None,
+        id_vehiculo=None,
+        fecha=date(2026, 10, 26),
+        hora_inicio=time(10, 0),
+        horas_estimadas=Decimal("1"),
+        distancia_ida_km=Decimal("0"),
+    )
+
+    assert len(clientes.creados) == 1, "La segunda alta debe reutilizar el cliente existente"
+
+
+def test_disponibilidad_excluye_recursos_solapados_y_conserva_libres() -> None:
+    gestor, repo, _ = _crear_gestor()
+    repo.asignaciones = [
+        AsignacionDia(
+            id_chofer=1,
+            id_vehiculo=21,
+            hora_inicio=time(9, 0),
+            horas_estimadas=Decimal("2"),
+        ),
+        AsignacionDia(
+            id_chofer=None,
+            id_vehiculo=22,
+            hora_inicio=time(15, 0),
+            horas_estimadas=Decimal("1"),
+        ),
+    ]
+
+    disponibilidad = gestor.disponibilidad(
+        fecha=date(2026, 10, 25),
+        id_tipo_vehiculo=3,
+        hora_inicio=time(10, 0),
+        horas_estimadas=Decimal("1"),
+    )
+
+    assert [chofer.id for chofer in disponibilidad.choferes] == [2]
+    assert [vehiculo.vehiculo.id for vehiculo in disponibilidad.vehiculos] == [22]
+    assert disponibilidad.hora_fin == time(11, 0)
+
+
+def test_disponibilidad_bloquea_el_dia_si_falta_la_hora_de_inicio() -> None:
+    gestor, repo, _ = _crear_gestor()
+    repo.asignaciones = [
+        AsignacionDia(
+            id_chofer=2,
+            id_vehiculo=22,
+            hora_inicio=None,
+            horas_estimadas=Decimal("1"),
+        )
+    ]
+
+    disponibilidad = gestor.disponibilidad(
+        fecha=date(2026, 10, 25),
+        id_tipo_vehiculo=3,
+        hora_inicio=time(10, 0),
+        horas_estimadas=Decimal("1"),
+    )
+
+    assert [chofer.id for chofer in disponibilidad.choferes] == [1]
+    assert [vehiculo.vehiculo.id for vehiculo in disponibilidad.vehiculos] == [21]

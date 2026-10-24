@@ -69,4 +69,71 @@ describe("request", () => {
       detalle: null,
     });
   });
+
+  it("reintenta con localhost si la URL pública no responde", async () => {
+    const original = process.env.NEXT_PUBLIC_API_URL;
+    process.env.NEXT_PUBLIC_API_URL = "http://api-caida:8000";
+    fetchFalso
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(responder(200, { ok: true }));
+
+    try {
+      await expect(request("/api/clientes")).resolves.toEqual({ ok: true });
+      expect(fetchFalso).toHaveBeenCalledTimes(2);
+      expect(String(fetchFalso.mock.calls[0][0])).toContain("api-caida");
+      expect(String(fetchFalso.mock.calls[1][0])).toContain("localhost");
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_API_URL;
+      } else {
+        process.env.NEXT_PUBLIC_API_URL = original;
+      }
+    }
+  });
+
+  it("en el servidor usa API_URL y cae a backend si no responde", async () => {
+    const originalApi = process.env.API_URL;
+    const originalPublic = process.env.NEXT_PUBLIC_API_URL;
+    process.env.API_URL = "http://api-caida:8000";
+    delete process.env.NEXT_PUBLIC_API_URL;
+    vi.stubGlobal("window", undefined);
+    fetchFalso
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(responder(200, { ok: true }));
+
+    try {
+      await expect(request("/api/clientes")).resolves.toEqual({ ok: true });
+      expect(fetchFalso).toHaveBeenCalledTimes(2);
+      expect(String(fetchFalso.mock.calls[0][0])).toContain("api-caida");
+      expect(String(fetchFalso.mock.calls[1][0])).toContain("backend");
+    } finally {
+      if (originalApi === undefined) {
+        delete process.env.API_URL;
+      } else {
+        process.env.API_URL = originalApi;
+      }
+      if (originalPublic === undefined) {
+        delete process.env.NEXT_PUBLIC_API_URL;
+      } else {
+        process.env.NEXT_PUBLIC_API_URL = originalPublic;
+      }
+    }
+  });
+
+  it("no reintenta cuando la API responde con un error HTTP", async () => {
+    fetchFalso.mockResolvedValue(responder(500, { detail: "boom" }));
+
+    await expect(request("/api/clientes")).rejects.toMatchObject({ status: 500 });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+  });
+
+  it("no reintenta un POST después de un timeout", async () => {
+    const timeout = Object.assign(new Error("timeout"), { name: "TimeoutError" });
+    fetchFalso.mockRejectedValue(timeout);
+
+    await expect(
+      request("/api/servicios", { method: "POST", body: "{}" }),
+    ).rejects.toMatchObject({ clase: "sin-respuesta" });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+  });
 });

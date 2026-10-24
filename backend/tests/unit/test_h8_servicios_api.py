@@ -239,3 +239,140 @@ def test_asociaciones_legibles_y_bajas_bloqueadas_por_historial(
 
     assert cliente_api.delete(f"/api/clientes/{cliente_id}", headers=admin).status_code == 409
     assert cliente_api.delete(f"/api/vehiculos/{vehiculo_id}", headers=admin).status_code == 409
+
+
+def test_alta_con_cliente_nuevo_lo_crea_y_reutiliza(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    entrada = {
+        "id_tipo_vehiculo": tipo_id,
+        "horas_estimadas": 1,
+        "distancia_ida_km": 0,
+        "fecha": "2026-10-25",
+        "nuevo_cliente": {
+            "razon_social": "Mudanzas Nueva",
+            "telefono": "3515559999",
+            "direccion_habitual": "Av. Nueva 456",
+            "tiene_cuenta_corriente": False,
+        },
+    }
+
+    primera = cliente_api.post("/api/servicios", headers=admin, json=entrada)
+    assert primera.status_code == 201, primera.text
+    assert primera.json()["razon_social_cliente"] == "Mudanzas Nueva"
+
+    segunda = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            **entrada,
+            "fecha": "2026-10-26",
+            "nuevo_cliente": {
+                **entrada["nuevo_cliente"],
+                "razon_social": "  mudanzas   NUEVA ",
+            },
+        },
+    )
+    assert segunda.status_code == 201, segunda.text
+
+    listado = cliente_api.get("/api/clientes?page=1&size=10", headers=admin)
+    assert listado.status_code == 200
+    assert listado.json()["total"] == 1
+    assert primera.json()["id_cliente"] == segunda.json()["id_cliente"]
+
+
+def test_alta_rechaza_cliente_existente_y_nuevo_a_la_vez(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+
+    respuesta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "nuevo_cliente": {
+                "razon_social": "Otro cliente",
+                "telefono": "3515559999",
+                "direccion_habitual": "Otra calle 123",
+                "tiene_cuenta_corriente": False,
+            },
+            "id_tipo_vehiculo": tipo_id,
+            "fecha": "2026-10-25",
+            "horas_estimadas": 1,
+            "distancia_ida_km": 0,
+        },
+    )
+
+    assert respuesta.status_code == 422
+    assert cliente_api.get("/api/servicios", headers=admin).json()["total"] == 0
+
+
+def test_disponibilidad_excluye_choferes_y_vehiculos_ocupados(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+
+    choferes = []
+    for nombre in ("Chofer Uno", "Chofer Dos"):
+        respuesta = cliente_api.post(
+            "/api/choferes",
+            headers=admin,
+            json={"nombre_completo": nombre, "telefono": "3515550101"},
+        )
+        assert respuesta.status_code == 201
+        choferes.append(respuesta.json()["id"])
+
+    vehiculos = []
+    for patente in ("AA 123 ABC", "BB 456 DEF"):
+        respuesta = cliente_api.post(
+            "/api/vehiculos",
+            headers=admin,
+            json={"patente": patente, "id_tipo_vehiculo": tipo_id},
+        )
+        assert respuesta.status_code == 201
+        vehiculos.append(respuesta.json()["id"])
+
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "id_chofer": choferes[0],
+            "id_vehiculo": vehiculos[0],
+            "fecha": "2026-10-25",
+            "hora_inicio": "09:00:00",
+            "horas_estimadas": 2,
+            "distancia_ida_km": 0,
+        },
+    )
+    assert alta.status_code == 201
+
+    solapada = cliente_api.get(
+        "/api/servicios/disponibilidad",
+        headers=admin,
+        params={
+            "fecha": "2026-10-25",
+            "id_tipo_vehiculo": tipo_id,
+            "hora_inicio": "10:00:00",
+            "horas_estimadas": 1,
+        },
+    )
+    assert solapada.status_code == 200, solapada.text
+    assert [item["id"] for item in solapada.json()["choferes"]] == [choferes[1]]
+    assert [item["id"] for item in solapada.json()["vehiculos"]] == [vehiculos[1]]
+
+    libre = cliente_api.get(
+        "/api/servicios/disponibilidad",
+        headers=admin,
+        params={
+            "fecha": "2026-10-25",
+            "id_tipo_vehiculo": tipo_id,
+            "hora_inicio": "12:00:00",
+            "horas_estimadas": 1,
+        },
+    )
+    assert libre.status_code == 200
+    assert len(libre.json()["choferes"]) == 2
+    assert len(libre.json()["vehiculos"]) == 2

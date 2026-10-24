@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { BuscadorChoferes } from "@/features/choferes/components/buscador-choferes";
 import { CabeceraListado } from "@/features/choferes/components/cabecera-listado";
+import { DialogoChofer } from "@/features/choferes/components/dialogo-chofer";
 import { Cargando } from "@/features/choferes/components/estados/cargando";
 import { EstadoError } from "@/features/choferes/components/estados/error";
 import { EstadoVacio } from "@/features/choferes/components/estados/vacio";
@@ -23,11 +24,6 @@ export const metadata = {
 };
 
 export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">) {
-  const truckRates = [
-    { type: "Camión chico", value: "$16.000", detail: "Hasta 12 m³ de capacidad" },
-    { type: "Camión grande", value: "$24.000", detail: "Hasta 30 m³ de capacidad" },
-  ];
-
   return (
     <div className="flex flex-col gap-6">
       {/* Encabezado */}
@@ -40,99 +36,21 @@ export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">)
             Choferes
           </h2>
           <p className="mt-1 text-xs text-[#7f8da1] dark:text-[#94a3b8]">
-            Gestioná tu equipo, disponibilidad y tarifas operativas.
+            Gestioná el equipo y los datos de contacto de cada chofer.
           </p>
         </div>
 
-        <div className="w-full sm:w-auto">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Suspense
             fallback={
-              <div className="h-10 w-full sm:w-72 rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="h-10 w-full rounded-lg bg-slate-100 sm:w-72 dark:bg-slate-800" />
             }
           >
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
+          <DialogoChofer />
         </div>
       </div>
-
-      {/* Tarjetas de Disponibilidad */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm dark:border-[#1e2c44] dark:bg-[#111c2e]">
-          <p className="text-xs font-medium text-[#8b99ab] dark:text-[#94a3b8]">
-            Libres hoy
-          </p>
-          <p className="mt-2 inline-flex rounded-lg bg-[#e9f8ef] px-2.5 py-1 text-xl font-bold text-[#248952] dark:bg-[#163827] dark:text-[#4ade80]">
-            3
-          </p>
-          <p className="mt-2 text-[10px] text-[#9aa7b7] dark:text-[#64748b]">
-            de 6 choferes registrados
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm dark:border-[#1e2c44] dark:bg-[#111c2e]">
-          <p className="text-xs font-medium text-[#8b99ab] dark:text-[#94a3b8]">
-            En viaje
-          </p>
-          <p className="mt-2 inline-flex rounded-lg bg-[#e9f4ff] px-2.5 py-1 text-xl font-bold text-[#2879bd] dark:bg-[#1a3356] dark:text-[#60a5fa]">
-            2
-          </p>
-          <p className="mt-2 text-[10px] text-[#9aa7b7] dark:text-[#64748b]">
-            en servicios en curso
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[#e8edf4] bg-white p-4 shadow-sm dark:border-[#1e2c44] dark:bg-[#111c2e]">
-          <p className="text-xs font-medium text-[#8b99ab] dark:text-[#94a3b8]">
-            Licencia
-          </p>
-          <p className="mt-2 inline-flex rounded-lg bg-[#f1edff] px-2.5 py-1 text-xl font-bold text-[#7951c9] dark:bg-[#2b1f48] dark:text-[#c084fc]">
-            1
-          </p>
-          <p className="mt-2 text-[10px] text-[#9aa7b7] dark:text-[#64748b]">
-            franco programado
-          </p>
-        </div>
-      </div>
-
-      {/* Tarifario por vehículo */}
-      <section className="rounded-2xl border border-[#e8edf4] bg-white p-5 shadow-sm sm:p-6 dark:border-[#1e2c44] dark:bg-[#111c2e]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h3 className="text-base font-bold text-[#172b4d] dark:text-white">
-              Tarifario por vehículo
-            </h3>
-            <p className="mt-0.5 text-xs text-[#96a2b2] dark:text-[#94a3b8]">
-              Base sugerida para calcular cada servicio
-            </p>
-          </div>
-          <span className="rounded-full bg-[#f4f8ff] px-3 py-1 text-xs font-semibold text-[#2165d5] dark:bg-[#16253d] dark:text-[#60a5fa]">
-            Vigente desde septiembre 2026
-          </span>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {truckRates.map((rate) => (
-            <div
-              key={rate.type}
-              className="flex items-center justify-between rounded-xl border border-[#edf0f4] bg-[#fbfcfd] p-4 dark:border-[#1e2c44] dark:bg-[#0d1626]"
-            >
-              <div>
-                <p className="text-xs font-bold text-[#172b4d] dark:text-white">
-                  {rate.type}
-                </p>
-                <p className="mt-0.5 text-[11px] text-[#96a2b2] dark:text-[#94a3b8]">
-                  {rate.detail}
-                </p>
-              </div>
-              <p className="text-base font-bold text-[#172b4d] dark:text-white">
-                {rate.value}
-                <span className="ml-1 text-[11px] font-normal text-[#96a2b2] dark:text-[#64748b]">
-                  / servicio
-                </span>
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Tabla del equipo de choferes con datos reales */}
       <div className="rounded-2xl border border-[#e8edf4] bg-white p-6 shadow-sm dark:border-[#1e2c44] dark:bg-[#111c2e]">

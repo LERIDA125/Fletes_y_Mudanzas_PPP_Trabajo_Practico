@@ -117,7 +117,7 @@ export default function DashboardPage() {
         </div>
 
         <Link
-          href="/servicios"
+          href="/servicios?nuevo=1"
           className="flex shrink-0 items-center gap-2 rounded-xl bg-[#2165d5] px-4 py-2.5 text-xs font-bold text-white shadow-[0_5px_12px_rgba(33,101,213,0.18)] transition hover:bg-[#1857bd] dark:bg-[#2563eb] dark:hover:bg-[#1d4ed8]"
         >
           <Plus size={16} />

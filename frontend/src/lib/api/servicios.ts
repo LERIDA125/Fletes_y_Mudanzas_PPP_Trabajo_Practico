@@ -1,6 +1,8 @@
 import type {
   AltaServicio,
+  ConsultaDisponibilidad,
   Cotizacion,
+  Disponibilidad,
   ListadoServicios,
   Servicio,
   SolicitudCotizacion,
@@ -46,6 +48,22 @@ export async function listarTiposParaAlta(): Promise<
     `/api/tipos-vehiculo?${parametros.toString()}`,
   );
   return respuesta.items;
+}
+
+export async function consultarDisponibilidad(
+  consulta: ConsultaDisponibilidad,
+): Promise<Disponibilidad> {
+  const parametros = new URLSearchParams({
+    fecha: consulta.fecha,
+    id_tipo_vehiculo: String(consulta.id_tipo_vehiculo),
+    horas_estimadas: String(consulta.horas_estimadas),
+  });
+  if (consulta.hora_inicio) {
+    parametros.set("hora_inicio", consulta.hora_inicio);
+  }
+  return request<Disponibilidad>(
+    `/api/servicios/disponibilidad?${parametros.toString()}`,
+  );
 }
 
 export async function cotizarServicio(
