@@ -15,6 +15,7 @@ import {
   totalPaginas,
   ultimaFilaDeLaPagina,
 } from "@/lib/utils/formato";
+export const instant = false;
 
 type SearchParams = PageProps<"/clientes">["searchParams"];
 
