@@ -1,5 +1,5 @@
 ﻿import random
-from datetime import date, time, timedelta
+from datetime import date, time, timedelta, datetime
 from decimal import Decimal
 from app.infrastructure.db.session import SessionLocal
 
@@ -113,9 +113,11 @@ def run_seed():
                     razon_social=n,
                     razon_social_key=_normalizar_texto(n),
                     telefono=f"11-{random.randint(4000,6999)}-1111",
-                    direccion_habitual="CABA",
+                    direccion_habitual="Capital Federal",
                     tiene_cuenta_corriente=False,
                     activo=True,
+                    creado_en=datetime.now(),
+                    actualizado_en=datetime.now(),
                 )
             )
         db.add_all(db_clientes)
