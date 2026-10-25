@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { connection } from "next/server";
 
 import { BuscadorClientes } from "@/features/clientes/components/buscador-clientes";
 import { CabeceraListado } from "@/features/clientes/components/cabecera-listado";
@@ -66,11 +67,13 @@ export default function PaginaClientes({ searchParams }: PageProps<"/clientes">)
 }
 
 async function BuscadorConCriterio({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const criterio = leerTexto(await searchParams, "q");
   return <BuscadorClientes criterioInicial={criterio} />;
 }
 
 async function Listado({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await searchParams;
   const criterio = leerTexto(params, "q");
   const pagina = leerNumero(params, "page");
