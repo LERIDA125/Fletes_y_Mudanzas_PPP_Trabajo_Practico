@@ -172,9 +172,16 @@ export function FormularioServicio({
 
   useEffect(() => {
     const idTipo = Number(valores.id_tipo_vehiculo);
-    const horas = Number(valores.horas_estimadas);
+    const horasSanitizadas = String(valores.horas_estimadas ?? "").replace(",", ".");
+    const horas = Number(horasSanitizadas);
     const fecha = valores.fecha;
-    const horaInicio = valores.hora_inicio;
+    let horaInicioSanitizada: string | null = valores.hora_inicio || null;
+    if (horaInicioSanitizada === "") {
+      horaInicioSanitizada = null;
+    } else if (horaInicioSanitizada && horaInicioSanitizada.length === 5) {
+      horaInicioSanitizada = `${horaInicioSanitizada}:00`;
+    }
+    const horaInicio = horaInicioSanitizada;
     const idSolicitud = solicitudDisponibilidad.current + 1;
     solicitudDisponibilidad.current = idSolicitud;
 
@@ -194,7 +201,7 @@ export function FormularioServicio({
           fecha,
           id_tipo_vehiculo: idTipo,
           horas_estimadas: horas,
-          hora_inicio: horaInicio || null,
+          hora_inicio: horaInicio,
         });
         if (solicitudDisponibilidad.current !== idSolicitud) {
           return;

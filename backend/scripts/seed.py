@@ -73,7 +73,7 @@ def run_seed():
         db_vehiculos = []
         for i in range(5):
             vehiculo = VehiculoORM(
-                patente=f"AB{random.randint(100, 999)}CD",
+                patente=f"ABC{random.randint(100, 999)}",
                 id_tipo_vehiculo=db_tipos[i % 3].id,
                 id_chofer_habitual=db_choferes[i].id,
                 activo=True,
