@@ -152,6 +152,46 @@ export interface paths {
         patch: operations["cancelar_servicio_api_servicios__id_servicio__cancelar_patch"];
         trace?: never;
     };
+    "/api/servicios/{id_servicio}/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el estado de un servicio
+         * @description Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación debe realizarse mediante la ruta específica que exige motivo.
+         */
+        patch: operations["cambiar_estado_servicio_api_servicios__id_servicio__estado_patch"];
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar un servicio
+         * @description Elimina un servicio sin dependencias; no admite borrado si hay referencias.
+         */
+        delete: operations["eliminar_servicio_api_servicios__id_servicio__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/choferes": {
         parameters: {
             query?: never;
@@ -656,6 +696,15 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio?: string | null;
+        };
+        /** ServicioEstadoUpdate */
+        ServicioEstadoUpdate: {
+            /**
+             * Estado
+             * @description Nuevo estado solicitado para el servicio.
+             * @enum {string}
+             */
+            estado: "pendiente" | "confirmado" | "en curso" | "finalizado" | "cobrado" | "cancelado";
         };
         /**
          * ServicioListado
@@ -1585,6 +1634,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    cambiar_estado_servicio_api_servicios__id_servicio__estado_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServicioEstadoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El estado o la transición solicitada no es válida. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    eliminar_servicio_api_servicios__id_servicio__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio tiene registros dependientes y no puede eliminarse. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

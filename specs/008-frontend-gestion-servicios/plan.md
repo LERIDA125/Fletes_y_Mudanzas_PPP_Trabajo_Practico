@@ -69,7 +69,7 @@ vigencia de una cotización entre solicitudes.
 | `backend/app/application/cotizacion/estrategias/por_hora_y_km.py` | Estrategia pura con fórmula y `Decimal/ROUND_HALF_UP`; sin lecturas ni constantes de tarifas. La franquicia fija de 10 km es la regla aprobada de esta estrategia. |
 | `backend/app/application/cotizacion/calculadora.py` | Caso de uso/selector de la estrategia de cotización, dependiente del puerto de tarifas. |
 | `backend/app/application/servicios/puertos.py` | Protocols para repositorio de Servicios y consultas de entidades activas requeridas al alta. |
-| `backend/app/application/servicios/gestor_servicios.py` | Métodos `cotizar`, `crear`, `listar` y `cancelar`; validar referencias/asignación tipo-vehículo, delegar la transición al dominio, inyectar la hora del servidor y persistir por puerto. |
+| `backend/app/application/servicios/gestor_servicios.py` | Métodos `cotizar`, `crear`, `listar`, `cancelar`, `cambiar_estado` y `eliminar`; validar referencias/asignación tipo-vehículo, delegar transiciones al dominio y persistir por puerto. |
 
 ### Infraestructura
 
@@ -77,7 +77,7 @@ vigencia de una cotización entre solicitudes.
 |---|---|
 | `backend/app/infrastructure/models/servicio.py` | ORM `servicios`, FK a cliente/tipo/chofer/vehículo; campos de viaje, snapshot tarifario, precio, estado, `motivo_cancelacion`, `hora_fin` y auditoría. |
 | `backend/app/infrastructure/models/__init__.py` | Registrar `ServicioORM` para metadata de Alembic y tests. |
-| `backend/app/infrastructure/repositories/servicio_repo.py` | Persistir servicios; obtener por id; actualizar la cancelación; listar con JOINs paginados, total y orden estable; consultas de historial de clientes/vehículos. |
+| `backend/app/infrastructure/repositories/servicio_repo.py` | Persistir servicios; obtener por id; actualizar; eliminar con detección de dependencias; listar con JOINs paginados, total y orden estable; consultas de historial de clientes/vehículos. |
 | `backend/alembic/versions/0004_crear_servicios.py` | Migración aditiva enlazada a `0003`, tabla, FKs, constraints, índices y estado inicial de aplicación. |
 | `backend/alembic/versions/0005_cancelacion_servicios.py` | Agrega `hora_fin` y `motivo_cancelacion`; amplía el CHECK de estados con `cancelado` y agrega el CHECK de cancelación completa. |
 | `backend/app/infrastructure/repositories/consulta_stub.py` | No usar el stub de “sin servicios” para consultas que ahora pueden responderse. Eliminarlo solo si queda sin referencias; no conservar resultado ficticio. |
@@ -86,14 +86,16 @@ Los importes/tarifas usan `Numeric(12, 2)`. Distancias y horas admiten dos decim
 negativo; `horas_estimadas` debe ser ≥ 1. El modelo mantiene el estado como string restringido a
 los estados definidos por la máquina del proyecto; el alta siempre persiste `pendiente`. Si el
 modelo actual no dispone de catálogo de estados, no crear un catálogo especulativo para esta
-historia: usar campo acotado y constraint para los estados definidos. No se exponen transiciones.
+historia: usar campo acotado y constraint para los estados definidos. Las transiciones ordinarias
+expuestas siguen estrictamente el estado siguiente permitido por `Servicio.transicionar_a`;
+cancelar permanece como flujo separado con motivo y hora de finalización.
 
 ### API y composición
 
 | Archivo | Responsabilidad |
 |---|---|
-| `backend/app/api/schemas/servicio.py` | `CotizacionRequest/Read`, `ServicioCreate`, `ServicioCancelar`, `ServicioRead`, `ServicioListado`; entrada estricta `extra="forbid"`, campos calculados solo en salida y `motivo_cancelacion`/`hora_fin` en la lectura. |
-| `backend/app/api/servicios.py` | Router `/api/servicios`: `POST /cotizar`, `POST ""` con 201, `GET ""` paginado y `PATCH /{id}/cancelar`. Todas las operaciones requieren `admin`; handlers solo validan schema/dependencia y delegan. |
+| `backend/app/api/schemas/servicio.py` | `CotizacionRequest/Read`, `ServicioCreate`, `ServicioCancelar`, `ServicioEstadoUpdate`, `ServicioRead`, `ServicioListado`; entrada estricta `extra="forbid"`, campos calculados solo en salida y `motivo_cancelacion`/`hora_fin` en la lectura. |
+| `backend/app/api/servicios.py` | Router `/api/servicios`: `POST /cotizar`, `POST ""` con 201, `GET ""` paginado, `PATCH /{id}/cancelar`, `PATCH /{id}/estado` y `DELETE /{id}` con 204. Todas las operaciones requieren `admin`; handlers solo validan schema/dependencia y delegan. |
 | `backend/app/core/dependencias.py` | Construir repositorio/gestor de servicios y calculadora con repositorio de tarifas; reemplazar adaptadores stub de historial de Cliente y servicios por Vehículo por consultas reales, sin dependencias circulares. |
 | `backend/app/main.py` | Registrar router de servicios. Los handlers globales actuales traducen errores de dominio a 404/409/422. |
 
@@ -108,14 +110,24 @@ router delega en `GestorServicios.cancelar`, que busca el servicio, delega la tr
 `Servicio.cancelar` y le inyecta `hora_fin` con la hora del servidor. Responde 200 con el servicio
 actualizado; 404 si no existe, 409 si el estado no admite cancelación y 422 si el motivo es inválido.
 
+Contrato de cambio de estado: requiere rol admin; body `{"estado": "..."}` con un estado válido.
+El router delega en `GestorServicios.cambiar_estado`; Aplicación carga la entidad, invoca
+`Servicio.transicionar_a` y persiste por el repositorio. Solo se permite la transición siguiente,
+conforme a la máquina del dominio; cancelación sigue usando `/{id}/cancelar`. Responde 200 con el
+servicio actualizado, 404 si no existe y 422 ante estado o transición inválidos.
+
+Contrato de eliminación: requiere rol admin y no recibe cuerpo. El gestor delega en el repositorio,
+que verifica existencia y elimina en una transacción. Responde 204 sin cuerpo; 404 si el servicio
+no existe y 409 (con rollback) si una referencia dependiente impide el borrado.
+
 ### Tests
 
 | Archivo | Cobertura |
 |---|---|
 | `backend/tests/unit/application/cotizacion/test_calculadora.py` | Fórmula, franquicia cero/positiva, decimales y empates `ROUND_HALF_UP`, validaciones de horas/distancia. |
-| `backend/tests/unit/application/servicios/test_gestor_servicios.py` | Tipo/cliente/referencias inválidas, consistencia de vehículo/tipo, estado inicial, snapshots y cancelación con hora inyectada, motivo obligatorio y estados no cancelables. |
-| `backend/tests/unit/infrastructure/test_servicio_repo.py` | Crear, listado estable/paginado, JOINs opcionales, conteo e historial de clientes/vehículos. |
-| `backend/tests/integration/api/test_servicios_api.py` | Cotizar y crear como admin, rechazos de rol/validación, resistencia a precio manipulado, respuesta/listado, páginas y cancelación (200, 404, 409, 422) contra PostgreSQL. |
+| `backend/tests/unit/application/servicios/test_gestor_servicios.py` | Tipo/cliente/referencias inválidas, consistencia de vehículo/tipo, estado inicial, snapshots, transición permitida/invalidada, eliminación y cancelación con motivo y hora. |
+| `backend/tests/unit/infrastructure/test_servicio_repo.py` | Crear, actualizar, eliminar (incluidos no encontrado y conflicto referencial), listado estable/paginado, JOINs opcionales, conteo e historial de clientes/vehículos. |
+| `backend/tests/integration/api/test_servicios_api.py` | Cotizar y crear como admin, rechazos de rol/validación, resistencia a precio manipulado, respuesta/listado, transición de estado, eliminación y cancelación (200, 204, 404, 409, 422) contra PostgreSQL. |
 | Tests existentes de Clientes/Vehículos | Mantener el comportamiento de baja: una vez que hay servicios asociados no se puede dar de baja la entidad. |
 
 `backend/tests/integration/conftest.py` usa `Base.metadata.create_all` y PostgreSQL real; registrar

@@ -157,6 +157,13 @@ class FakeServicioRepository:
             self.items[servicio.id] = servicio
         return self._item(servicio)
 
+    def eliminar(self, servicio_id: int) -> None:
+        if servicio_id not in self.items:
+            raise ServicioNoEncontrado(servicio_id)
+        del self.items[servicio_id]
+        if self.guardado is not None and self.guardado.id == servicio_id:
+            self.guardado = None
+
     def listar(self, offset: int, limit: int) -> list[ServicioListadoItem]:
         return []
 
@@ -318,6 +325,37 @@ def test_gestor_rechaza_cancelacion_de_servicio_inexistente() -> None:
 
     with pytest.raises(ServicioNoEncontrado):
         gestor.cancelar(id_servicio=999, motivo="Cliente desiste")
+
+
+def test_gestor_transiciona_solo_al_siguiente_estado() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor)
+
+    actualizado = gestor.cambiar_estado(item.servicio.id, "confirmado")
+
+    assert actualizado.servicio.estado == "confirmado"
+    assert repo.guardado is actualizado.servicio
+    with pytest.raises(TransicionEstadoServicioInvalida):
+        gestor.cambiar_estado(item.servicio.id, "finalizado")
+    assert repo.items[item.servicio.id].estado == "confirmado"
+
+
+def test_gestor_rechaza_cambio_de_estado_de_servicio_inexistente() -> None:
+    gestor, _, _ = _crear_gestor()
+
+    with pytest.raises(ServicioNoEncontrado):
+        gestor.cambiar_estado(999, "confirmado")
+
+
+def test_gestor_elimina_servicio_y_rechaza_id_inexistente() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor)
+
+    gestor.eliminar(item.servicio.id)
+
+    assert item.servicio.id not in repo.items
+    with pytest.raises(ServicioNoEncontrado):
+        gestor.eliminar(item.servicio.id)
 
 
 def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:

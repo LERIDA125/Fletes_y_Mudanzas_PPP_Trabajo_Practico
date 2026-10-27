@@ -193,6 +193,76 @@ def test_cancela_servicio_con_motivo_y_hora_del_servidor(cliente_api: TestClient
     )
 
 
+def test_cambia_estado_siguiendo_la_maquina_y_requiere_admin(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "fecha": "2026-10-25",
+            "horas_estimadas": 1,
+            "distancia_ida_km": 0,
+        },
+    )
+    servicio_id = alta.json()["id_servicio"]
+    ruta = f"/api/servicios/{servicio_id}/estado"
+
+    no_admin = cliente_api.patch(ruta, headers={"X-Rol": "chofer"}, json={"estado": "confirmado"})
+    assert no_admin.status_code == 403
+
+    confirmado = cliente_api.patch(ruta, headers=admin, json={"estado": "confirmado"})
+    assert confirmado.status_code == 200
+    assert confirmado.json()["estado"] == "confirmado"
+
+    salto = cliente_api.patch(ruta, headers=admin, json={"estado": "finalizado"})
+    assert salto.status_code == 422
+    assert cliente_api.get("/api/servicios", headers=admin).json()["items"][0]["estado"] == (
+        "confirmado"
+    )
+
+    assert (
+        cliente_api.patch(
+            "/api/servicios/999999/estado",
+            headers=admin,
+            json={"estado": "confirmado"},
+        ).status_code
+        == 404
+    )
+    assert cliente_api.patch(ruta, headers=admin, json={"estado": "cancelado"}).status_code == 422
+
+
+def test_elimina_servicio_con_respuesta_204_y_404_si_no_existe(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "fecha": "2026-10-25",
+            "horas_estimadas": 1,
+            "distancia_ida_km": 0,
+        },
+    )
+    servicio_id = alta.json()["id_servicio"]
+    ruta = f"/api/servicios/{servicio_id}"
+
+    no_admin = cliente_api.delete(ruta, headers={"X-Rol": "chofer"})
+    assert no_admin.status_code == 403
+
+    eliminacion = cliente_api.delete(ruta, headers=admin)
+    assert eliminacion.status_code == 204
+    assert eliminacion.content == b""
+    assert cliente_api.get("/api/servicios", headers=admin).json()["total"] == 0
+    assert cliente_api.delete(ruta, headers=admin).status_code == 404
+
+
 def test_asociaciones_legibles_y_bajas_bloqueadas_por_historial(
     cliente_api: TestClient,
 ) -> None:

@@ -192,5 +192,13 @@ class ServicioListado(Pagina[ServicioRead]):
 
 
 class ServicioEstadoUpdate(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    estado: str = Field(description='Nuevo estado del servicio')
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal[
+        "pendiente",
+        "confirmado",
+        "en curso",
+        "finalizado",
+        "cobrado",
+        "cancelado",
+    ] = Field(description="Nuevo estado solicitado para el servicio.")

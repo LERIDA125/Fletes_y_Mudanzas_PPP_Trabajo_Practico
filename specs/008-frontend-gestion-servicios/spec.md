@@ -43,8 +43,14 @@ precios ni valores derivados del cálculo.
   el backend crea el cliente y lo vincula al servicio; si ya existe un cliente activo con la misma
   razón social normalizada, reutiliza ese registro. Un cliente inactivo con la misma razón social
   se rechaza como duplicado.
-- Todo servicio nuevo inicia en estado `pendiente`. La cancelación es la única transición expuesta
-  en esta fase: pasa el servicio a `cancelado`, exige un motivo y registra la hora de finalización.
+- Todo servicio nuevo inicia en estado `pendiente`. Los cambios ordinarios de estado siguen la
+  máquina explícita del dominio; la cancelación continúa siendo una operación separada que exige
+  un motivo y registra la hora de finalización.
+- Un servicio puede transicionar únicamente al estado siguiente definido por la máquina
+  (`pendiente → confirmado → en curso → finalizado → cobrado`). Cancelar no es una transición
+  ordinaria y sigue usando su endpoint específico.
+- Un servicio puede eliminarse solo si no tiene registros dependientes; la ausencia responde 404
+  y una restricción referencial responde 409 sin borrar el registro.
 - Un servicio puede cancelarse desde `pendiente`, `confirmado` o `en curso`. No puede cancelarse
   desde `finalizado`, `cobrado` ni desde un servicio ya `cancelado`.
 - Pagos, cuenta corriente y rendiciones quedan fuera de alcance.
@@ -277,6 +283,20 @@ Salida: el servicio actualizado con `estado = 'cancelado'`, `motivo_cancelacion`
 auditoría. Errores: 404 si el servicio no existe, 409 si no es cancelable, 422 si el motivo es
 inválido.
 
+### `PATCH /api/servicios/{id_servicio}/estado` — admin
+
+Entrada: `estado`, uno de los valores válidos de la máquina. Aplicación debe cargar el servicio,
+delegar la transición en `Servicio.transicionar_a` y persistirla por el repositorio. Solo se admite
+el estado siguiente; no se permiten saltos, repetir el estado actual ni cancelar mediante esta
+ruta. Salida: servicio actualizado con 200. Errores: 404 si no existe y 422 si el estado o la
+transición no son válidos.
+
+### `DELETE /api/servicios/{id_servicio}` — admin
+
+No recibe cuerpo. Aplicación delega el borrado al repositorio. Salida: 204 sin cuerpo. Errores:
+404 si no existe y 409 si una dependencia referencial impide eliminarlo; en ese caso el registro
+debe permanecer intacto.
+
 ### `GET /api/servicios/disponibilidad` — admin
 
 Query params obligatorios: `fecha` (date), `id_tipo_vehiculo` (int activo), `horas_estimadas`
@@ -334,12 +354,20 @@ las decisiones pendientes del cliente (AGENTS.md §6):
 - **FR-034**: Los botones de alta y sus modales en `/choferes`, `/vehiculos` y `/servicios`
   MUST renderizarse aunque la API falle o devuelva catálogos vacíos. El formulario de servicio
   MUST abrirse automáticamente al navegar con `?nuevo=1`.
+- **FR-035**: `PATCH /api/servicios/{id_servicio}/estado` MUST requerir rol `admin`, recibir un
+  estado válido y delegar la transición en `Servicio.transicionar_a` desde Aplicación. Solo se
+  permite el siguiente estado de la máquina; una transición inválida responde 422 sin modificar
+  el registro y un servicio inexistente responde 404. La cancelación MUST seguir usando su ruta
+  específica y sus validaciones existentes.
+- **FR-036**: `DELETE /api/servicios/{id_servicio}` MUST requerir rol `admin` y delegar el borrado
+  en Aplicación/repositorio. El éxito responde 204 sin cuerpo; la ausencia responde 404 y una
+  dependencia referencial que impida el borrado responde 409 sin borrar el servicio.
 
 ## Out of Scope
 
 - La autenticación JWT y el login quedan fuera del MVP. El modo demo local no equivale a
   autenticación ni debe desplegarse.
-- Edición, baja y transiciones de estado distintas de la cancelación.
+- Edición de servicios.
 - Bloqueo de solapamientos al crear: la consulta de disponibilidad es informativa y el alta no
   rechaza recursos ocupados (regla de agenda aún no confirmada por el cliente).
 - Pagos, medios de cobro, cuenta corriente, saldos y rendiciones.
@@ -364,3 +392,7 @@ las decisiones pendientes del cliente (AGENTS.md §6):
 - **SC-009**: Cancelar un servicio persistido devuelve 200 con `estado = 'cancelado'`, un
   `motivo_cancelacion` recortado y `hora_fin` no nulo; repetir la cancelación devuelve 409 y no
   altera el registro original.
+- **SC-010**: Cambiar el estado de un servicio respeta la transición siguiente de la máquina;
+  saltar estados, repetir el estado o cancelar por esta ruta devuelve 422 sin modificarlo.
+- **SC-011**: Eliminar un servicio existente devuelve 204 y deja de aparecer en el listado;
+  eliminar un ID inexistente devuelve 404 y una restricción referencial responde 409.

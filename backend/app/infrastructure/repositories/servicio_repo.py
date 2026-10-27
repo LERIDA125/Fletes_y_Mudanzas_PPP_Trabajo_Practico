@@ -7,7 +7,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.application.servicios.puertos import AsignacionDia, ServicioListadoItem
-from app.domain.errores import ReferenciasServicioInvalidas, ServicioNoEncontrado
+from app.domain.errores import (
+    ReferenciasServicioInvalidas,
+    ServicioConDependencias,
+    ServicioNoEncontrado,
+)
 from app.domain.servicio import Servicio
 from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
@@ -190,7 +194,6 @@ class ServicioRepo:
             patente_vehiculo=patente,
         )
 
-
     def eliminar(self, servicio_id: int) -> None:
         orm = self._db.get(ServicioORM, servicio_id)
         if orm is None:
@@ -200,4 +203,4 @@ class ServicioRepo:
             self._db.commit()
         except IntegrityError as error:
             self._db.rollback()
-            raise ReferenciasServicioInvalidas() from error
+            raise ServicioConDependencias(servicio_id) from error

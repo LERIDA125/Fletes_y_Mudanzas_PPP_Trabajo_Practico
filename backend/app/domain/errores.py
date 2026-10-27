@@ -131,6 +131,14 @@ class ServicioNoEncontrado(RecursoNoEncontrado):
         self.servicio_id = servicio_id
 
 
+class ServicioConDependencias(ConflictoOperacion):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(
+            f"El servicio {servicio_id} tiene registros dependientes y no se puede eliminar"
+        )
+        self.servicio_id = servicio_id
+
+
 class ServicioNoCancelable(ConflictoOperacion):
     def __init__(self, estado_actual: str) -> None:
         super().__init__(f"Un servicio en estado {estado_actual!r} no se puede cancelar")

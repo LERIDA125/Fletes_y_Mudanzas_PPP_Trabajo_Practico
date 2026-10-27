@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, Response, status
 
+from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.servicio import (
     CotizacionRead,
     CotizacionRequest,
@@ -16,7 +17,6 @@ from app.api.schemas.servicio import (
     ServicioListado,
     ServicioRead,
 )
-from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.vehiculo import VehiculoRead
 from app.application.servicios.gestor_servicios import GestorServicios
 from app.core.dependencias import ROL_ADMIN, get_gestor_servicios, require_rol
@@ -82,9 +82,7 @@ def consultar_disponibilidad(
         hora_inicio=hora_inicio,
         hora_fin=disponibilidad.hora_fin,
         choferes=[ChoferRead.de_chofer(chofer) for chofer in disponibilidad.choferes],
-        vehiculos=[
-            VehiculoRead.de_listado(vehiculo) for vehiculo in disponibilidad.vehiculos
-        ],
+        vehiculos=[VehiculoRead.de_listado(vehiculo) for vehiculo in disponibilidad.vehiculos],
     )
 
 
@@ -196,6 +194,61 @@ def cancelar_servicio(
 ) -> ServicioRead:
     item = gestor.cancelar(id_servicio=id_servicio, motivo=datos.motivo)
     return ServicioRead.de_item(item)
+
+
+@router.patch(
+    "/{id_servicio}/estado",
+    response_model=ServicioRead,
+    summary="Cambiar el estado de un servicio",
+    description=(
+        "Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación "
+        "debe realizarse mediante la ruta específica que exige motivo."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "El estado o la transición solicitada no es válida."
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def cambiar_estado_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    datos: ServicioEstadoUpdate,
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+) -> ServicioRead:
+    item = gestor.cambiar_estado(id_servicio=id_servicio, estado=datos.estado)
+    return ServicioRead.de_item(item)
+
+
+@router.delete(
+    "/{id_servicio}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    summary="Eliminar un servicio",
+    description="Elimina un servicio sin dependencias; no admite borrado si hay referencias.",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El servicio tiene registros dependientes y no puede eliminarse."
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def eliminar_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+) -> Response:
+    gestor.eliminar(id_servicio)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(
