@@ -1,6 +1,22 @@
-import { CarFront, MoreHorizontal } from "lucide-react";
+"use client";
 
-import type { Servicio } from "@/features/servicios/types";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { CarFront, MoreHorizontal, Trash2 } from "lucide-react";
+
+import { cambiarEstadoServicio, eliminarServicio } from "@/features/servicios/actions";
+import type { EstadoServicio, Servicio } from "@/features/servicios/types";
+
+const estadosEditables: { valor: EstadoServicio; etiqueta: string }[] = [
+  { valor: "pendiente", etiqueta: "Pendiente" },
+  { valor: "en curso", etiqueta: "En curso" },
+  { valor: "finalizado", etiqueta: "Finalizado" },
+  { valor: "cancelado", etiqueta: "Cancelado" },
+];
+
+function esEstadoEditable(estado: string): estado is EstadoServicio {
+  return estadosEditables.some(({ valor }) => valor === estado);
+}
 
 const formatoMoneda = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -35,12 +51,63 @@ const statusStyles: Record<string, string> = {
   finalizado: "border-emerald-200 bg-emerald-50 text-emerald-700",
   confirmado: "border-blue-200 bg-blue-50 text-blue-700",
   cobrado: "border-purple-200 bg-purple-50 text-purple-700",
+  cancelado: "border-slate-200 bg-slate-50 text-slate-600",
 };
 
 export function FilaServicio({ servicio }: { servicio: Servicio }) {
+  const router = useRouter();
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
+  const [estadoSeleccionado, setEstadoSeleccionado] =
+    useState<EstadoServicio>("pendiente");
+  const [enviando, setEnviando] = useState(false);
+  const [mensajeError, setMensajeError] = useState("");
   const estadoClave = servicio.estado.toLowerCase();
   const claseBadge =
     statusStyles[estadoClave] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+  async function guardarEstado() {
+    setMensajeError("");
+    setEnviando(true);
+    try {
+      const resultado = await cambiarEstadoServicio(
+        servicio.id_servicio,
+        estadoSeleccionado,
+      );
+      if (!resultado.ok) {
+        setMensajeError(resultado.mensaje);
+        return;
+      }
+      setMenuAbierto(false);
+      setSelectorAbierto(false);
+      router.refresh();
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function confirmarEliminacion() {
+    const confirmado = window.confirm(
+      `¿Eliminar el servicio de ${servicio.razon_social_cliente}? Esta acción no se puede deshacer.`,
+    );
+    if (!confirmado) {
+      return;
+    }
+
+    setMensajeError("");
+    setEnviando(true);
+    try {
+      const resultado = await eliminarServicio(servicio.id_servicio);
+      if (!resultado.ok) {
+        setMensajeError(resultado.mensaje);
+        return;
+      }
+      setMenuAbierto(false);
+      router.refresh();
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <tr className="transition-colors hover:bg-slate-50/70">
@@ -121,13 +188,94 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
       </td>
 
       <td className="whitespace-nowrap py-3.5 pr-5 text-right sm:pr-6">
-        <button
-          type="button"
-          aria-label={`Opciones de ${servicio.razon_social_cliente}`}
-          className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-        >
-          <MoreHorizontal className="size-4" />
-        </button>
+        <div className="relative inline-block text-left">
+          <button
+            type="button"
+            aria-label={`Opciones de ${servicio.razon_social_cliente}`}
+            aria-expanded={menuAbierto}
+            aria-haspopup="true"
+            onClick={() => {
+              setMenuAbierto((abierto) => !abierto);
+              setSelectorAbierto(false);
+              setMensajeError("");
+            }}
+            disabled={enviando}
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+          {menuAbierto ? (
+            <div
+              aria-label={`Acciones de ${servicio.razon_social_cliente}`}
+              className="absolute right-0 z-10 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-lg"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  const estadoActual = estadosEditables.find(
+                    ({ valor }) => valor === servicio.estado,
+                  );
+                  setEstadoSeleccionado(estadoActual?.valor ?? "pendiente");
+                  setSelectorAbierto((abierto) => !abierto);
+                  setMensajeError("");
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cambiar estado
+              </button>
+              {selectorAbierto ? (
+                <div className="border-t border-slate-100 px-2 py-3">
+                  <label
+                    htmlFor={`estado-servicio-${servicio.id_servicio}`}
+                    className="mb-1 block text-xs font-medium text-slate-500"
+                  >
+                    Nuevo estado
+                  </label>
+                  <select
+                    id={`estado-servicio-${servicio.id_servicio}`}
+                    value={estadoSeleccionado}
+                    onChange={(evento) => {
+                      const estado = evento.target.value;
+                      if (esEstadoEditable(estado)) {
+                        setEstadoSeleccionado(estado);
+                      }
+                    }}
+                    disabled={enviando}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                  >
+                    {estadosEditables.map(({ valor, etiqueta }) => (
+                      <option key={valor} value={valor}>
+                        {etiqueta}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={guardarEstado}
+                    disabled={enviando}
+                    className="mt-2 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {enviando ? "Guardando…" : "Guardar estado"}
+                  </button>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={confirmarEliminacion}
+                disabled={enviando}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                Eliminar
+              </button>
+              {mensajeError ? (
+                <p role="alert" className="px-3 py-2 text-left text-xs text-red-700">
+                  {mensajeError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </td>
     </tr>
   );

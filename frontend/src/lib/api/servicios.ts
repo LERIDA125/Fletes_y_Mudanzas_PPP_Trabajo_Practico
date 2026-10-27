@@ -4,6 +4,7 @@ import type {
   Cotizacion,
   Disponibilidad,
   ListadoServicios,
+  EstadoServicio,
   Servicio,
   SolicitudCotizacion,
 } from "@/features/servicios/types";
@@ -81,5 +82,22 @@ export async function crearServicio(solicitud: AltaServicio): Promise<Servicio> 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(solicitud),
+  });
+}
+
+export async function cambiarEstadoServicio(
+  idServicio: number,
+  estado: EstadoServicio,
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/estado`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado }),
+  });
+}
+
+export async function eliminarServicio(idServicio: number): Promise<void> {
+  return request<void>(`/api/servicios/${idServicio}`, {
+    method: "DELETE",
   });
 }

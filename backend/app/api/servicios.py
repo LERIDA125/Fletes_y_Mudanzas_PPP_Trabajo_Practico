@@ -4,7 +4,7 @@ from datetime import date, time
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.schemas.servicio import (
     CotizacionRead,
@@ -12,6 +12,7 @@ from app.api.schemas.servicio import (
     DisponibilidadRead,
     ServicioCancelar,
     ServicioCreate,
+    ServicioEstadoUpdate,
     ServicioListado,
     ServicioRead,
 )

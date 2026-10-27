@@ -189,3 +189,8 @@ class ServicioRead(BaseModel):
 
 class ServicioListado(Pagina[ServicioRead]):
     """Página de Servicios con relaciones legibles."""
+
+
+class ServicioEstadoUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    estado: str = Field(description='Nuevo estado del servicio')

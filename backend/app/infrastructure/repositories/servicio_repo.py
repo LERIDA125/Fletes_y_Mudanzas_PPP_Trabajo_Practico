@@ -189,3 +189,15 @@ class ServicioRepo:
             nombre_chofer=nombre_chofer,
             patente_vehiculo=patente,
         )
+
+
+    def eliminar(self, servicio_id: int) -> None:
+        orm = self._db.get(ServicioORM, servicio_id)
+        if orm is None:
+            raise ServicioNoEncontrado(servicio_id)
+        self._db.delete(orm)
+        try:
+            self._db.commit()
+        except IntegrityError as error:
+            self._db.rollback()
+            raise ReferenciasServicioInvalidas() from error

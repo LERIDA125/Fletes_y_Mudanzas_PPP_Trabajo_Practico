@@ -8,6 +8,7 @@ import type {
   ConsultaDisponibilidad,
   Cotizacion,
   Disponibilidad,
+  EstadoServicio,
   Servicio,
   SolicitudCotizacion,
   TipoVehiculoOpcion,
@@ -15,7 +16,9 @@ import type {
 import {
   consultarDisponibilidad,
   crearServicio,
+  cambiarEstadoServicio as actualizarEstadoServicio,
   cotizarServicio,
+  eliminarServicio as borrarServicio,
   listarClientesParaAlta,
   listarTiposParaAlta,
 } from "@/lib/api/servicios";
@@ -94,9 +97,45 @@ export async function registrarServicio(
   }
 }
 
+export async function cambiarEstadoServicio(
+  idServicio: number,
+  estado: EstadoServicio,
+): Promise<ResultadoAccion<Servicio>> {
+  try {
+    const servicio = await actualizarEstadoServicio(idServicio, estado);
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error.clase, "cambiar-estado") };
+    }
+    throw error;
+  }
+}
+
+export async function eliminarServicio(
+  idServicio: number,
+): Promise<ResultadoAccion<void>> {
+  try {
+    await borrarServicio(idServicio);
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: undefined };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error.clase, "eliminar") };
+    }
+    throw error;
+  }
+}
+
 function mensajeDeError(
   clase: ErrorApi["clase"],
-  operacion: "cotizar" | "crear" | "disponibilidad" | "catalogos",
+  operacion:
+    "cotizar" | "crear" | "disponibilidad" | "catalogos" | "cambiar-estado" | "eliminar",
 ): string {
   if (clase === "sin-permisos" || clase === "sesion-expirada") {
     return "La API rechazó la operación. Verificá que el modo de demo local esté habilitado.";
@@ -112,6 +151,12 @@ function mensajeDeError(
   }
   if (operacion === "disponibilidad") {
     return "No pudimos consultar la disponibilidad. Revisá la fecha y el tipo de vehículo.";
+  }
+  if (operacion === "cambiar-estado") {
+    return "No pudimos cambiar el estado del servicio. Revisá el estado actual e intentá de nuevo.";
+  }
+  if (operacion === "eliminar") {
+    return "No pudimos eliminar el servicio. Intentá de nuevo.";
   }
   return "No pudimos registrar el servicio. Revisá los datos e intentá de nuevo.";
 }

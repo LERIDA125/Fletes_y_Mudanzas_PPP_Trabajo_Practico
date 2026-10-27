@@ -16,12 +16,16 @@ const {
   solicitarCotizacion,
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
+  cambiarEstadoServicio,
+  eliminarServicio,
   refresh,
 } = vi.hoisted(() => ({
   registrarServicio: vi.fn(),
   solicitarCotizacion: vi.fn(),
   consultarDisponibilidadServicio: vi.fn(),
   obtenerCatalogosServicio: vi.fn(),
+  cambiarEstadoServicio: vi.fn(),
+  eliminarServicio: vi.fn(),
   refresh: vi.fn(),
 }));
 
@@ -30,6 +34,8 @@ vi.mock("@/features/servicios/actions", () => ({
   solicitarCotizacion,
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
+  cambiarEstadoServicio,
+  eliminarServicio,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -285,6 +291,15 @@ describe("FormularioServicio", () => {
 });
 
 describe("ListadoServicios", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cambiarEstadoServicio.mockResolvedValue({
+      ok: true,
+      dato: servicioCreado(),
+    });
+    eliminarServicio.mockResolvedValue({ ok: true, dato: undefined });
+  });
+
   it("muestra asociaciones legibles, fecha, estado e importe del backend", () => {
     render(<ListadoServicios servicios={[servicioCreado()]} />);
 
@@ -299,5 +314,48 @@ describe("ListadoServicios", () => {
     expect(fila).toHaveTextContent("9.000,00");
     expect(fila).toHaveTextContent("Sin chofer");
     expect(fila).toHaveTextContent("Sin vehículo");
+  });
+
+  it("permite cambiar el estado y actualiza la tabla tras el éxito", async () => {
+    const usuario = userEvent.setup();
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Cambiar estado" }));
+    await usuario.selectOptions(screen.getByLabelText("Nuevo estado"), "en curso");
+    await usuario.click(screen.getByRole("button", { name: "Guardar estado" }));
+
+    await waitFor(() => {
+      expect(cambiarEstadoServicio).toHaveBeenCalledWith(41, "en curso");
+      expect(refresh).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("pide confirmación antes de eliminar el servicio", async () => {
+    const usuario = userEvent.setup();
+    const confirmacion = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    expect(confirmacion).toHaveBeenCalledWith(
+      "¿Eliminar el servicio de Mudanzas del Centro? Esta acción no se puede deshacer.",
+    );
+    expect(eliminarServicio).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+
+    confirmacion.mockReturnValue(true);
+    await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    await waitFor(() => {
+      expect(eliminarServicio).toHaveBeenCalledWith(41);
+      expect(refresh).toHaveBeenCalledOnce();
+    });
+    confirmacion.mockRestore();
   });
 });

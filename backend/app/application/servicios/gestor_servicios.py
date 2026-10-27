@@ -258,3 +258,13 @@ class GestorServicios:
         if creado.id is None:
             raise RuntimeError("El repositorio devolvió un cliente recién creado sin identidad")
         return creado.id
+
+    def eliminar(self, id_servicio: int) -> None:
+        self._repo.eliminar(id_servicio)
+
+    def cambiar_estado(self, id_servicio: int, estado: str) -> ServicioListadoItem:
+        actual = self._repo.obtener_por_id(id_servicio)
+        if actual is None:
+            raise ServicioNoEncontrado(id_servicio)
+        actual.servicio.transicionar_a(estado)
+        return self._repo.actualizar(actual.servicio)
