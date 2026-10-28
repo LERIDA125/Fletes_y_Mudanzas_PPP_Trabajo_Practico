@@ -27,9 +27,9 @@ export function ListadoChoferes({ choferes }: { choferes: Chofer[] }) {
           </th>
           <th
             scope="col"
-            className="py-2 text-right text-[0.8125rem] font-medium text-tinta-media"
+            className="w-px py-2 pl-4 text-right text-[0.8125rem] font-medium text-tinta-media"
           >
-            Acciones
+            <span className="sr-only">Acciones</span>
           </th>
         </tr>
       </thead>

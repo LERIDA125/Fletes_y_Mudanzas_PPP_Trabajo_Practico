@@ -16,6 +16,7 @@ vi.mock("@/features/vehiculos/actions", () => ({
   guardarVehiculo: vi.fn(),
   guardarTarifasTipo: vi.fn(),
   obtenerCatalogosVehiculo: vi.fn(),
+  eliminarVehiculo: vi.fn(),
 }));
 
 function vehiculoDePrueba(sobrescritura: Partial<Vehiculo> = {}): Vehiculo {

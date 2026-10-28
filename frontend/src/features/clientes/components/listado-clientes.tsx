@@ -31,6 +31,12 @@ export function ListadoClientes({ clientes }: { clientes: Cliente[] }) {
           >
             Alta
           </th>
+          <th
+            scope="col"
+            className="w-px py-2 pl-4 text-right text-[0.8125rem] font-medium text-tinta-media"
+          >
+            <span className="sr-only">Acciones</span>
+          </th>
         </tr>
       </thead>
       <tbody className="max-sm:block">

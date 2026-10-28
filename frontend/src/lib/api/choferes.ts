@@ -61,3 +61,9 @@ export async function actualizarChofer(
     body: JSON.stringify(datos),
   });
 }
+
+export async function eliminarChofer(id: number): Promise<void> {
+  return request<void>(`/api/choferes/${id}`, {
+    method: "DELETE",
+  });
+}

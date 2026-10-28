@@ -52,6 +52,12 @@ export async function actualizarVehiculo(
   });
 }
 
+export async function eliminarVehiculo(id: number): Promise<void> {
+  return request<void>(`/api/vehiculos/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function listarTiposVehiculo(): Promise<TipoVehiculo[]> {
   const parametros = new URLSearchParams({
     page: "1",

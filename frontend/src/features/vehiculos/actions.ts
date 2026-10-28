@@ -13,6 +13,7 @@ import {
   actualizarTipoVehiculo,
   actualizarVehiculo,
   crearVehiculo,
+  eliminarVehiculo as borrarVehiculo,
   listarTiposVehiculo,
 } from "@/lib/api/vehiculos";
 import { ErrorApi } from "@/lib/api/http";
@@ -69,6 +70,24 @@ export async function guardarVehiculo(
   }
 }
 
+export async function eliminarVehiculo(
+  id: number,
+): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+  try {
+    await borrarVehiculo(id);
+    revalidatePath("/vehiculos");
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "eliminar") };
+    }
+    throw error;
+  }
+}
+
 export async function guardarTarifasTipo(
   id: number,
   datos: TarifasTipoValidadas,
@@ -88,12 +107,24 @@ export async function guardarTarifasTipo(
   }
 }
 
-function mensajeDeError(error: ErrorApi): string {
+function mensajeDeError(
+  error: ErrorApi,
+  operacion: "guardar" | "eliminar" = "guardar",
+): string {
   if (error.clase === "sin-permisos" || error.clase === "sesion-expirada") {
     return "La API rechazó la operación. Verificá que el modo de demo local esté habilitado.";
   }
   if (error.clase === "sin-respuesta") {
     return "No pudimos conectar con el sistema. Revisá que el servidor esté funcionando.";
+  }
+  if (operacion === "eliminar") {
+    if (error.status === 409) {
+      return "No se puede dar de baja un vehículo que tiene servicios registrados.";
+    }
+    if (error.status === 404) {
+      return "El vehículo ya no existe o fue dado de baja. Actualizá el listado.";
+    }
+    return "No pudimos dar de baja el vehículo. Intentá de nuevo.";
   }
   const detalle = error.detalle;
   if (detalle && typeof detalle === "object" && "detail" in detalle) {

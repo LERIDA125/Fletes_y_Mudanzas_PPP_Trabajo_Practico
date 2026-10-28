@@ -10,7 +10,7 @@ import {
 import { ErrorApi } from "@/lib/api/http";
 import { BuscadorVehiculos } from "@/features/vehiculos/components/buscador-vehiculos";
 import { CabeceraListado } from "@/features/vehiculos/components/cabecera-listado";
-import { DialogoVehiculo } from "@/features/vehiculos/components/dialogo-vehiculo";
+import { NuevoVehiculo } from "@/features/vehiculos/components/nuevo-vehiculo";
 import { Cargando } from "@/features/vehiculos/components/estados/cargando";
 import { EstadoError } from "@/features/vehiculos/components/estados/error";
 import { EstadoVacio } from "@/features/vehiculos/components/estados/vacio";
@@ -54,8 +54,8 @@ export default function PaginaVehiculos({ searchParams }: PageProps<"/vehiculos"
           >
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
-          {/* El diálogo se renderiza siempre; pide sus catálogos al abrirse. */}
-          <DialogoVehiculo />
+          {/* El diálogo se monta al abrirse y pide sus catálogos en ese momento. */}
+          <NuevoVehiculo />
         </div>
       </div>
 

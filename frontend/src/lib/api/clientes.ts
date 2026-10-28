@@ -1,4 +1,5 @@
 import type { Cliente, ListadoClientes } from "@/features/clientes/types";
+import type { components } from "@/types/openapi";
 import { request } from "./http";
 
 export type CriterioDeBusqueda = {
@@ -6,6 +7,8 @@ export type CriterioDeBusqueda = {
   page?: number;
   size?: number;
 };
+
+export type EdicionCliente = components["schemas"]["ClienteUpdate"];
 
 export type { Cliente, ListadoClientes };
 
@@ -25,4 +28,21 @@ export async function listarClientes(
   // Sin `use cache` y sin opciones de revalidación: el listado se resuelve en cada
   // request, que es el patrón de Cache Components para datos frescos detrás de Suspense.
   return request<ListadoClientes>(`/api/clientes?${parametros.toString()}`);
+}
+
+export async function actualizarCliente(
+  id: number,
+  datos: EdicionCliente,
+): Promise<Cliente> {
+  return request<Cliente>(`/api/clientes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  });
+}
+
+export async function eliminarCliente(id: number): Promise<void> {
+  return request<void>(`/api/clientes/${id}`, {
+    method: "DELETE",
+  });
 }

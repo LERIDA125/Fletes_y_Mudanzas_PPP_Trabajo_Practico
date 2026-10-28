@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { BuscadorChoferes } from "@/features/choferes/components/buscador-choferes";
 import { CabeceraListado } from "@/features/choferes/components/cabecera-listado";
-import { DialogoChofer } from "@/features/choferes/components/dialogo-chofer";
+import { NuevoChofer } from "@/features/choferes/components/nuevo-chofer";
 import { Cargando } from "@/features/choferes/components/estados/cargando";
 import { EstadoError } from "@/features/choferes/components/estados/error";
 import { EstadoVacio } from "@/features/choferes/components/estados/vacio";
@@ -49,7 +49,7 @@ export default function PaginaChoferes({ searchParams }: PageProps<"/choferes">)
           >
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
-          <DialogoChofer />
+          <NuevoChofer />
         </div>
       </div>
 
