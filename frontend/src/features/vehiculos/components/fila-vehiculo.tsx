@@ -56,26 +56,30 @@ export function FilaVehiculo({
   }
 
   return (
-    <tr className="border-t border-linea align-top max-sm:block">
+    <tr className="border-t border-linea align-top max-sm:block dark:border-[#1e2c44]">
       <th
         scope="row"
-        className="break-words px-4 py-4 text-left text-[1rem] font-semibold text-tinta max-sm:block sm:px-0 sm:pr-4"
+        className="break-words px-4 py-4 text-left text-[1rem] font-semibold text-tinta max-sm:block sm:px-0 sm:pr-4 dark:text-white"
       >
         {vehiculo.patente}
       </th>
-      <td className="break-words px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4">
-        <span className="text-tinta-media sm:hidden">Tipo y capacidad: </span>
+      <td className="break-words px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4 dark:text-slate-100">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">
+          Tipo y capacidad:{" "}
+        </span>
         <span>{vehiculo.descripcion_tipo_vehiculo}</span>
-        <span className="block text-tinta-media">
+        <span className="block text-tinta-media dark:text-slate-400">
           {formatoCapacidad.format(vehiculo.capacidad_carga_kg)} kg
         </span>
       </td>
-      <td className="break-words px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4">
-        <span className="text-tinta-media sm:hidden">Chofer habitual: </span>
+      <td className="break-words px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4 dark:text-slate-100">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">
+          Chofer habitual:{" "}
+        </span>
         {vehiculo.nombre_chofer_habitual ?? "Sin chofer habitual"}
       </td>
-      <td className="px-4 py-1 text-right text-[0.875rem] text-tinta-media tabular-nums max-sm:block max-sm:text-left sm:px-0 sm:py-4">
-        <span className="text-tinta-media sm:hidden">Alta: </span>
+      <td className="px-4 py-1 text-right text-[0.875rem] text-tinta-media tabular-nums max-sm:block max-sm:text-left sm:px-0 sm:py-4 dark:text-slate-400">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">Alta: </span>
         {fechaCorta(vehiculo.creado_en)}
       </td>
       <td className="px-4 py-1 text-right max-sm:block max-sm:text-left sm:px-0 sm:py-3">

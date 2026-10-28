@@ -41,26 +41,28 @@ export function FilaCliente({ cliente }: { cliente: Cliente }) {
   }
 
   return (
-    <tr className="border-t border-linea align-top max-sm:block">
+    <tr className="border-t border-linea align-top max-sm:block dark:border-[#1e2c44]">
       <th
         scope="row"
-        className="px-4 py-4 text-left text-[1rem] font-semibold text-tinta max-sm:block sm:px-0 sm:pr-4"
+        className="px-4 py-4 text-left text-[1rem] font-semibold text-tinta max-sm:block sm:px-0 sm:pr-4 dark:text-white"
       >
         {cliente.razon_social}
-        <span className="mt-1 block text-[0.875rem] font-normal text-tinta-media">
+        <span className="mt-1 block text-[0.875rem] font-normal text-tinta-media dark:text-slate-400">
           {cliente.direccion_habitual}
         </span>
       </th>
-      <td className="px-4 py-1 text-[0.875rem] text-tinta tabular-nums max-sm:block sm:px-0 sm:py-4 sm:pr-4">
-        <span className="text-tinta-media sm:hidden">Teléfono: </span>
+      <td className="px-4 py-1 text-[0.875rem] text-tinta tabular-nums max-sm:block sm:px-0 sm:py-4 sm:pr-4 dark:text-slate-100">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">Teléfono: </span>
         {cliente.telefono}
       </td>
-      <td className="px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4">
-        <span className="text-tinta-media sm:hidden">Cuenta corriente: </span>
+      <td className="px-4 py-1 text-[0.875rem] text-tinta max-sm:block sm:px-0 sm:py-4 sm:pr-4 dark:text-slate-100">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">
+          Cuenta corriente:{" "}
+        </span>
         {cliente.tiene_cuenta_corriente ? "Sí" : "No"}
       </td>
-      <td className="px-4 py-1 text-right text-[0.875rem] text-tinta-media tabular-nums max-sm:block max-sm:text-left sm:px-0 sm:py-4">
-        <span className="text-tinta-media sm:hidden">Alta: </span>
+      <td className="px-4 py-1 text-right text-[0.875rem] text-tinta-media tabular-nums max-sm:block max-sm:text-left sm:px-0 sm:py-4 dark:text-slate-400">
+        <span className="text-tinta-media sm:hidden dark:text-slate-400">Alta: </span>
         {fechaCorta(cliente.creado_en)}
       </td>
       <td className="px-4 py-1 text-right max-sm:block max-sm:text-left sm:px-0 sm:py-3">

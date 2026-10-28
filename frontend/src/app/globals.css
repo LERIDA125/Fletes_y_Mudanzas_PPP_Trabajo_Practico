@@ -14,6 +14,19 @@ html[data-theme="dark"] {
   --tinta: #f1f5f9;
   --tinta-media: #94a3b8;
   --linea: #1e2c44;
+
+  /* Tailwind v4 resuelve utilidades como text-tinta contra --color-tinta,
+     no contra --tinta. Sin estos overrides las filas siguen en tinta oscura. */
+  --color-papel: #0b1320;
+  --color-tinta: #f1f5f9;
+  --color-tinta-media: #94a3b8;
+  --color-linea: #1e2c44;
+  --color-panel-fondo: #0b1320;
+  --color-panel-superficie: #111c2e;
+  --color-panel-suave: #16253d;
+  --color-panel-borde: #1e2c44;
+  --color-panel-texto: #f1f5f9;
+  --color-panel-secundario: #94a3b8;
 }
 
 body {
