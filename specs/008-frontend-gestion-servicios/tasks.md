@@ -76,4 +76,5 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 - [x] **T038**: Agregar acciones de edición y baja lógica con confirmación (`DialogoConfirmacion`) en `FilaCliente`, `FilaChofer` y `FilaVehiculo`, mostrando errores de negocio (`409 Conflict`) cuando existen servicios asociados.
 - [x] **T039**: Conectar **Agenda** (`/agenda/page.tsx` + `agenda-cliente.tsx`) y **Dashboard** (`/page.tsx`) a los datos reales de `/api/servicios`, `/api/choferes` y `/api/vehiculos`.
 - [x] **T040**: Actualizar `backend/scripts/seed.py` con datos realistas de clientes, flota, tarifas y servicios en distintos estados y fechas.
-- [x] **T041**: Ampliar cobertura de tests a **44 tests unitarios de backend** (`pytest tests/unit`) y **80 tests de frontend en 12 suites** (`vitest`), y actualizar `AGENTS.md` y `ssd.md`.
+- [x] **T041**: Ampliar cobertura de tests a **44 tests unitarios de backend** (`pytest tests/unit`) y **81 tests de frontend en 12 suites** (`vitest`), y actualizar `AGENTS.md` y `ssd.md`.
+- [x] **T042**: Habilitar alta directa de clientes en `/clientes` (`NuevoCliente` + `DialogoCliente` + `guardarCliente`), extraer normalización de dominio a `app/domain/normalizacion.py`, optimizar Vitest (`vmThreads`) y consolidar documentación en `/docs`.
