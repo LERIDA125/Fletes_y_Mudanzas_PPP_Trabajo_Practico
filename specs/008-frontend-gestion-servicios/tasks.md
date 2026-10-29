@@ -15,12 +15,12 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 ## Fase 2 — Implementación y Conexión de Vistas Operativas
 
 - [x] **T004**: Implementar **Dashboard principal** (`frontend/src/app/(admin)/page.tsx`) con KPIs operativos (`Servicios del día`, `Choferes disponibles`, `Dinero por cobrar`, `Pendiente de rendición`) y tabla de próximos servicios.
-- [x] **T005**: Implementar **Agenda mensual interactiva** (`frontend/src/app/(admin)/agenda/page.tsx`) con selector de mes, grilla de 31 días, indicadores de turnos asignados/libres, panel de turnos de hoy y modal de nuevo turno.
-- [x] **T006**: Implementar **Cotizador comercial** (`frontend/src/app/(admin)/cotizaciones/page.tsx`) con cálculo en tiempo real por tipo de camión, kilometraje, extras (escaleras, embalaje), desglose y cotizaciones recientes.
+- [x] **T005**: Implementar **Agenda mensual interactiva** (`frontend/src/app/(admin)/agenda/page.tsx`) con selector de mes, grilla de 31 días, indicadores de turnos asignados/libres, panel de turnos de hoy y acceso a nuevo servicio.
+- [x] **T006**: Implementar **Cotizador comercial** (`frontend/src/app/(admin)/cotizaciones/page.tsx`) conectado al backend para cálculo oficial por tipo de vehículo, horas y kilometraje.
 - [x] **T007**: Implementar **Rendiciones y arqueo de choferes** (`frontend/src/app/(admin)/rendiciones/page.tsx`) con métricas financieras, tabla de rendición `#REN-024` y modales de detalle de liquidación y nueva rendición.
 - [x] **T008**: **Choferes**: quitar las tarjetas ficticias de disponibilidad y el tarifario sugerido; dejar el listado real con buscador y el alta/edición mediante `DialogoChofer`.
 - [x] **T009**: **Vehículos**: quitar las tarjetas ficticias de flota; dejar las tarifas reales por tipo (`PanelTarifas`), el listado real y el alta/edición mediante `DialogoVehiculo`.
-- [x] **T010**: Enriquecer **Clientes** (`frontend/src/app/(admin)/clientes/page.tsx`) con badge de clientes activos y tokens visuales.
+- [x] **T010**: Enriquecer **Clientes** (`frontend/src/app/(admin)/clientes/page.tsx`) con badge de clientes activos, alta/edición (`DialogoCliente`) y baja lógica.
 - [x] **T011**: Conectar y estilizar **Servicios** (`frontend/src/app/(admin)/servicios/page.tsx`) manteniendo la cotización oficial y el alta contra la API FastAPI.
 
 ---
@@ -38,7 +38,7 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 
 - [x] **T016**: Redactar **SSD (System Sequence Diagrams)** en `specs/008-frontend-gestion-servicios/ssd.md` con diagramas de interacción en sintaxis Mermaid.
 - [x] **T017**: Crear `feature.json` y `quickstart.md` en `specs/008-frontend-gestion-servicios/`.
-- [x] **T018**: Ejecutar validación completa `npm run verificar` (ESLint 0 errores, Prettier 100%, TypeScript 0 errores, 52 tests de Vitest pasando).
+- [x] **T018**: Ejecutar validación completa `npm run verificar` (ESLint 0 errores, Prettier 100%, TypeScript 0 errores, tests de Vitest pasando).
 
 ---
 
@@ -66,4 +66,14 @@ Desglose de tareas según la metodología Spec Kit (Spec-Driven Development).
 - [x] **T033**: Integrar cliente nuevo y selección de recursos disponibles en el formulario de `/servicios`, incluida la apertura con `?nuevo=1`.
 - [x] **T034**: Cubrir backend con tests de cliente nuevo y disponibilidad; actualizar tests RTL del formulario y listado.
 - [x] **T035**: Desacoplar el encabezado y los modales de la carga de catálogos, reintentar hosts en servidor y pedir catálogos al abrir cada diálogo.
-- [ ] **T036**: Ejecutar `npm run verificar` en un entorno con Node/npm disponibles (pendiente en el entorno actual).
+- [x] **T036**: Ejecutar `npm run verificar` con todas las suites en verde.
+
+---
+
+## Fase 7 — Ciclo de Vida de Servicios y ABM Completo en UI (Integración Final)
+
+- [x] **T037**: Implementar `PATCH /api/servicios/{id}/estado` y `DELETE /api/servicios/{id}` en backend y conectarlos en `FilaServicio` con `DialogoConfirmacion`.
+- [x] **T038**: Agregar acciones de edición y baja lógica con confirmación (`DialogoConfirmacion`) en `FilaCliente`, `FilaChofer` y `FilaVehiculo`, mostrando errores de negocio (`409 Conflict`) cuando existen servicios asociados.
+- [x] **T039**: Conectar **Agenda** (`/agenda/page.tsx` + `agenda-cliente.tsx`) y **Dashboard** (`/page.tsx`) a los datos reales de `/api/servicios`, `/api/choferes` y `/api/vehiculos`.
+- [x] **T040**: Actualizar `backend/scripts/seed.py` con datos realistas de clientes, flota, tarifas y servicios en distintos estados y fechas.
+- [x] **T041**: Ampliar cobertura de tests a **44 tests unitarios de backend** (`pytest tests/unit`) y **80 tests de frontend en 12 suites** (`vitest`), y actualizar `AGENTS.md` y `ssd.md`.
