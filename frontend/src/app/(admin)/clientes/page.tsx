@@ -8,6 +8,7 @@ import { Cargando } from "@/features/clientes/components/estados/cargando";
 import { EstadoError } from "@/features/clientes/components/estados/error";
 import { EstadoVacio } from "@/features/clientes/components/estados/vacio";
 import { ListadoClientes } from "@/features/clientes/components/listado-clientes";
+import { NuevoCliente } from "@/features/clientes/components/nuevo-cliente";
 import { Paginacion } from "@/features/clientes/components/paginacion";
 import { listarClientes, TAMANO_DE_PAGINA } from "@/lib/api/clientes";
 import { ErrorApi } from "@/lib/api/http";
@@ -46,14 +47,15 @@ export default function PaginaClientes({ searchParams }: PageProps<"/clientes">)
           </p>
         </div>
 
-        <div className="w-full sm:w-auto">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Suspense
             fallback={
-              <div className="h-10 w-full sm:w-72 rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="h-10 w-full rounded-lg bg-slate-100 sm:w-72 dark:bg-slate-800" />
             }
           >
             <BuscadorConCriterio searchParams={searchParams} />
           </Suspense>
+          <NuevoCliente />
         </div>
       </div>
 

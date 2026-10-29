@@ -6,6 +6,7 @@ import type { Cliente } from "@/features/clientes/types";
 import type { ClienteValidado } from "@/features/clientes/schemas/cliente";
 import {
   actualizarCliente as modificarCliente,
+  crearCliente as altaCliente,
   eliminarCliente as borrarCliente,
 } from "@/lib/api/clientes";
 import { ErrorApi } from "@/lib/api/http";
@@ -14,10 +15,11 @@ export type ResultadoAccion<T> = { ok: true; dato: T } | { ok: false; mensaje: s
 
 export async function guardarCliente(
   datos: ClienteValidado,
-  id: number,
+  id?: number,
 ): Promise<ResultadoAccion<Cliente>> {
   try {
-    const cliente = await modificarCliente(id, datos);
+    const cliente =
+      id === undefined ? await altaCliente(datos) : await modificarCliente(id, datos);
     revalidatePath("/clientes");
     revalidatePath("/servicios");
     revalidatePath("/agenda");

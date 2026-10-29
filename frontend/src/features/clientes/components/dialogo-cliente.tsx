@@ -10,7 +10,7 @@ import { esquemaCliente, type ValoresCliente } from "@/features/clientes/schemas
 import type { Cliente } from "@/features/clientes/types";
 
 type Propiedades = {
-  cliente: Cliente;
+  cliente?: Cliente;
   onCerrar: () => void;
 };
 
@@ -19,6 +19,8 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mensaje, setMensaje] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const editando = cliente !== undefined;
+  const sufijoId = cliente?.id ?? "nuevo";
 
   const {
     register,
@@ -27,10 +29,10 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
   } = useForm<ValoresCliente>({
     resolver: zodResolver(esquemaCliente),
     defaultValues: {
-      razon_social: cliente.razon_social,
-      telefono: cliente.telefono,
-      direccion_habitual: cliente.direccion_habitual,
-      tiene_cuenta_corriente: cliente.tiene_cuenta_corriente,
+      razon_social: cliente?.razon_social ?? "",
+      telefono: cliente?.telefono ?? "",
+      direccion_habitual: cliente?.direccion_habitual ?? "",
+      tiene_cuenta_corriente: cliente?.tiene_cuenta_corriente ?? false,
     },
   });
 
@@ -45,7 +47,7 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
     setMensaje("");
     setEnviando(true);
     try {
-      const respuesta = await guardarCliente(valores, cliente.id);
+      const respuesta = await guardarCliente(valores, cliente?.id);
       if (!respuesta.ok) {
         setMensaje(respuesta.mensaje);
         return;
@@ -61,19 +63,21 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
     <dialog
       ref={dialogRef}
       onClose={onCerrar}
-      aria-labelledby={`titulo-dialogo-cliente-${cliente.id}`}
+      aria-labelledby={`titulo-dialogo-cliente-${sufijoId}`}
       className="m-auto max-h-[92dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-panel-borde/70 bg-panel-superficie p-0 text-panel-texto shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
     >
       <div className="flex items-start justify-between gap-4 border-b border-panel-borde/60 bg-panel-suave/40 px-6 py-5">
         <div>
           <h2
-            id={`titulo-dialogo-cliente-${cliente.id}`}
+            id={`titulo-dialogo-cliente-${sufijoId}`}
             className="text-lg font-bold text-panel-texto"
           >
-            Editar cliente
+            {editando ? "Editar cliente" : "Nuevo cliente"}
           </h2>
           <p className="mt-0.5 text-xs text-panel-secundario">
-            Actualizá los datos del cliente sin perder su historial.
+            {editando
+              ? "Actualizá los datos del cliente sin perder su historial."
+              : "Registrá un nuevo cliente en el padrón operativo."}
           </p>
         </div>
         <button
@@ -102,26 +106,23 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
       >
         <div>
           <label
-            htmlFor={`razon_social-${cliente.id}`}
+            htmlFor={`razon_social-${sufijoId}`}
             className="block text-xs font-semibold uppercase tracking-wider text-panel-secundario"
           >
             Razón social
           </label>
           <input
-            id={`razon_social-${cliente.id}`}
+            id={`razon_social-${sufijoId}`}
             aria-invalid={Boolean(errors.razon_social)}
             aria-describedby={
-              errors.razon_social ? `razon_social-error-${cliente.id}` : undefined
+              errors.razon_social ? `razon_social-error-${sufijoId}` : undefined
             }
             autoComplete="organization"
             {...register("razon_social")}
             className={claseControl}
           />
           {errors.razon_social ? (
-            <p
-              id={`razon_social-error-${cliente.id}`}
-              className="mt-1 text-xs text-alerta"
-            >
+            <p id={`razon_social-error-${sufijoId}`} className="mt-1 text-xs text-alerta">
               {errors.razon_social.message}
             </p>
           ) : null}
@@ -129,26 +130,24 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
 
         <div>
           <label
-            htmlFor={`telefono-${cliente.id}`}
+            htmlFor={`telefono-${sufijoId}`}
             className="block text-xs font-semibold uppercase tracking-wider text-panel-secundario"
           >
             Teléfono
           </label>
           <input
-            id={`telefono-${cliente.id}`}
+            id={`telefono-${sufijoId}`}
             type="tel"
             inputMode="tel"
             placeholder="351 555 0100"
             aria-invalid={Boolean(errors.telefono)}
-            aria-describedby={
-              errors.telefono ? `telefono-error-${cliente.id}` : undefined
-            }
+            aria-describedby={errors.telefono ? `telefono-error-${sufijoId}` : undefined}
             autoComplete="tel"
             {...register("telefono")}
             className={claseControl}
           />
           {errors.telefono ? (
-            <p id={`telefono-error-${cliente.id}`} className="mt-1 text-xs text-alerta">
+            <p id={`telefono-error-${sufijoId}`} className="mt-1 text-xs text-alerta">
               {errors.telefono.message}
             </p>
           ) : null}
@@ -156,17 +155,17 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
 
         <div>
           <label
-            htmlFor={`direccion_habitual-${cliente.id}`}
+            htmlFor={`direccion_habitual-${sufijoId}`}
             className="block text-xs font-semibold uppercase tracking-wider text-panel-secundario"
           >
             Dirección habitual
           </label>
           <input
-            id={`direccion_habitual-${cliente.id}`}
+            id={`direccion_habitual-${sufijoId}`}
             aria-invalid={Boolean(errors.direccion_habitual)}
             aria-describedby={
               errors.direccion_habitual
-                ? `direccion_habitual-error-${cliente.id}`
+                ? `direccion_habitual-error-${sufijoId}`
                 : undefined
             }
             autoComplete="street-address"
@@ -175,7 +174,7 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
           />
           {errors.direccion_habitual ? (
             <p
-              id={`direccion_habitual-error-${cliente.id}`}
+              id={`direccion_habitual-error-${sufijoId}`}
               className="mt-1 text-xs text-alerta"
             >
               {errors.direccion_habitual.message}
@@ -184,11 +183,11 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
         </div>
 
         <label
-          htmlFor={`tiene_cuenta_corriente-${cliente.id}`}
+          htmlFor={`tiene_cuenta_corriente-${sufijoId}`}
           className="flex items-center gap-2 text-sm font-medium text-panel-texto"
         >
           <input
-            id={`tiene_cuenta_corriente-${cliente.id}`}
+            id={`tiene_cuenta_corriente-${sufijoId}`}
             type="checkbox"
             {...register("tiene_cuenta_corriente")}
             className="size-4 rounded border-panel-borde text-panel-azul focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul"
@@ -210,7 +209,7 @@ export function DialogoCliente({ cliente, onCerrar }: Propiedades) {
             Cancelar
           </button>
           <button type="submit" disabled={enviando} className={claseBotonPrincipal}>
-            {enviando ? "Guardando…" : "Guardar cambios"}
+            {enviando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cliente"}
           </button>
         </div>
       </form>

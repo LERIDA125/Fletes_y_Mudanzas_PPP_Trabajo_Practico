@@ -8,6 +8,7 @@ export type CriterioDeBusqueda = {
   size?: number;
 };
 
+export type AltaCliente = components["schemas"]["ClienteCreate"];
 export type EdicionCliente = components["schemas"]["ClienteUpdate"];
 
 export type { Cliente, ListadoClientes };
@@ -28,6 +29,14 @@ export async function listarClientes(
   // Sin `use cache` y sin opciones de revalidación: el listado se resuelve en cada
   // request, que es el patrón de Cache Components para datos frescos detrás de Suspense.
   return request<ListadoClientes>(`/api/clientes?${parametros.toString()}`);
+}
+
+export async function crearCliente(datos: AltaCliente): Promise<Cliente> {
+  return request<Cliente>("/api/clientes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  });
 }
 
 export async function actualizarCliente(

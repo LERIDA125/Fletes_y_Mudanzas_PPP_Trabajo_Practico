@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FilaCliente } from "@/features/clientes/components/fila-cliente";
+import { NuevoCliente } from "@/features/clientes/components/nuevo-cliente";
 
 import type { Cliente } from "@/features/clientes/types";
 
@@ -117,6 +118,33 @@ describe("FilaCliente", () => {
           tiene_cuenta_corriente: true,
         },
         1,
+      );
+      expect(refresh).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("permite dar de alta un nuevo cliente desde NuevoCliente", async () => {
+    const usuario = userEvent.setup();
+    render(<NuevoCliente />);
+
+    await usuario.click(screen.getByRole("button", { name: /Nuevo cliente/i }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await usuario.type(screen.getByLabelText("Razón social"), "Mueblería Belgrano");
+    await usuario.type(screen.getByLabelText("Teléfono"), "11 4444-8888");
+    await usuario.type(screen.getByLabelText("Dirección habitual"), "Av. Cabildo 2100");
+    await usuario.click(screen.getByLabelText("Tiene cuenta corriente"));
+    await usuario.click(screen.getByRole("button", { name: "Guardar cliente" }));
+
+    await waitFor(() => {
+      expect(guardarCliente).toHaveBeenCalledWith(
+        {
+          razon_social: "Mueblería Belgrano",
+          telefono: "11 4444-8888",
+          direccion_habitual: "Av. Cabildo 2100",
+          tiene_cuenta_corriente: true,
+        },
+        undefined,
       );
       expect(refresh).toHaveBeenCalledOnce();
     });
