@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.autenticacion import router as autenticacion_router
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
 from app.api.servicios import router as servicios_router
@@ -10,7 +11,9 @@ from app.api.vehiculos import router as vehiculos_router
 from app.core.config import get_settings
 from app.domain.errores import (
     ConflictoOperacion,
+    CredencialesInvalidas,
     DatoInvalido,
+    PermisoDenegado,
     RecursoNoEncontrado,
     ReglaNegocioError,
 )
@@ -37,6 +40,25 @@ def health() -> dict[str, str]:
 
 # Traducción polimórfica de errores de Dominio a códigos HTTP (AGENTS.md §2).
 # Se agrupan por clase base para evitar duplicar handlers por cada entidad nueva.
+@app.exception_handler(CredencialesInvalidas)
+async def credenciales_invalidas(
+    _request: Request, error: CredencialesInvalidas
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": str(error)},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@app.exception_handler(PermisoDenegado)
+async def permiso_denegado(_request: Request, error: PermisoDenegado) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={"detail": str(error)},
+    )
+
+
 @app.exception_handler(RecursoNoEncontrado)
 async def recurso_no_encontrado(_request: Request, error: RecursoNoEncontrado) -> JSONResponse:
     return JSONResponse(
@@ -69,6 +91,7 @@ async def regla_de_negocio(_request: Request, error: ReglaNegocioError) -> JSONR
     )
 
 
+app.include_router(autenticacion_router)
 app.include_router(clientes_router)
 app.include_router(servicios_router)
 app.include_router(choferes_router)

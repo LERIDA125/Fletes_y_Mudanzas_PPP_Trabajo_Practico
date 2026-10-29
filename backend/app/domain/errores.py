@@ -17,6 +17,22 @@ class DatoInvalido(ReglaNegocioError):
     """Los datos provistos son inválidos o no cumplen las reglas requeridas (mapea a HTTP 422)."""
 
 
+class CredencialesInvalidas(ReglaNegocioError):
+    """Las credenciales o el token de autenticación no son válidos (mapea a HTTP 401)."""
+
+    def __init__(self, detalle: str = "Usuario o contraseña incorrectos") -> None:
+        super().__init__(detalle)
+
+
+class PermisoDenegado(ReglaNegocioError):
+    """El usuario autenticado no tiene permisos sobre el recurso (mapea a HTTP 403)."""
+
+    def __init__(
+        self, detalle: str = "No tenés permisos para realizar esta operación"
+    ) -> None:
+        super().__init__(detalle)
+
+
 # ── Clientes (H1) ─────────────────────────────────────────────────────────────
 
 
@@ -163,4 +179,25 @@ class ReferenciasServicioInvalidas(DatoInvalido):
 class ChoferNoEncontrado(RecursoNoEncontrado):
     def __init__(self, chofer_id: int) -> None:
         super().__init__(f"No existe un chofer con id {chofer_id}")
+        self.chofer_id = chofer_id
+
+
+# ── Autenticación y Usuarios (H9) ──────────────────────────────────────────────
+
+
+class UsuarioNoEncontrado(RecursoNoEncontrado):
+    def __init__(self, usuario_id: int) -> None:
+        super().__init__(f"No existe un usuario con id {usuario_id}")
+        self.usuario_id = usuario_id
+
+
+class UsuarioDuplicado(ConflictoOperacion):
+    def __init__(self, username: str) -> None:
+        super().__init__(f"Ya existe un usuario con el nombre {username!r}")
+        self.username = username
+
+
+class ChoferConUsuarioExistente(ConflictoOperacion):
+    def __init__(self, chofer_id: int) -> None:
+        super().__init__(f"El chofer {chofer_id} ya tiene una cuenta de usuario asignada")
         self.chofer_id = chofer_id
