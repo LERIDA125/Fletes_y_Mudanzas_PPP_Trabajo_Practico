@@ -136,4 +136,18 @@ describe("request", () => {
     ).rejects.toMatchObject({ clase: "sin-respuesta" });
     expect(fetchFalso).toHaveBeenCalledTimes(1);
   });
+
+  it("adjunta Authorization Bearer cuando existe fletes_jwt_token en localStorage", async () => {
+    window.localStorage.setItem("fletes_jwt_token", "jwt-token-de-prueba");
+    fetchFalso.mockResolvedValue(responder(200, { items: [], total: 0 }));
+
+    try {
+      await request("/api/servicios");
+      const opciones = fetchFalso.mock.calls[0]?.[1] as RequestInit | undefined;
+      const headers = new Headers(opciones?.headers);
+      expect(headers.get("Authorization")).toBe("Bearer jwt-token-de-prueba");
+    } finally {
+      window.localStorage.removeItem("fletes_jwt_token");
+    }
+  });
 });

@@ -12,17 +12,54 @@ import type { components } from "@/types/openapi";
 import { request } from "./http";
 
 export const TAMANO_DE_PAGINA = 20;
+export const POLLING_SERVICIOS_CHOFER_MS = 5000;
 const TAMANO_DE_CATALOGOS = 100;
 
 export async function listarServicios(
   pagina = 1,
   tamano = TAMANO_DE_PAGINA,
+  idChofer?: number,
 ): Promise<ListadoServicios> {
   const parametros = new URLSearchParams({
     page: String(pagina),
     size: String(tamano),
   });
+  if (idChofer !== undefined && idChofer > 0) {
+    parametros.set("id_chofer", String(idChofer));
+  }
   return request<ListadoServicios>(`/api/servicios?${parametros.toString()}`);
+}
+
+export function suscribirServiciosChofer(
+  alRecibir: (listado: ListadoServicios) => void,
+  alFallar?: (error: unknown) => void,
+  intervaloMs = POLLING_SERVICIOS_CHOFER_MS,
+  idChofer?: number,
+): () => void {
+  let activo = true;
+
+  async function refrescar() {
+    try {
+      const datos = await listarServicios(1, 50, idChofer);
+      if (activo) {
+        alRecibir(datos);
+      }
+    } catch (error) {
+      if (activo && alFallar) {
+        alFallar(error);
+      }
+    }
+  }
+
+  void refrescar();
+  const timer = setInterval(() => {
+    void refrescar();
+  }, intervaloMs);
+
+  return () => {
+    activo = false;
+    clearInterval(timer);
+  };
 }
 
 export async function listarClientesParaAlta(): Promise<

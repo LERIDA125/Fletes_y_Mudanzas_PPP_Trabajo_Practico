@@ -132,8 +132,19 @@ export async function request<T>(ruta: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  // Inyección global del rol para autorizar las peticiones en FastAPI
-  if (!headers.has("X-Rol")) {
+  // Si existe un token JWT activo en el navegador, se adjunta como Bearer token.
+  // Si no hay token, se mantiene X-Rol de respaldo para desarrollo local (DEV_ASSUME_ADMIN).
+  if (!headers.has("Authorization") && typeof window !== "undefined") {
+    try {
+      const token = window.localStorage.getItem("fletes_jwt_token");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+    } catch {
+      // Ignorar restricciones de acceso a localStorage en entornos aislados
+    }
+  }
+  if (!headers.has("Authorization") && !headers.has("X-Rol")) {
     headers.set("X-Rol", "admin");
   }
 

@@ -11,6 +11,8 @@ import {
   Moon,
   PackageCheck,
   Plus,
+  ShieldCheck,
+  Smartphone,
   Sun,
   Truck,
   UserRound,
@@ -30,6 +32,8 @@ const navItems = [
   { label: "Cotizaciones", href: "/cotizaciones", icon: FileText },
   { label: "Servicios", href: "/servicios", icon: PackageCheck },
   { label: "Rendiciones", href: "/rendiciones", icon: CircleDollarSign },
+  { label: "Usuarios y Auditoría", href: "/usuarios", icon: ShieldCheck },
+  { label: "Portal Chofer", href: "/chofer", icon: Smartphone },
 ];
 
 function subscribeTheme(callback: () => void) {
@@ -251,9 +255,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span>Cotizar servicio</span>
             </Link>
 
-            <div className="grid size-9 place-items-center rounded-full bg-[#dbe9ff] text-xs font-bold text-[#2165d5] dark:bg-[#1e3a66] dark:text-[#93c5fd]">
+            <Link
+              href="/login"
+              title="Iniciar sesión o cambiar de usuario (JWT)"
+              className="grid size-9 place-items-center rounded-full bg-[#dbe9ff] text-xs font-bold text-[#2165d5] transition hover:bg-[#c8ddff] dark:bg-[#1e3a66] dark:text-[#93c5fd]"
+            >
               FG
-            </div>
+            </Link>
           </div>
         </header>
 
