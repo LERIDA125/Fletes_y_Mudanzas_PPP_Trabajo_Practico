@@ -151,6 +151,8 @@ class ServicioRead(BaseModel):
     estado: str
     transiciones_validas: list[str]
     motivo_cancelacion: str | None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
     creado_en: datetime
     actualizado_en: datetime
 
@@ -184,6 +186,8 @@ class ServicioRead(BaseModel):
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,
+            creado_por_id=servicio.creado_por_id,
+            modificado_por_id=servicio.modificado_por_id,
             creado_en=servicio.creado_en,
             actualizado_en=servicio.actualizado_en,
         )

@@ -19,7 +19,13 @@ from app.api.schemas.servicio import (
 )
 from app.api.schemas.vehiculo import VehiculoRead
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.core.dependencias import ROL_ADMIN, get_gestor_servicios, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    UsuarioAutenticado,
+    get_gestor_servicios,
+    get_usuario_actual,
+    require_rol,
+)
 from app.domain.cliente import Cliente
 
 router = APIRouter(prefix="/api/servicios", tags=["servicios"])
@@ -140,6 +146,7 @@ def cotizar_servicio(
 def crear_servicio(
     datos: ServicioCreate,
     gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ServicioRead:
     nuevo_cliente = None
     if datos.nuevo_cliente is not None:
@@ -148,6 +155,7 @@ def crear_servicio(
             telefono=datos.nuevo_cliente.telefono,
             direccion_habitual=datos.nuevo_cliente.direccion_habitual,
             tiene_cuenta_corriente=datos.nuevo_cliente.tiene_cuenta_corriente,
+            creado_por_id=usuario_actual.id,
         )
 
     item = gestor.crear(
@@ -160,6 +168,7 @@ def crear_servicio(
         horas_estimadas=datos.horas_estimadas,
         distancia_ida_km=datos.distancia_ida_km,
         nuevo_cliente=nuevo_cliente,
+        usuario_id=usuario_actual.id,
     )
     return ServicioRead.de_item(item)
 
@@ -191,8 +200,13 @@ def cancelar_servicio(
     id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
     datos: ServicioCancelar,
     gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ServicioRead:
-    item = gestor.cancelar(id_servicio=id_servicio, motivo=datos.motivo)
+    item = gestor.cancelar(
+        id_servicio=id_servicio,
+        motivo=datos.motivo,
+        usuario_id=usuario_actual.id,
+    )
     return ServicioRead.de_item(item)
 
 
@@ -220,8 +234,13 @@ def cambiar_estado_servicio(
     id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
     datos: ServicioEstadoUpdate,
     gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ServicioRead:
-    item = gestor.cambiar_estado(id_servicio=id_servicio, estado=datos.estado)
+    item = gestor.cambiar_estado(
+        id_servicio=id_servicio,
+        estado=datos.estado,
+        usuario_id=usuario_actual.id,
+    )
     return ServicioRead.de_item(item)
 
 

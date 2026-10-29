@@ -42,6 +42,8 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         motivo_cancelacion=orm.motivo_cancelacion,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
+        creado_por_id=orm.creado_por_id,
+        modificado_por_id=orm.modificado_por_id,
     )
 
 
@@ -67,6 +69,8 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         motivo_cancelacion=servicio.motivo_cancelacion,
         creado_en=servicio.creado_en,
         actualizado_en=servicio.actualizado_en,
+        creado_por_id=servicio.creado_por_id,
+        modificado_por_id=servicio.modificado_por_id,
     )
 
 
@@ -116,6 +120,8 @@ class ServicioRepo:
         orm.precio_total = servicio.precio_total
         orm.estado = servicio.estado
         orm.motivo_cancelacion = servicio.motivo_cancelacion
+        orm.modificado_por_id = servicio.modificado_por_id
+        orm.actualizado_en = func.now()
 
         try:
             self._db.commit()

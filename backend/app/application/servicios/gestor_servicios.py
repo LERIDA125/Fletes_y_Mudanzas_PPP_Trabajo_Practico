@@ -55,13 +55,7 @@ def _se_solapa(
     horas_estimadas: Decimal,
     asignacion: AsignacionDia,
 ) -> bool:
-    """Considera ocupado el recurso ante cualquier dato horario incompleto.
-
-    Supuesto documentado en `specs/008-frontend-gestion-servicios/spec.md`: si un
-    servicio del día no tiene hora de inicio, no se puede garantizar que el recurso
-    esté libre, así que se bloquea durante todo el día. Tampoco se aplica un margen
-    entre servicios porque el cliente no lo confirmó (AGENTS.md §6).
-    """
+    """Considera ocupado el recurso ante cualquier dato horario incompleto."""
     if hora_inicio is None or asignacion.hora_inicio is None:
         return True
 
@@ -117,8 +111,13 @@ class GestorServicios:
         horas_estimadas: Decimal,
         distancia_ida_km: Decimal,
         nuevo_cliente: Cliente | None = None,
+        usuario_id: int | None = None,
     ) -> ServicioListadoItem:
-        cliente_id = self._resolver_cliente(id_cliente=id_cliente, nuevo_cliente=nuevo_cliente)
+        cliente_id = self._resolver_cliente(
+            id_cliente=id_cliente,
+            nuevo_cliente=nuevo_cliente,
+            usuario_id=usuario_id,
+        )
 
         if id_chofer is not None:
             chofer = self._choferes.obtener_por_id(id_chofer)
@@ -152,6 +151,7 @@ class GestorServicios:
             tarifa_hora_aplicada=cotizacion.resultado.tarifa_hora_base,
             tarifa_km_aplicada=cotizacion.resultado.tarifa_km_excedente,
             precio_total=cotizacion.resultado.precio_final,
+            creado_por_id=usuario_id,
         )
         return self._repo.crear(servicio)
 
@@ -208,13 +208,18 @@ class GestorServicios:
         id_servicio: int,
         motivo: str,
         ahora: datetime | None = None,
+        usuario_id: int | None = None,
     ) -> ServicioListadoItem:
         actual = self._repo.obtener_por_id(id_servicio)
         if actual is None:
             raise ServicioNoEncontrado(id_servicio)
 
         hora_fin = (ahora or datetime.now()).time().replace(microsecond=0)
-        actual.servicio.cancelar(motivo=motivo, hora_fin=hora_fin)
+        actual.servicio.cancelar(
+            motivo=motivo,
+            hora_fin=hora_fin,
+            modificado_por_id=usuario_id,
+        )
         return self._repo.actualizar(actual.servicio)
 
     def listar(self, *, offset: int, limit: int) -> tuple[list[ServicioListadoItem], int]:
@@ -226,6 +231,7 @@ class GestorServicios:
         *,
         id_cliente: int | None,
         nuevo_cliente: Cliente | None,
+        usuario_id: int | None = None,
     ) -> int:
         if id_cliente is not None and nuevo_cliente is not None:
             raise DatoInvalido("Indicá un cliente existente o uno nuevo, pero no ambos")
@@ -254,6 +260,10 @@ class GestorServicios:
                 raise RuntimeError("El repositorio devolvió un cliente sin identidad")
             return existente.id
 
+        if usuario_id is not None and nuevo_cliente.creado_por_id is None:
+            nuevo_cliente.creado_por_id = usuario_id
+            nuevo_cliente.modificado_por_id = usuario_id
+
         creado = self._registro_clientes.crear(nuevo_cliente)
         if creado.id is None:
             raise RuntimeError("El repositorio devolvió un cliente recién creado sin identidad")
@@ -262,9 +272,15 @@ class GestorServicios:
     def eliminar(self, id_servicio: int) -> None:
         self._repo.eliminar(id_servicio)
 
-    def cambiar_estado(self, id_servicio: int, estado: str) -> ServicioListadoItem:
+    def cambiar_estado(
+        self,
+        id_servicio: int,
+        estado: str,
+        *,
+        usuario_id: int | None = None,
+    ) -> ServicioListadoItem:
         actual = self._repo.obtener_por_id(id_servicio)
         if actual is None:
             raise ServicioNoEncontrado(id_servicio)
-        actual.servicio.transicionar_a(estado)
+        actual.servicio.transicionar_a(estado, modificado_por_id=usuario_id)
         return self._repo.actualizar(actual.servicio)

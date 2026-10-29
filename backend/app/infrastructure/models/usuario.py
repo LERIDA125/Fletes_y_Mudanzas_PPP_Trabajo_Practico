@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Index,
+    Integer,
     String,
     func,
 )
@@ -24,9 +25,7 @@ class UsuarioORM(Base):
     username: Mapped[str] = mapped_column(String(60), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     rol: Mapped[str] = mapped_column(String(20), nullable=False)
-    id_chofer: Mapped[int | None] = mapped_column(
-        ForeignKey("choferes.id", ondelete="RESTRICT"), nullable=True, unique=True
-    )
+    id_chofer: Mapped[int | None] = mapped_column(Integer, nullable=True, unique=True)
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     creado_por_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True

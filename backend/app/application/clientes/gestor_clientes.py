@@ -25,12 +25,14 @@ class GestorClientes:
         telefono: str,
         direccion_habitual: str,
         tiene_cuenta_corriente: bool,
+        usuario_id: int | None = None,
     ) -> Cliente:
         cliente = Cliente.crear(
             razon_social=razon_social,
             telefono=telefono,
             direccion_habitual=direccion_habitual,
             tiene_cuenta_corriente=tiene_cuenta_corriente,
+            creado_por_id=usuario_id,
         )
         self._verificar_razon_social_disponible(cliente.razon_social_key)
         return self._repo.crear(cliente)
@@ -53,6 +55,7 @@ class GestorClientes:
         telefono: str,
         direccion_habitual: str,
         tiene_cuenta_corriente: bool,
+        usuario_id: int | None = None,
     ) -> Cliente:
         cliente = self.obtener(cliente_id)
         self._verificar_razon_social_disponible(
@@ -70,10 +73,11 @@ class GestorClientes:
             telefono=telefono,
             direccion_habitual=direccion_habitual,
             tiene_cuenta_corriente=tiene_cuenta_corriente,
+            modificado_por_id=usuario_id,
         )
         return self._repo.actualizar(cliente)
 
-    def eliminar(self, cliente_id: int) -> None:
+    def eliminar(self, cliente_id: int, *, usuario_id: int | None = None) -> None:
         cliente = self._repo.obtener_por_id(cliente_id)
         if cliente is None:
             raise ClienteNoEncontrado(cliente_id)
@@ -81,7 +85,9 @@ class GestorClientes:
             return
         if self._historial.tiene_historial(cliente.id):
             raise ClienteConHistorial(cliente.id)
-        cliente.desactivar()
+        cliente.desactivar(modificado_por_id=usuario_id)
+        if usuario_id is not None:
+            self._repo.actualizar(cliente)
         self._repo.desactivar(cliente.id)
 
     def _verificar_razon_social_disponible(

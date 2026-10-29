@@ -17,6 +17,8 @@ def a_dominio(orm: ClienteORM) -> Cliente:
         activo=orm.activo,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
+        creado_por_id=orm.creado_por_id,
+        modificado_por_id=orm.modificado_por_id,
     )
 
 
@@ -31,6 +33,8 @@ def a_orm(cliente: Cliente) -> ClienteORM:
         activo=cliente.activo,
         creado_en=cliente.creado_en,
         actualizado_en=cliente.actualizado_en,
+        creado_por_id=cliente.creado_por_id,
+        modificado_por_id=cliente.modificado_por_id,
     )
 
 
@@ -76,6 +80,7 @@ class ClienteRepo:
         orm.telefono = cliente.telefono
         orm.direccion_habitual = cliente.direccion_habitual
         orm.tiene_cuenta_corriente = cliente.tiene_cuenta_corriente
+        orm.modificado_por_id = cliente.modificado_por_id
         # FR-020: guardar tiene que refrescar la fecha de última modificación aunque el cliente se
         # guarde idéntico. El `onupdate` de la columna no alcanza para eso, porque si ningún
         # atributo cambió SQLAlchemy no emite el UPDATE y el `onupdate` nunca llega a evaluarse;

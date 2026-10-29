@@ -15,6 +15,8 @@ def a_dominio(orm: ChoferORM) -> Chofer:
         saldo_a_favor=float(orm.saldo_a_favor),
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
+        creado_por_id=orm.creado_por_id,
+        modificado_por_id=orm.modificado_por_id,
     )
 
 
@@ -27,6 +29,8 @@ def a_orm(chofer: Chofer) -> ChoferORM:
         saldo_a_favor=chofer.saldo_a_favor,
         creado_en=chofer.creado_en,
         actualizado_en=chofer.actualizado_en,
+        creado_por_id=chofer.creado_por_id,
+        modificado_por_id=chofer.modificado_por_id,
     )
 
 
@@ -63,6 +67,7 @@ class ChoferRepo:
             raise ChoferNoEncontrado(chofer.id)
         orm.nombre_completo = chofer.nombre_completo
         orm.telefono = chofer.telefono
+        orm.modificado_por_id = chofer.modificado_por_id
         # Forzado a mano: `onupdate` no dispara si ningún atributo cambia (lección H1/T047).
         orm.actualizado_en = func.now()
         self._db.commit()

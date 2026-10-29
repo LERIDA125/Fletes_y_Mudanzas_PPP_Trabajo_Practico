@@ -52,6 +52,12 @@ class ServicioORM(Base):
         String(20), nullable=False, server_default=text("'pendiente'")
     )
     motivo_cancelacion: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    creado_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+    modificado_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

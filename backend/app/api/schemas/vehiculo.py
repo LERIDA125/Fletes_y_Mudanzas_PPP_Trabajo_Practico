@@ -54,6 +54,12 @@ class VehiculoRead(VehiculoBase):
         default=True,
         description="False cuando el vehículo fue dado de baja.",
     )
+    creado_por_id: int | None = Field(
+        default=None, description="ID del usuario que creó el vehículo."
+    )
+    modificado_por_id: int | None = Field(
+        default=None, description="ID del último usuario que modificó el vehículo."
+    )
     creado_en: datetime | None = Field(
         default=None,
         description="Fecha de alta, asignada por el sistema.",
@@ -93,6 +99,8 @@ class VehiculoRead(VehiculoBase):
             id_tipo_vehiculo=vehiculo.id_tipo_vehiculo,
             id_chofer_habitual=vehiculo.id_chofer_habitual,
             activo=vehiculo.activo,
+            creado_por_id=vehiculo.creado_por_id,
+            modificado_por_id=vehiculo.modificado_por_id,
             creado_en=vehiculo.creado_en,
             actualizado_en=vehiculo.actualizado_en,
             descripcion_tipo_vehiculo=item.descripcion_tipo_vehiculo,

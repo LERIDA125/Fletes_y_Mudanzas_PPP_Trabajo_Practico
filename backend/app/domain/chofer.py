@@ -27,6 +27,8 @@ class Chofer:
     saldo_a_favor: float = 0.0
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
 
     def __post_init__(self) -> None:
         self.nombre_completo = normalizar_nombre(self.nombre_completo)
@@ -34,10 +36,28 @@ class Chofer:
         self._validar()
 
     @classmethod
-    def crear(cls, nombre_completo: str, telefono: str) -> Chofer:
-        return cls(id=None, nombre_completo=nombre_completo, telefono=telefono)
+    def crear(
+        cls,
+        nombre_completo: str,
+        telefono: str,
+        *,
+        creado_por_id: int | None = None,
+    ) -> Chofer:
+        return cls(
+            id=None,
+            nombre_completo=nombre_completo,
+            telefono=telefono,
+            creado_por_id=creado_por_id,
+            modificado_por_id=creado_por_id,
+        )
 
-    def actualizar(self, *, nombre_completo: str, telefono: str) -> Chofer:
+    def actualizar(
+        self,
+        *,
+        nombre_completo: str,
+        telefono: str,
+        modificado_por_id: int | None = None,
+    ) -> Chofer:
         """Valida primero y recién después modifica, para no dejar el chofer a medias.
 
         No toca `activo` ni `saldo_a_favor`: el estado solo cambia por la baja lógica y el saldo
@@ -53,15 +73,23 @@ class Chofer:
             saldo_a_favor=self.saldo_a_favor,
             creado_en=self.creado_en,
             actualizado_en=self.actualizado_en,
+            creado_por_id=self.creado_por_id,
+            modificado_por_id=modificado_por_id
+            if modificado_por_id is not None
+            else self.modificado_por_id,
             **candidatos,
         )
 
         self.nombre_completo = candidatos["nombre_completo"]
         self.telefono = candidatos["telefono"]
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
-    def desactivar(self) -> Chofer:
+    def desactivar(self, *, modificado_por_id: int | None = None) -> Chofer:
         self.activo = False
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
     def _validar(self) -> None:

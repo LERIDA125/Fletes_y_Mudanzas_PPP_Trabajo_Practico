@@ -70,6 +70,12 @@ class TipoVehiculoRead(TipoVehiculoBase):
         default=True,
         description="False cuando el tipo de vehículo fue dado de baja.",
     )
+    creado_por_id: int | None = Field(
+        default=None, description="ID del usuario que creó el tipo de vehículo."
+    )
+    modificado_por_id: int | None = Field(
+        default=None, description="ID del último usuario que modificó el tipo de vehículo."
+    )
     creado_en: datetime | None = Field(
         default=None,
         description="Fecha de alta, asignada por el sistema.",

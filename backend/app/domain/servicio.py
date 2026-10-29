@@ -66,6 +66,8 @@ class Servicio:
     motivo_cancelacion: str | None = None
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
 
     def __post_init__(self) -> None:
         self._validar()
@@ -88,6 +90,7 @@ class Servicio:
         tarifa_hora_aplicada: Decimal,
         tarifa_km_aplicada: Decimal,
         precio_total: Decimal,
+        creado_por_id: int | None = None,
     ) -> Servicio:
         return cls(
             id=None,
@@ -105,15 +108,30 @@ class Servicio:
             tarifa_hora_aplicada=tarifa_hora_aplicada,
             tarifa_km_aplicada=tarifa_km_aplicada,
             precio_total=precio_total,
+            creado_por_id=creado_por_id,
+            modificado_por_id=creado_por_id,
         )
 
-    def transicionar_a(self, estado_nuevo: str) -> Servicio:
+    def transicionar_a(
+        self,
+        estado_nuevo: str,
+        *,
+        modificado_por_id: int | None = None,
+    ) -> Servicio:
         if TRANSICIONES_ESTADO_SERVICIO.get(self.estado) != estado_nuevo:
             raise TransicionEstadoServicioInvalida(self.estado, estado_nuevo)
         self.estado = estado_nuevo
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
-    def cancelar(self, *, motivo: str, hora_fin: time) -> Servicio:
+    def cancelar(
+        self,
+        *,
+        motivo: str,
+        hora_fin: time,
+        modificado_por_id: int | None = None,
+    ) -> Servicio:
         if self.estado in ESTADOS_NO_CANCELABLES:
             raise ServicioNoCancelable(self.estado)
 
@@ -130,6 +148,8 @@ class Servicio:
         self.motivo_cancelacion = motivo_limpio
         self.hora_fin = hora_fin
         self.estado = "cancelado"
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         self._validar()
         return self
 

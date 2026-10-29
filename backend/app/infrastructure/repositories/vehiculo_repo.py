@@ -19,6 +19,8 @@ def a_dominio(orm: VehiculoORM) -> Vehiculo:
         activo=orm.activo,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
+        creado_por_id=orm.creado_por_id,
+        modificado_por_id=orm.modificado_por_id,
     )
 
 
@@ -31,6 +33,8 @@ def a_orm(vehiculo: Vehiculo) -> VehiculoORM:
         activo=vehiculo.activo,
         creado_en=vehiculo.creado_en,
         actualizado_en=vehiculo.actualizado_en,
+        creado_por_id=vehiculo.creado_por_id,
+        modificado_por_id=vehiculo.modificado_por_id,
     )
 
 
@@ -121,6 +125,7 @@ class VehiculoRepo:
         orm.patente = vehiculo.patente
         orm.id_tipo_vehiculo = vehiculo.id_tipo_vehiculo
         orm.id_chofer_habitual = vehiculo.id_chofer_habitual
+        orm.modificado_por_id = vehiculo.modificado_por_id
         orm.actualizado_en = func.now()
         try:
             self._db.commit()

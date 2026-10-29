@@ -199,3 +199,112 @@ def test_h9_api_login_multi_admin_y_usuario_chofer(
         ).status_code
         == 403
     )
+
+
+
+def test_h9_trazabilidad_y_auditoria_multi_admin(
+    cliente_auth: tuple[TestClient, Session],
+) -> None:
+    cliente, sesion = cliente_auth
+    gestor = GestorAutenticacion(
+        repositorio_usuarios=UsuarioRepo(sesion),
+        hasher=PasswordHasher(),
+        tokens=JWTService(secret_key="fletes-express-dev-secret-key-2026-mvp"),
+    )
+    admin_a = gestor.crear_usuario(username="admin_a", password="Password123", rol="admin")
+    admin_b = gestor.crear_usuario(username="admin_b", password="Password456", rol="admin")
+    assert admin_a.id == 1 and admin_b.id == 2
+
+    token_a = cliente.post(
+        "/api/auth/login", json={"username": "admin_a", "password": "Password123"}
+    ).json()["access_token"]
+    token_b = cliente.post(
+        "/api/auth/login", json={"username": "admin_b", "password": "Password456"}
+    ).json()["access_token"]
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    # 1. Admin A crea registros -> creado_por_id=1, modificado_por_id=1
+    c_resp = cliente.post(
+        "/api/clientes",
+        headers=headers_a,
+        json={
+            "razon_social": "Logística Austral S.A.",
+            "telefono": "351 444 5566",
+            "direccion_habitual": "Av. Sabattini 2500",
+            "tiene_cuenta_corriente": True,
+        },
+    ).json()
+    assert c_resp["creado_por_id"] == 1
+    assert c_resp["modificado_por_id"] == 1
+
+    t_resp = cliente.post(
+        "/api/tipos-vehiculo",
+        headers=headers_a,
+        json={
+            "descripcion": "Camión Chasis",
+            "capacidad_carga_kg": 3500,
+            "tarifa_hora_base": 8000,
+            "tarifa_km_excedente": 350,
+        },
+    ).json()
+    assert t_resp["creado_por_id"] == 1
+    assert t_resp["modificado_por_id"] == 1
+
+    ch_resp = cliente.post(
+        "/api/choferes",
+        headers=headers_a,
+        json={"nombre_completo": "Pedro Sosa", "telefono": "351 777 8899"},
+    ).json()
+    assert ch_resp["creado_por_id"] == 1
+    assert ch_resp["modificado_por_id"] == 1
+
+    v_resp = cliente.post(
+        "/api/vehiculos",
+        headers=headers_a,
+        json={
+            "patente": "AF 123 BCD",
+            "id_tipo_vehiculo": t_resp["id"],
+            "id_chofer_habitual": ch_resp["id"],
+        },
+    ).json()
+    assert v_resp["creado_por_id"] == 1
+    assert v_resp["modificado_por_id"] == 1
+
+    s_resp = cliente.post(
+        "/api/servicios",
+        headers=headers_a,
+        json={
+            "id_cliente": c_resp["id"],
+            "id_tipo_vehiculo": t_resp["id"],
+            "id_chofer": ch_resp["id"],
+            "id_vehiculo": v_resp["id"],
+            "fecha": "2026-11-10",
+            "horas_estimadas": 3,
+            "distancia_ida_km": 12,
+        },
+    ).json()
+    assert s_resp["creado_por_id"] == 1
+    assert s_resp["modificado_por_id"] == 1
+
+    # 2. Admin B modifica registros -> creado_por_id=1, modificado_por_id=2
+    c_mod = cliente.put(
+        f"/api/clientes/{c_resp['id']}",
+        headers=headers_b,
+        json={
+            "razon_social": "Logística Austral S.R.L.",
+            "telefono": "351 444 5566",
+            "direccion_habitual": "Av. Sabattini 2600",
+            "tiene_cuenta_corriente": False,
+        },
+    ).json()
+    assert c_mod["creado_por_id"] == 1
+    assert c_mod["modificado_por_id"] == 2
+
+    s_mod = cliente.patch(
+        f"/api/servicios/{s_resp['id_servicio']}/estado",
+        headers=headers_b,
+        json={"estado": "confirmado"},
+    ).json()
+    assert s_mod["creado_por_id"] == 1
+    assert s_mod["modificado_por_id"] == 2

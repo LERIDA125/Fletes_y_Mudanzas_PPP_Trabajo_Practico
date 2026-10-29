@@ -1,8 +1,4 @@
-"""Schemas de entrada y salida de choferes en la capa de Presentación.
-
-Los límites y formatos se declaran acá para que un dato inválido se rechace con un `422` nombrando
-el campo responsable (FR-011), pero la fuente de verdad sigue siendo `app/domain/chofer.py`.
-"""
+"""Schemas de entrada y salida de choferes en la capa de Presentación."""
 
 from __future__ import annotations
 
@@ -24,11 +20,7 @@ from app.domain.chofer import (
 
 
 class ChoferCreate(BaseModel):
-    """Los datos requeridos del alta (FR-001, FR-002).
-
-    `activo` y `saldo_a_favor` no se aceptan del usuario (FR-006): el dominio los fija por
-    defecto y `extra="forbid"` rechaza el intento con `422`.
-    """
+    """Los datos requeridos del alta (FR-001, FR-002)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -81,6 +73,12 @@ class ChoferRead(BaseModel):
     telefono: str
     activo: bool = Field(description="False cuando el chofer fue dado de baja (FR-013).")
     saldo_a_favor: float = Field(description="Saldo económico a favor del chofer.")
+    creado_por_id: int | None = Field(
+        default=None, description="ID del usuario que dio de alta el chofer."
+    )
+    modificado_por_id: int | None = Field(
+        default=None, description="ID del último usuario que modificó el chofer."
+    )
     creado_en: datetime = Field(description="Fecha de alta, asignada por el sistema.")
     actualizado_en: datetime = Field(description="Fecha de la última modificación (FR-019).")
 

@@ -42,6 +42,8 @@ class Cliente:
     activo: bool = True
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
 
     def __post_init__(self) -> None:
         self.razon_social = normalizar_razon_visual(self.razon_social)
@@ -56,6 +58,8 @@ class Cliente:
         telefono: str,
         direccion_habitual: str,
         tiene_cuenta_corriente: bool = False,
+        *,
+        creado_por_id: int | None = None,
     ) -> Cliente:
         return cls(
             id=None,
@@ -63,6 +67,8 @@ class Cliente:
             telefono=telefono,
             direccion_habitual=direccion_habitual,
             tiene_cuenta_corriente=tiene_cuenta_corriente,
+            creado_por_id=creado_por_id,
+            modificado_por_id=creado_por_id,
         )
 
     @property
@@ -76,6 +82,7 @@ class Cliente:
         telefono: str,
         direccion_habitual: str,
         tiene_cuenta_corriente: bool,
+        modificado_por_id: int | None = None,
     ) -> Cliente:
         """Valida primero y recién después modifica, para no dejar el cliente a medias."""
         candidatos = {
@@ -89,6 +96,10 @@ class Cliente:
             activo=self.activo,
             creado_en=self.creado_en,
             actualizado_en=self.actualizado_en,
+            creado_por_id=self.creado_por_id,
+            modificado_por_id=modificado_por_id
+            if modificado_por_id is not None
+            else self.modificado_por_id,
             **candidatos,
         )
 
@@ -96,10 +107,14 @@ class Cliente:
         self.telefono = candidatos["telefono"]
         self.direccion_habitual = candidatos["direccion_habitual"]
         self.tiene_cuenta_corriente = candidatos["tiene_cuenta_corriente"]
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
-    def desactivar(self) -> Cliente:
+    def desactivar(self, *, modificado_por_id: int | None = None) -> Cliente:
         self.activo = False
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
     def _validar(self) -> None:

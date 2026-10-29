@@ -11,7 +11,13 @@ from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead, ClienteUpdate
 from app.application.clientes.gestor_clientes import GestorClientes
-from app.core.dependencias import ROL_ADMIN, get_gestor_clientes, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    UsuarioAutenticado,
+    get_gestor_clientes,
+    get_usuario_actual,
+    require_rol,
+)
 
 router = APIRouter(prefix="/api/clientes", tags=["clientes"])
 
@@ -49,12 +55,14 @@ RESPUESTAS_ALTA = {
 def registrar_cliente(
     datos: ClienteCreate,
     gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ClienteRead:
     cliente = gestor.registrar(
         razon_social=datos.razon_social,
         telefono=datos.telefono,
         direccion_habitual=datos.direccion_habitual,
         tiene_cuenta_corriente=datos.tiene_cuenta_corriente,
+        usuario_id=usuario_actual.id,
     )
     return ClienteRead.de_cliente(cliente)
 
@@ -147,6 +155,7 @@ def actualizar_cliente(
     cliente_id: Annotated[int, Path(description="Identificador del cliente.", ge=1)],
     datos: ClienteUpdate,
     gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ClienteRead:
     cliente = gestor.actualizar(
         cliente_id,
@@ -154,6 +163,7 @@ def actualizar_cliente(
         telefono=datos.telefono,
         direccion_habitual=datos.direccion_habitual,
         tiene_cuenta_corriente=datos.tiene_cuenta_corriente,
+        usuario_id=usuario_actual.id,
     )
     return ClienteRead.de_cliente(cliente)
 
@@ -187,6 +197,7 @@ def actualizar_cliente(
 def eliminar_cliente(
     cliente_id: Annotated[int, Path(description="Identificador del cliente.", ge=1)],
     gestor: Annotated[GestorClientes, Depends(get_gestor_clientes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> Response:
-    gestor.eliminar(cliente_id)
+    gestor.eliminar(cliente_id, usuario_id=usuario_actual.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
