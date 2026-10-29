@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 
 from app.domain.errores import ReglaNegocioError
+from app.domain.normalizacion import (
+    contar_digitos,
+    normalizar_clave_sin_acentos,
+    normalizar_espacios,
+)
 
 RAZON_SOCIAL_MIN = 3
 RAZON_SOCIAL_MAX = 120
@@ -17,7 +21,7 @@ TELEFONO_MAX = 20  # longitud del texto que admite la columna, separadores inclu
 
 def normalizar_razon_visual(texto: str) -> str:
     """Colapsa espacios sobrantes y quita los de los extremos. Para mostrar y guardar."""
-    return " ".join(texto.split())
+    return normalizar_espacios(texto)
 
 
 def normalizar_razon_social(texto: str) -> str:
@@ -25,16 +29,7 @@ def normalizar_razon_social(texto: str) -> str:
 
     Es la base de la búsqueda (FR-008) y de la unicidad de la razón social (FR-004).
     """
-    sin_acentos = "".join(
-        caracter
-        for caracter in unicodedata.normalize("NFD", texto)
-        if not unicodedata.combining(caracter)
-    )
-    return normalizar_razon_visual(sin_acentos).lower()
-
-
-def contar_digitos(texto: str) -> int:
-    return sum(caracter.isdigit() for caracter in texto)
+    return normalizar_clave_sin_acentos(texto)
 
 
 @dataclass

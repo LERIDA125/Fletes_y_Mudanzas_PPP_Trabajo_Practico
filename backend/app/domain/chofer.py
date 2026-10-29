@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.domain.errores import ReglaNegocioError
+from app.domain.normalizacion import contar_digitos, normalizar_espacios
 
 NOMBRE_MIN = 3
 NOMBRE_MAX = 120
@@ -14,11 +15,7 @@ TELEFONO_MAX = 20  # longitud del texto que admite la columna, separadores inclu
 
 def normalizar_nombre(texto: str) -> str:
     """Colapsa espacios sobrantes y quita los de los extremos. Para mostrar y guardar."""
-    return " ".join(texto.split())
-
-
-def contar_digitos(texto: str) -> int:
-    return sum(caracter.isdigit() for caracter in texto)
+    return normalizar_espacios(texto)
 
 
 @dataclass
