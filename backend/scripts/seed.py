@@ -1,13 +1,13 @@
-﻿import random
-from datetime import date, time, timedelta, datetime
+import random
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from app.infrastructure.db.session import SessionLocal
 
-from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.models.chofer import ChoferORM
+from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.servicio import ServicioORM
 from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
 from app.infrastructure.models.vehiculo import VehiculoORM
-from app.infrastructure.models.servicio import ServicioORM
 
 
 def _normalizar_texto(texto: str) -> str:
@@ -62,7 +62,11 @@ def run_seed():
             "Lucas Ramirez",
         ]
         db_choferes = [
-            ChoferORM(nombre_completo=n, telefono=f"11-{random.randint(2000,7999)}-{random.randint(1000,9999)}", activo=True)
+            ChoferORM(
+                nombre_completo=n,
+                telefono=f"11-{random.randint(2000, 7999)}-{random.randint(1000, 9999)}",
+                activo=True,
+            )
             for n in nombres
         ]
         db.add_all(db_choferes)
@@ -112,7 +116,7 @@ def run_seed():
                 ClienteORM(
                     razon_social=n,
                     razon_social_key=_normalizar_texto(n),
-                    telefono=f"11-{random.randint(4000,6999)}-1111",
+                    telefono=f"11-{random.randint(4000, 6999)}-1111",
                     direccion_habitual="Capital Federal",
                     tiene_cuenta_corriente=False,
                     activo=True,
@@ -126,7 +130,11 @@ def run_seed():
             db.refresh(c)
 
         hoy = date.today()
-        fechas = [hoy - timedelta(days=1)] * 3 + [hoy] * 5 + [hoy + timedelta(days=i) for i in range(1, 8)]
+        fechas = (
+            [hoy - timedelta(days=1)] * 3
+            + [hoy] * 5
+            + [hoy + timedelta(days=i) for i in range(1, 8)]
+        )
         horas = [time(8, 0), time(9, 30), time(11, 0), time(14, 0), time(16, 30)]
 
         for i in range(15):
