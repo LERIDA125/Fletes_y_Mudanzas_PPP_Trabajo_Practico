@@ -21,10 +21,12 @@ from app.api.schemas.vehiculo import VehiculoRead
 from app.application.servicios.gestor_servicios import GestorServicios
 from app.core.dependencias import (
     ROL_ADMIN,
+    ROL_CHOFER,
     UsuarioAutenticado,
     get_gestor_servicios,
     get_usuario_actual,
     require_rol,
+    require_roles,
 )
 from app.domain.cliente import Cliente
 
@@ -216,19 +218,23 @@ def cancelar_servicio(
     summary="Cambiar el estado de un servicio",
     description=(
         "Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación "
-        "debe realizarse mediante la ruta específica que exige motivo."
+        "debe realizarse mediante la ruta específica que exige motivo. Si el token es de rol "
+        "chofer, solo permite actualizar viajes asignados a su propio id_chofer hacia 'en curso' "
+        "o 'finalizado'."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {
             "description": "La autenticación no está habilitada para este entorno."
         },
-        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_403_FORBIDDEN: {
+            "description": "La operación requiere el rol adecuado o pertenencia del viaje."
+        },
         status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": "El estado o la transición solicitada no es válida."
         },
     },
-    dependencies=[Depends(require_rol(ROL_ADMIN))],
+    dependencies=[Depends(require_roles(ROL_ADMIN, ROL_CHOFER))],
 )
 def cambiar_estado_servicio(
     id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
@@ -240,6 +246,8 @@ def cambiar_estado_servicio(
         id_servicio=id_servicio,
         estado=datos.estado,
         usuario_id=usuario_actual.id,
+        rol_usuario=usuario_actual.rol,
+        id_chofer_usuario=usuario_actual.id_chofer,
     )
     return ServicioRead.de_item(item)
 
@@ -276,17 +284,19 @@ def eliminar_servicio(
     summary="Listar servicios",
     description=(
         "Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las "
-        "asignaciones opcionales."
+        "asignaciones opcionales. Si el token es de rol chofer, se inyecta de forma obligatoria "
+        "el filtro id_chofer igual al id_chofer del token autenticado."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {
             "description": "La autenticación no está habilitada para este entorno."
         },
     },
-    dependencies=[Depends(require_rol(ROL_ADMIN))],
+    dependencies=[Depends(require_roles(ROL_ADMIN, ROL_CHOFER))],
 )
 def listar_servicios(
     gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
     page: Annotated[int, Query(ge=1, description="Número de página, empezando en 1.")] = 1,
     size: Annotated[
         int,
@@ -296,8 +306,20 @@ def listar_servicios(
             description="Cantidad de servicios por página.",
         ),
     ] = TAMANO_DE_PAGINA_POR_DEFECTO,
+    id_chofer: Annotated[
+        int | None,
+        Query(gt=0, description="Filtro opcional por chofer (solo respetado para rol admin)."),
+    ] = None,
 ) -> ServicioListado:
-    items, total = gestor.listar(offset=(page - 1) * size, limit=size)
+    filtro_chofer = id_chofer
+    if usuario_actual.rol == ROL_CHOFER:
+        filtro_chofer = usuario_actual.id_chofer if usuario_actual.id_chofer is not None else -1
+
+    items, total = gestor.listar(
+        offset=(page - 1) * size,
+        limit=size,
+        id_chofer=filtro_chofer,
+    )
     return ServicioListado(
         items=[ServicioRead.de_item(item) for item in items],
         total=total,

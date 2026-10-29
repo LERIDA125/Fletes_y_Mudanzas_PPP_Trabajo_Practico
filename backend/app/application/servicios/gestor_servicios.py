@@ -22,6 +22,7 @@ from app.domain.errores import (
     ChoferInvalido,
     ClienteInvalido,
     DatoInvalido,
+    PermisoDenegado,
     RazonSocialDuplicada,
     ServicioNoEncontrado,
     TipoVehiculoInvalido,
@@ -222,9 +223,18 @@ class GestorServicios:
         )
         return self._repo.actualizar(actual.servicio)
 
-    def listar(self, *, offset: int, limit: int) -> tuple[list[ServicioListadoItem], int]:
-        total = self._repo.contar()
-        return self._repo.listar(offset=offset, limit=limit), total
+    def listar(
+        self,
+        *,
+        offset: int,
+        limit: int,
+        id_chofer: int | None = None,
+    ) -> tuple[list[ServicioListadoItem], int]:
+        if id_chofer is None:
+            total = self._repo.contar()
+            return self._repo.listar(offset=offset, limit=limit), total
+        total = self._repo.contar(id_chofer=id_chofer)
+        return self._repo.listar(offset=offset, limit=limit, id_chofer=id_chofer), total
 
     def _resolver_cliente(
         self,
@@ -278,9 +288,20 @@ class GestorServicios:
         estado: str,
         *,
         usuario_id: int | None = None,
+        rol_usuario: str = "admin",
+        id_chofer_usuario: int | None = None,
     ) -> ServicioListadoItem:
         actual = self._repo.obtener_por_id(id_servicio)
         if actual is None:
             raise ServicioNoEncontrado(id_servicio)
+        if rol_usuario == "chofer":
+            if id_chofer_usuario is None or actual.servicio.id_chofer != id_chofer_usuario:
+                raise PermisoDenegado(
+                    "El chofer solo puede actualizar servicios asignados a sí mismo."
+                )
+            if estado not in ("en curso", "finalizado"):
+                raise PermisoDenegado(
+                    "El chofer solo puede avanzar el servicio a 'en curso' o 'finalizado'."
+                )
         actual.servicio.transicionar_a(estado, modificado_por_id=usuario_id)
         return self._repo.actualizar(actual.servicio)

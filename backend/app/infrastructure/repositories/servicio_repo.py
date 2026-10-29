@@ -132,12 +132,20 @@ class ServicioRepo:
         fila = self._db.execute(self._consulta_con_nombres().where(ServicioORM.id == orm.id)).one()
         return self._a_item(fila)
 
-    def listar(self, offset: int, limit: int) -> list[ServicioListadoItem]:
-        consulta = self._consulta_con_nombres().order_by(ServicioORM.id).offset(offset).limit(limit)
+    def listar(
+        self, offset: int, limit: int, id_chofer: int | None = None
+    ) -> list[ServicioListadoItem]:
+        consulta = self._consulta_con_nombres()
+        if id_chofer is not None:
+            consulta = consulta.where(ServicioORM.id_chofer == id_chofer)
+        consulta = consulta.order_by(ServicioORM.id).offset(offset).limit(limit)
         return [self._a_item(fila) for fila in self._db.execute(consulta)]
 
-    def contar(self) -> int:
-        return self._db.scalar(select(func.count()).select_from(ServicioORM)) or 0
+    def contar(self, id_chofer: int | None = None) -> int:
+        consulta = select(func.count()).select_from(ServicioORM)
+        if id_chofer is not None:
+            consulta = consulta.where(ServicioORM.id_chofer == id_chofer)
+        return self._db.scalar(consulta) or 0
 
     def tiene_historial(self, cliente_id: int) -> bool:
         consulta = select(ServicioORM.id).where(ServicioORM.id_cliente == cliente_id)

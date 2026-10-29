@@ -16,6 +16,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Iniciar sesión con usuario y contraseña
+         * @description Autentica cuentas activas de rol 'admin' o 'chofer' y emite un token JWT Bearer con expiración de 30 minutos.
+         */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener identidad del usuario autenticado
+         * @description Devuelve los datos vigentes del usuario dueño del token Bearer.
+         */
+        get: operations["obtener_perfil_actual_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/usuarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar cuentas de usuarios (Administradores y Choferes)
+         * @description Devuelve todas las cuentas de usuario registradas para auditoría y gestión multi-admin. Requiere rol 'admin'.
+         */
+        get: operations["listar_usuarios_api_auth_usuarios_get"];
+        put?: never;
+        /**
+         * Crear cuenta de Administrador o de Chofer
+         * @description Permite a un administrador dar de alta otro administrador (soporte multi-admin) o crearle el usuario de acceso a un chofer activo (vinculando `id_chofer`).
+         */
+        post: operations["crear_usuario_api_auth_usuarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clientes": {
         parameters: {
             query?: never;
@@ -117,7 +181,7 @@ export interface paths {
         };
         /**
          * Listar servicios
-         * @description Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las asignaciones opcionales.
+         * @description Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las asignaciones opcionales. Si el token es de rol chofer, se inyecta de forma obligatoria el filtro id_chofer igual al id_chofer del token autenticado.
          */
         get: operations["listar_servicios_api_servicios_get"];
         put?: never;
@@ -167,7 +231,7 @@ export interface paths {
         head?: never;
         /**
          * Cambiar el estado de un servicio
-         * @description Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación debe realizarse mediante la ruta específica que exige motivo.
+         * @description Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación debe realizarse mediante la ruta específica que exige motivo. Si el token es de rol chofer, solo permite actualizar viajes asignados a su propio id_chofer hacia 'en curso' o 'finalizado'.
          */
         patch: operations["cambiar_estado_servicio_api_servicios__id_servicio__estado_patch"];
         trace?: never;
@@ -355,9 +419,6 @@ export interface components {
         /**
          * ChoferCreate
          * @description Los datos requeridos del alta (FR-001, FR-002).
-         *
-         *     `activo` y `saldo_a_favor` no se aceptan del usuario (FR-006): el dominio los fija por
-         *     defecto y `extra="forbid"` rechaza el intento con `422`.
          */
         ChoferCreate: {
             /**
@@ -420,6 +481,16 @@ export interface components {
              * @description Saldo económico a favor del chofer.
              */
             saldo_a_favor: number;
+            /**
+             * Creado Por Id
+             * @description ID del usuario que dio de alta el chofer.
+             */
+            creado_por_id?: number | null;
+            /**
+             * Modificado Por Id
+             * @description ID del último usuario que modificó el chofer.
+             */
+            modificado_por_id?: number | null;
             /**
              * Creado En
              * Format: date-time
@@ -528,6 +599,16 @@ export interface components {
              */
             activo: boolean;
             /**
+             * Creado Por Id
+             * @description ID del usuario que dio de alta el registro.
+             */
+            creado_por_id?: number | null;
+            /**
+             * Modificado Por Id
+             * @description ID del último usuario que modificó el registro.
+             */
+            modificado_por_id?: number | null;
+            /**
              * Creado En
              * Format: date-time
              * @description Fecha de alta, asignada por el sistema.
@@ -543,9 +624,6 @@ export interface components {
         /**
          * ClienteUpdate
          * @description La edición toma los mismos cuatro datos obligatorios que el alta (DD-5).
-         *
-         *     No es un `PATCH`: se manda el cliente completo. Así el dominio siempre valida un cliente
-         *     entero y nunca queda un registro a medio modificar por un campo que se olvidó enviar.
          */
         ClienteUpdate: {
             /**
@@ -645,6 +723,19 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /**
+             * Username
+             * @description Nombre de usuario.
+             */
+            username: string;
+            /**
+             * Password
+             * @description Contraseña en claro.
+             */
+            password: string;
         };
         /** ServicioCancelar */
         ServicioCancelar: {
@@ -786,6 +877,10 @@ export interface components {
             transiciones_validas: string[];
             /** Motivo Cancelacion */
             motivo_cancelacion: string | null;
+            /** Creado Por Id */
+            creado_por_id?: number | null;
+            /** Modificado Por Id */
+            modificado_por_id?: number | null;
             /**
              * Creado En
              * Format: date-time
@@ -891,6 +986,16 @@ export interface components {
              */
             activo: boolean;
             /**
+             * Creado Por Id
+             * @description ID del usuario que creó el tipo de vehículo.
+             */
+            creado_por_id?: number | null;
+            /**
+             * Modificado Por Id
+             * @description ID del último usuario que modificó el tipo de vehículo.
+             */
+            modificado_por_id?: number | null;
+            /**
              * Creado En
              * @description Fecha de alta, asignada por el sistema.
              */
@@ -930,6 +1035,64 @@ export interface components {
              * @example 150.0
              */
             tarifa_km_excedente: number | string;
+        };
+        /** TokenRead */
+        TokenRead: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+            usuario: components["schemas"]["UsuarioRead"];
+        };
+        /** UsuarioCreate */
+        UsuarioCreate: {
+            /**
+             * Username
+             * @description Nombre de usuario único (se normaliza en minúsculas).
+             */
+            username: string;
+            /**
+             * Password
+             * @description Contraseña inicial asignada por el administrador.
+             */
+            password: string;
+            /**
+             * Rol
+             * @description Rol de la cuenta: 'admin' (multi-admin) o 'chofer'.
+             * @enum {string}
+             */
+            rol: "admin" | "chofer";
+            /**
+             * Id Chofer
+             * @description ID del chofer activo vinculado (obligatorio si rol='chofer').
+             */
+            id_chofer?: number | null;
+        };
+        /** UsuarioRead */
+        UsuarioRead: {
+            /** Id */
+            id: number;
+            /** Username */
+            username: string;
+            /** Rol */
+            rol: string;
+            /** Id Chofer */
+            id_chofer?: number | null;
+            /** Activo */
+            activo: boolean;
+            /** Creado Por Id */
+            creado_por_id?: number | null;
+            /** Modificado Por Id */
+            modificado_por_id?: number | null;
+            /** Creado En */
+            creado_en?: string | null;
+            /** Actualizado En */
+            actualizado_en?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1019,6 +1182,16 @@ export interface components {
              */
             activo: boolean;
             /**
+             * Creado Por Id
+             * @description ID del usuario que creó el vehículo.
+             */
+            creado_por_id?: number | null;
+            /**
+             * Modificado Por Id
+             * @description ID del último usuario que modificó el vehículo.
+             */
+            modificado_por_id?: number | null;
+            /**
              * Creado En
              * Format: date-time
              */
@@ -1067,6 +1240,16 @@ export interface components {
              * @default true
              */
             activo: boolean;
+            /**
+             * Creado Por Id
+             * @description ID del usuario que creó el vehículo.
+             */
+            creado_por_id?: number | null;
+            /**
+             * Modificado Por Id
+             * @description ID del último usuario que modificó el vehículo.
+             */
+            modificado_por_id?: number | null;
             /**
              * Creado En
              * @description Fecha de alta, asignada por el sistema.
@@ -1146,6 +1329,171 @@ export interface operations {
             };
         };
     };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenRead"];
+                };
+            };
+            /** @description Usuario o contraseña incorrectos, o cuenta inactiva. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_perfil_actual_api_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"];
+                };
+            };
+            /** @description Token ausente, inválido, expirado o usuario inactivo. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_usuarios_api_auth_usuarios_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_usuario_api_auth_usuarios_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsuarioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"];
+                };
+            };
+            /** @description Solo un usuario con rol 'admin' puede crear cuentas. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El username ya existe o el chofer ya tiene un usuario asignado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos inválidos o chofer inexistente/inactivo. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listar_clientes_api_clientes_get: {
         parameters: {
             query?: {
@@ -1188,6 +1536,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1275,6 +1625,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del cliente. */
@@ -1333,6 +1685,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del cliente. */
@@ -1396,6 +1750,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1440,6 +1796,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1489,10 +1847,14 @@ export interface operations {
                 page?: number;
                 /** @description Cantidad de servicios por página. */
                 size?: number;
+                /** @description Filtro opcional por chofer (solo respetado para rol admin). */
+                id_chofer?: number | null;
             };
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1532,6 +1894,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1580,6 +1944,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del servicio. */
@@ -1645,6 +2011,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del servicio. */
@@ -1674,7 +2042,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La operación requiere el rol admin. */
+            /** @description La operación requiere el rol adecuado o pertenencia del viaje. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1703,6 +2071,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del servicio. */
@@ -1800,6 +2170,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1880,6 +2252,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del chofer. */
@@ -1931,6 +2305,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del chofer. */
@@ -2014,6 +2390,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2101,6 +2479,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del tipo de vehículo. */
@@ -2159,6 +2539,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del tipo de vehículo. */
@@ -2249,6 +2631,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2336,6 +2720,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del vehículo. */
@@ -2394,6 +2780,8 @@ export interface operations {
             header?: {
                 /** @description Rol de prueba en modo desarrollo local. */
                 "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
             };
             path: {
                 /** @description Identificador del vehículo. */

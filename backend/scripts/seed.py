@@ -7,7 +7,9 @@ from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
 from app.infrastructure.models.servicio import ServicioORM
 from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
+from app.infrastructure.models.usuario import UsuarioORM
 from app.infrastructure.models.vehiculo import VehiculoORM
+from app.infrastructure.security.password_hasher import PasswordHasher
 
 
 def _normalizar_texto(texto: str) -> str:
@@ -20,13 +22,34 @@ def _normalizar_texto(texto: str) -> str:
 
 def run_seed():
     db = SessionLocal()
+    hasher = PasswordHasher()
     try:
         db.query(ServicioORM).delete()
         db.query(VehiculoORM).delete()
         db.query(TipoVehiculoORM).delete()
         db.query(ChoferORM).delete()
         db.query(ClienteORM).delete()
+        db.query(UsuarioORM).delete()
         db.commit()
+
+        admin_1 = UsuarioORM(
+            username="admin",
+            password_hash=hasher.hashear("admin123"),
+            rol="admin",
+            id_chofer=None,
+            activo=True,
+        )
+        admin_2 = UsuarioORM(
+            username="socio",
+            password_hash=hasher.hashear("socio123"),
+            rol="admin",
+            id_chofer=None,
+            activo=True,
+        )
+        db.add_all([admin_1, admin_2])
+        db.commit()
+        db.refresh(admin_1)
+        db.refresh(admin_2)
 
         tipos_data = [
             ("Furgón Grande", Decimal("25000.00"), Decimal("850.00")),
@@ -42,6 +65,8 @@ def run_seed():
                 tarifa_hora_base=tarifa_hora,
                 tarifa_km_excedente=tarifa_km,
                 activo=True,
+                creado_por_id=admin_1.id,
+                modificado_por_id=admin_1.id,
             )
             db_tipos.append(tipo)
         db.add_all(db_tipos)
@@ -66,6 +91,8 @@ def run_seed():
                 nombre_completo=n,
                 telefono=f"11-{random.randint(2000, 7999)}-{random.randint(1000, 9999)}",
                 activo=True,
+                creado_por_id=admin_1.id,
+                modificado_por_id=admin_1.id,
             )
             for n in nombres
         ]
@@ -74,6 +101,20 @@ def run_seed():
         for c in db_choferes:
             db.refresh(c)
 
+        # Cuentas de acceso para los primeros 2 choferes (creadas por el administrador)
+        for idx in range(2):
+            usuario_chofer = UsuarioORM(
+                username=f"chofer{idx + 1}",
+                password_hash=hasher.hashear("chofer123"),
+                rol="chofer",
+                id_chofer=db_choferes[idx].id,
+                activo=True,
+                creado_por_id=admin_1.id,
+                modificado_por_id=admin_1.id,
+            )
+            db.add(usuario_chofer)
+        db.commit()
+
         db_vehiculos = []
         for i in range(5):
             vehiculo = VehiculoORM(
@@ -81,6 +122,8 @@ def run_seed():
                 id_tipo_vehiculo=db_tipos[i % 3].id,
                 id_chofer_habitual=db_choferes[i].id,
                 activo=True,
+                creado_por_id=admin_1.id,
+                modificado_por_id=admin_1.id,
             )
             db.add(vehiculo)
             db_vehiculos.append(vehiculo)
@@ -122,6 +165,8 @@ def run_seed():
                     activo=True,
                     creado_en=datetime.now(),
                     actualizado_en=datetime.now(),
+                    creado_por_id=admin_1.id,
+                    modificado_por_id=admin_1.id,
                 )
             )
         db.add_all(db_clientes)
@@ -140,6 +185,7 @@ def run_seed():
         for i in range(15):
             cliente = random.choice(db_clientes)
             fecha_serv = fechas[i]
+            autor_id = admin_1.id if i % 2 == 0 else admin_2.id
 
             if i % 3 == 0:
                 chofer_id = None
@@ -174,6 +220,8 @@ def run_seed():
                 tarifa_hora_aplicada=Decimal("12500.00"),
                 tarifa_km_aplicada=Decimal("450.00"),
                 precio_total=Decimal("40250.00"),
+                creado_por_id=autor_id,
+                modificado_por_id=autor_id,
             )
             db.add(servicio)
 

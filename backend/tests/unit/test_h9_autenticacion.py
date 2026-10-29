@@ -308,3 +308,168 @@ def test_h9_trazabilidad_y_auditoria_multi_admin(
     ).json()
     assert s_mod["creado_por_id"] == 1
     assert s_mod["modificado_por_id"] == 2
+
+
+def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
+    cliente_auth: tuple[TestClient, Session],
+) -> None:
+    cliente, sesion = cliente_auth
+    gestor = GestorAutenticacion(
+        repositorio_usuarios=UsuarioRepo(sesion),
+        hasher=PasswordHasher(),
+        tokens=JWTService(secret_key="fletes-express-dev-secret-key-2026-mvp"),
+    )
+    gestor.crear_usuario(username="admin", password="Password123", rol="admin")
+    token_admin = cliente.post(
+        "/api/auth/login", json={"username": "admin", "password": "Password123"}
+    ).json()["access_token"]
+    headers_admin = {"Authorization": f"Bearer {token_admin}"}
+
+    tipo_id = cliente.post(
+        "/api/tipos-vehiculo",
+        headers=headers_admin,
+        json={
+            "descripcion": "Furgón",
+            "capacidad_carga_kg": 1200,
+            "tarifa_hora_base": 5000,
+            "tarifa_km_excedente": 200,
+        },
+    ).json()["id"]
+    cliente_id = cliente.post(
+        "/api/clientes",
+        headers=headers_admin,
+        json={
+            "razon_social": "Cliente Portal Chofer",
+            "telefono": "351 400 1000",
+            "direccion_habitual": "Av. Colón 500",
+            "tiene_cuenta_corriente": False,
+        },
+    ).json()["id"]
+
+    chofer_1_id = cliente.post(
+        "/api/choferes",
+        headers=headers_admin,
+        json={"nombre_completo": "Chofer Uno", "telefono": "351 500 1001"},
+    ).json()["id"]
+    chofer_2_id = cliente.post(
+        "/api/choferes",
+        headers=headers_admin,
+        json={"nombre_completo": "Chofer Dos", "telefono": "351 500 1002"},
+    ).json()["id"]
+
+    # Admin le crea cuenta al Chofer 1
+    cliente.post(
+        "/api/auth/usuarios",
+        headers=headers_admin,
+        json={
+            "username": "chofer1",
+            "password": "Chofer1Pass",
+            "rol": "chofer",
+            "id_chofer": chofer_1_id,
+        },
+    )
+    token_chofer_1 = cliente.post(
+        "/api/auth/login",
+        json={"username": "chofer1", "password": "Chofer1Pass"},
+    ).json()["access_token"]
+    headers_chofer_1 = {"Authorization": f"Bearer {token_chofer_1}"}
+
+    # Admin crea 2 servicios: uno para Chofer 1 y otro para Chofer 2
+    serv_1 = cliente.post(
+        "/api/servicios",
+        headers=headers_admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "id_chofer": chofer_1_id,
+            "fecha": "2026-11-12",
+            "horas_estimadas": 2,
+            "distancia_ida_km": 8,
+        },
+    ).json()
+    serv_2 = cliente.post(
+        "/api/servicios",
+        headers=headers_admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "id_chofer": chofer_2_id,
+            "fecha": "2026-11-12",
+            "horas_estimadas": 2,
+            "distancia_ida_km": 8,
+        },
+    ).json()
+
+    # 1. GET /api/servicios con token de Chofer 1 SOLO devuelve su propio viaje
+    # incluso si intenta forzar ?id_chofer=chofer_2_id en el query string
+    listado_chofer = cliente.get(
+        f"/api/servicios?id_chofer={chofer_2_id}",
+        headers=headers_chofer_1,
+    )
+    assert listado_chofer.status_code == 200
+    datos_listado = listado_chofer.json()
+    assert datos_listado["total"] == 1
+    assert datos_listado["items"][0]["id_servicio"] == serv_1["id_servicio"]
+    assert datos_listado["items"][0]["id_chofer"] == chofer_1_id
+
+    # 2. Chofer 1 NO puede pasar su viaje de 'pendiente' a 'confirmado' (solo admin confirma)
+    assert (
+        cliente.patch(
+            f"/api/servicios/{serv_1['id_servicio']}/estado",
+            headers=headers_chofer_1,
+            json={"estado": "confirmado"},
+        ).status_code
+        == 403
+    )
+
+    # Admin confirma ambos viajes
+    cliente.patch(
+        f"/api/servicios/{serv_1['id_servicio']}/estado",
+        headers=headers_admin,
+        json={"estado": "confirmado"},
+    )
+    cliente.patch(
+        f"/api/servicios/{serv_2['id_servicio']}/estado",
+        headers=headers_admin,
+        json={"estado": "confirmado"},
+    )
+
+    # 3. Chofer 1 NO puede modificar el viaje del Chofer 2 (403 Forbidden)
+    assert (
+        cliente.patch(
+            f"/api/servicios/{serv_2['id_servicio']}/estado",
+            headers=headers_chofer_1,
+            json={"estado": "en curso"},
+        ).status_code
+        == 403
+    )
+
+    # 4. Chofer 1 SÍ puede avanzar su propio viaje a 'en curso' y luego a 'finalizado',
+    # registrando su usuario_id en modificado_por_id
+    en_curso = cliente.patch(
+        f"/api/servicios/{serv_1['id_servicio']}/estado",
+        headers=headers_chofer_1,
+        json={"estado": "en curso"},
+    )
+    assert en_curso.status_code == 200
+    assert en_curso.json()["estado"] == "en curso"
+    assert en_curso.json()["modificado_por_id"] == 2  # id del usuario chofer1
+
+    finalizado = cliente.patch(
+        f"/api/servicios/{serv_1['id_servicio']}/estado",
+        headers=headers_chofer_1,
+        json={"estado": "finalizado"},
+    )
+    assert finalizado.status_code == 200
+    assert finalizado.json()["estado"] == "finalizado"
+
+    # 5. Chofer 1 NO puede marcar el servicio como 'cobrado' (403 Forbidden)
+    assert (
+        cliente.patch(
+            f"/api/servicios/{serv_1['id_servicio']}/estado",
+            headers=headers_chofer_1,
+            json={"estado": "cobrado"},
+        ).status_code
+        == 403
+    )
+
