@@ -26,6 +26,24 @@ TRANSICIONES_ESTADO_SERVICIO = {
 }
 
 
+def transiciones_validas_desde(estado: str) -> list[str]:
+    """Acciones de estado disponibles desde `estado` para el panel de administración.
+
+    La cancelación no es una transición más: se ejecuta por su propio endpoint porque
+    exige motivo. Se incluye en la lista para que la UI no tenga que duplicar la regla.
+    """
+    if estado not in ESTADOS_SERVICIO:
+        return []
+
+    disponibles: list[str] = []
+    siguiente = TRANSICIONES_ESTADO_SERVICIO[estado]
+    if siguiente is not None:
+        disponibles.append(siguiente)
+    if estado not in ESTADOS_NO_CANCELABLES:
+        disponibles.append("cancelado")
+    return disponibles
+
+
 @dataclass
 class Servicio:
     id: int | None

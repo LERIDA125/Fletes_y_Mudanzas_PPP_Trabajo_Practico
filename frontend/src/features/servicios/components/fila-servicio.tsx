@@ -1,21 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { CarFront, MoreHorizontal, Trash2 } from "lucide-react";
 
-import { cambiarEstadoServicio, eliminarServicio } from "@/features/servicios/actions";
+import { DialogoConfirmacion } from "@/components/ui/dialogo-confirmacion";
+import {
+  cambiarEstadoServicio,
+  cancelarServicio,
+  eliminarServicio,
+} from "@/features/servicios/actions";
 import type { EstadoServicio, Servicio } from "@/features/servicios/types";
+import { useMenuDesplegable } from "@/lib/hooks/use-menu-desplegable";
 
-const estadosEditables: { valor: EstadoServicio; etiqueta: string }[] = [
-  { valor: "pendiente", etiqueta: "Pendiente" },
-  { valor: "en curso", etiqueta: "En curso" },
-  { valor: "finalizado", etiqueta: "Finalizado" },
-  { valor: "cancelado", etiqueta: "Cancelado" },
-];
+const ETIQUETAS_ESTADO: Record<EstadoServicio, string> = {
+  pendiente: "Pendiente",
+  confirmado: "Confirmado",
+  "en curso": "En curso",
+  finalizado: "Finalizado",
+  cobrado: "Cobrado",
+  cancelado: "Cancelado",
+};
 
-function esEstadoEditable(estado: string): estado is EstadoServicio {
-  return estadosEditables.some(({ valor }) => valor === estado);
+function esEstadoServicio(estado: string): estado is EstadoServicio {
+  return Object.hasOwn(ETIQUETAS_ESTADO, estado);
 }
 
 const formatoMoneda = new Intl.NumberFormat("es-AR", {
@@ -56,30 +64,56 @@ const statusStyles: Record<string, string> = {
 
 export function FilaServicio({ servicio }: { servicio: Servicio }) {
   const router = useRouter();
-  const [menuAbierto, setMenuAbierto] = useState(false);
+  const { abierto, alternar, cerrar, anclaRef, menuRef, estilo } = useMenuDesplegable();
   const [selectorAbierto, setSelectorAbierto] = useState(false);
-  const [estadoSeleccionado, setEstadoSeleccionado] =
-    useState<EstadoServicio>("pendiente");
   const [enviando, setEnviando] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
+  const [dialogoEliminarAbierto, setDialogoEliminarAbierto] = useState(false);
+
+  const transiciones = servicio.transiciones_validas.filter(esEstadoServicio);
+  const puedeCambiarEstado = transiciones.length > 0;
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoServicio | "">("");
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
+  // Las props se refrescan después de guardar: si la transición elegida ya no
+  // está disponible, se vuelve a la primera que ofrece el backend.
+  const estadoElegido =
+    estadoSeleccionado && transiciones.includes(estadoSeleccionado)
+      ? estadoSeleccionado
+      : (transiciones[0] ?? "");
+
   const estadoClave = servicio.estado.toLowerCase();
   const claseBadge =
     statusStyles[estadoClave] ?? "border-slate-200 bg-slate-50 text-slate-700";
 
-  async function guardarEstado() {
+  function cerrarMenu() {
+    cerrar();
+    setSelectorAbierto(false);
+  }
+
+  async function guardarEstado(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!estadoElegido) {
+      return;
+    }
+    if (estadoElegido === "cancelado" && !motivoCancelacion.trim()) {
+      setMensajeError("Indicá el motivo de la cancelación.");
+      return;
+    }
+
     setMensajeError("");
     setEnviando(true);
     try {
-      const resultado = await cambiarEstadoServicio(
-        servicio.id_servicio,
-        estadoSeleccionado,
-      );
+      const resultado =
+        estadoElegido === "cancelado"
+          ? await cancelarServicio(servicio.id_servicio, motivoCancelacion)
+          : await cambiarEstadoServicio(servicio.id_servicio, estadoElegido);
+
       if (!resultado.ok) {
         setMensajeError(resultado.mensaje);
         return;
       }
-      setMenuAbierto(false);
-      setSelectorAbierto(false);
+      cerrarMenu();
+      setMotivoCancelacion("");
       router.refresh();
     } finally {
       setEnviando(false);
@@ -87,22 +121,17 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
   }
 
   async function confirmarEliminacion() {
-    const confirmado = window.confirm(
-      `¿Eliminar el servicio de ${servicio.razon_social_cliente}? Esta acción no se puede deshacer.`,
-    );
-    if (!confirmado) {
-      return;
-    }
-
     setMensajeError("");
     setEnviando(true);
     try {
       const resultado = await eliminarServicio(servicio.id_servicio);
       if (!resultado.ok) {
+        setDialogoEliminarAbierto(false);
         setMensajeError(resultado.mensaje);
         return;
       }
-      setMenuAbierto(false);
+      setDialogoEliminarAbierto(false);
+      cerrarMenu();
       router.refresh();
     } finally {
       setEnviando(false);
@@ -188,14 +217,14 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
       </td>
 
       <td className="whitespace-nowrap py-3.5 pr-5 text-right sm:pr-6">
-        <div className="relative inline-block text-left">
+        <div ref={anclaRef} className="inline-block text-left">
           <button
             type="button"
             aria-label={`Opciones de ${servicio.razon_social_cliente}`}
-            aria-expanded={menuAbierto}
+            aria-expanded={abierto}
             aria-haspopup="true"
             onClick={() => {
-              setMenuAbierto((abierto) => !abierto);
+              alternar();
               setSelectorAbierto(false);
               setMensajeError("");
             }}
@@ -204,27 +233,36 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
           >
             <MoreHorizontal className="size-4" />
           </button>
-          {menuAbierto ? (
+
+          {abierto ? (
             <div
+              ref={menuRef}
+              style={estilo}
               aria-label={`Acciones de ${servicio.razon_social_cliente}`}
-              className="absolute right-0 z-10 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-lg"
+              className="z-50 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-xl"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  const estadoActual = estadosEditables.find(
-                    ({ valor }) => valor === servicio.estado,
-                  );
-                  setEstadoSeleccionado(estadoActual?.valor ?? "pendiente");
-                  setSelectorAbierto((abierto) => !abierto);
-                  setMensajeError("");
-                }}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Cambiar estado
-              </button>
+              {puedeCambiarEstado ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorAbierto((abierto) => !abierto);
+                    setMensajeError("");
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cambiar estado
+                </button>
+              ) : (
+                <p className="px-3 py-2 text-xs text-slate-500">
+                  El servicio está en un estado final: no admite más cambios.
+                </p>
+              )}
+
               {selectorAbierto ? (
-                <div className="border-t border-slate-100 px-2 py-3">
+                <form
+                  onSubmit={guardarEstado}
+                  className="border-t border-slate-100 px-2 py-3"
+                >
                   <label
                     htmlFor={`estado-servicio-${servicio.id_servicio}`}
                     className="mb-1 block text-xs font-medium text-slate-500"
@@ -233,49 +271,93 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
                   </label>
                   <select
                     id={`estado-servicio-${servicio.id_servicio}`}
-                    value={estadoSeleccionado}
+                    value={estadoElegido}
                     onChange={(evento) => {
                       const estado = evento.target.value;
-                      if (esEstadoEditable(estado)) {
+                      if (esEstadoServicio(estado)) {
                         setEstadoSeleccionado(estado);
+                        setMensajeError("");
                       }
                     }}
                     disabled={enviando}
                     className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
                   >
-                    {estadosEditables.map(({ valor, etiqueta }) => (
-                      <option key={valor} value={valor}>
-                        {etiqueta}
+                    {transiciones.map((estado) => (
+                      <option key={estado} value={estado}>
+                        {ETIQUETAS_ESTADO[estado]}
                       </option>
                     ))}
                   </select>
+
+                  {estadoElegido === "cancelado" ? (
+                    <div className="mt-2">
+                      <label
+                        htmlFor={`motivo-cancelacion-${servicio.id_servicio}`}
+                        className="mb-1 block text-xs font-medium text-slate-500"
+                      >
+                        Motivo de la cancelación
+                      </label>
+                      <textarea
+                        id={`motivo-cancelacion-${servicio.id_servicio}`}
+                        value={motivoCancelacion}
+                        onChange={(evento) => setMotivoCancelacion(evento.target.value)}
+                        disabled={enviando}
+                        rows={2}
+                        maxLength={500}
+                        placeholder="Ej. El cliente reprogramó el viaje"
+                        className="w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                      />
+                    </div>
+                  ) : null}
+
                   <button
-                    type="button"
-                    onClick={guardarEstado}
+                    type="submit"
                     disabled={enviando}
                     className="mt-2 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {enviando ? "Guardando…" : "Guardar estado"}
+                    {enviando
+                      ? "Actualizando…"
+                      : estadoElegido === "cancelado"
+                        ? "Cancelar servicio"
+                        : "Actualizar estado"}
                   </button>
-                </div>
+                </form>
               ) : null}
+
               <button
                 type="button"
-                onClick={confirmarEliminacion}
+                onClick={() => {
+                  cerrarMenu();
+                  setDialogoEliminarAbierto(true);
+                }}
                 disabled={enviando}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
                 <Trash2 className="size-4" />
                 Eliminar
               </button>
-              {mensajeError ? (
-                <p role="alert" className="px-3 py-2 text-left text-xs text-red-700">
-                  {mensajeError}
-                </p>
-              ) : null}
             </div>
           ) : null}
+          {mensajeError ? (
+            <p
+              role="alert"
+              className="mt-2 block max-w-72 px-2 text-left text-xs text-red-700"
+            >
+              {mensajeError}
+            </p>
+          ) : null}
         </div>
+
+        {dialogoEliminarAbierto ? (
+          <DialogoConfirmacion
+            titulo="Eliminar servicio"
+            descripcion={`¿Eliminar el servicio de ${servicio.razon_social_cliente}? Esta acción no se puede deshacer.`}
+            textoConfirmar="Sí, eliminar"
+            enviando={enviando}
+            onConfirmar={confirmarEliminacion}
+            onCancelar={() => setDialogoEliminarAbierto(false)}
+          />
+        ) : null}
       </td>
     </tr>
   );

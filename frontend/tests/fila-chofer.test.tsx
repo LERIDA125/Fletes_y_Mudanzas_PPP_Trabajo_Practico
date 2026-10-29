@@ -87,31 +87,27 @@ describe("FilaChofer", () => {
 
   it("pide confirmación antes de dar de baja el chofer", async () => {
     const usuario = userEvent.setup();
-    const confirmacion = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderizarFila();
 
     await usuario.click(screen.getByRole("button", { name: "Opciones de Juan Pérez" }));
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
 
-    expect(confirmacion).toHaveBeenCalledWith(
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
       "¿Dar de baja a Juan Pérez? Esta acción no se puede deshacer.",
     );
     expect(eliminarChofer).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
 
-    confirmacion.mockReturnValue(true);
-    await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     await waitFor(() => {
       expect(eliminarChofer).toHaveBeenCalledWith(7);
       expect(refresh).toHaveBeenCalledOnce();
     });
-    confirmacion.mockRestore();
   });
 
   it("muestra el error del backend al intentar dar de baja", async () => {
     const usuario = userEvent.setup();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     eliminarChofer.mockResolvedValue({
       ok: false,
       mensaje: "El chofer ya no existe o fue dado de baja. Actualizá el listado.",
@@ -120,6 +116,7 @@ describe("FilaChofer", () => {
 
     await usuario.click(screen.getByRole("button", { name: "Opciones de Juan Pérez" }));
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "El chofer ya no existe o fue dado de baja. Actualizá el listado.",

@@ -144,7 +144,6 @@ describe("FilaCliente", () => {
 
   it("pide confirmación antes de dar de baja al cliente", async () => {
     const usuario = userEvent.setup();
-    const confirmacion = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderizarFila();
 
     await usuario.click(
@@ -152,25 +151,35 @@ describe("FilaCliente", () => {
     );
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
 
-    expect(confirmacion).toHaveBeenCalledWith(
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
       "¿Dar de baja a Distribuidora del Sur? Esta acción no se puede deshacer.",
     );
     expect(eliminarCliente).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
 
-    confirmacion.mockReturnValue(true);
-    await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     await waitFor(() => {
       expect(eliminarCliente).toHaveBeenCalledWith(1);
       expect(refresh).toHaveBeenCalledOnce();
     });
-    confirmacion.mockRestore();
+  });
+
+  it("permite cancelar la baja desde el diálogo sin llamar a la API", async () => {
+    const usuario = userEvent.setup();
+    renderizarFila();
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Distribuidora del Sur" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(eliminarCliente).not.toHaveBeenCalled();
   });
 
   it("explica que no se puede dar de baja un cliente con servicios (FR-015)", async () => {
     const usuario = userEvent.setup();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     eliminarCliente.mockResolvedValue({
       ok: false,
       mensaje: "No se puede dar de baja un cliente que tiene servicios registrados.",
@@ -181,6 +190,7 @@ describe("FilaCliente", () => {
       screen.getByRole("button", { name: "Opciones de Distribuidora del Sur" }),
     );
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se puede dar de baja un cliente que tiene servicios registrados.",

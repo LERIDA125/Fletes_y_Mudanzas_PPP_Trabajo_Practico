@@ -782,6 +782,8 @@ export interface components {
             moneda: "ARS";
             /** Estado */
             estado: string;
+            /** Transiciones Validas */
+            transiciones_validas: string[];
             /** Motivo Cancelacion */
             motivo_cancelacion: string | null;
             /**

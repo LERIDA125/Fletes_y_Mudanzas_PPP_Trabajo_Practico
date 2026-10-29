@@ -14,7 +14,7 @@ from app.api.schemas.comun import Pagina
 from app.api.schemas.vehiculo import VehiculoListadoRead
 from app.application.cotizacion.calculadora import Cotizacion
 from app.application.servicios.puertos import ServicioListadoItem
-from app.domain.servicio import MOTIVO_CANCELACION_MAX
+from app.domain.servicio import MOTIVO_CANCELACION_MAX, transiciones_validas_desde
 
 
 class CotizacionRequest(BaseModel):
@@ -149,6 +149,7 @@ class ServicioRead(BaseModel):
     precio_total: Decimal
     moneda: Literal["ARS"] = "ARS"
     estado: str
+    transiciones_validas: list[str]
     motivo_cancelacion: str | None
     creado_en: datetime
     actualizado_en: datetime
@@ -181,6 +182,7 @@ class ServicioRead(BaseModel):
             tarifa_km_aplicada=servicio.tarifa_km_aplicada,
             precio_total=servicio.precio_total,
             estado=servicio.estado,
+            transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,
             creado_en=servicio.creado_en,
             actualizado_en=servicio.actualizado_en,

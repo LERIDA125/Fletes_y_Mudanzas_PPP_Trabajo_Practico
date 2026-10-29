@@ -106,31 +106,27 @@ describe("FilaVehiculo", () => {
 
   it("pide confirmación antes de dar de baja el vehículo", async () => {
     const usuario = userEvent.setup();
-    const confirmacion = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderizarFila();
 
     await usuario.click(screen.getByRole("button", { name: "Opciones de AA 123 ABC" }));
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
 
-    expect(confirmacion).toHaveBeenCalledWith(
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
       "¿Dar de baja el vehículo AA 123 ABC? Esta acción no se puede deshacer.",
     );
     expect(eliminarVehiculo).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
 
-    confirmacion.mockReturnValue(true);
-    await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     await waitFor(() => {
       expect(eliminarVehiculo).toHaveBeenCalledWith(1);
       expect(refresh).toHaveBeenCalledOnce();
     });
-    confirmacion.mockRestore();
   });
 
   it("explica que no se puede dar de baja un vehículo con servicios", async () => {
     const usuario = userEvent.setup();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     eliminarVehiculo.mockResolvedValue({
       ok: false,
       mensaje: "No se puede dar de baja un vehículo que tiene servicios registrados.",
@@ -139,6 +135,7 @@ describe("FilaVehiculo", () => {
 
     await usuario.click(screen.getByRole("button", { name: "Opciones de AA 123 ABC" }));
     await usuario.click(screen.getByRole("button", { name: "Dar de baja" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, dar de baja" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se puede dar de baja un vehículo que tiene servicios registrados.",

@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 
+import { DialogoConfirmacion } from "@/components/ui/dialogo-confirmacion";
 import type { Chofer } from "@/features/choferes/types";
 import { eliminarVehiculo } from "@/features/vehiculos/actions";
+import { useMenuDesplegable } from "@/lib/hooks/use-menu-desplegable";
 import { fechaCorta } from "@/lib/utils/formato";
 
 import type { TipoVehiculo, Vehiculo } from "../types";
@@ -27,28 +29,24 @@ export function FilaVehiculo({
   choferes = [],
 }: Propiedades) {
   const router = useRouter();
-  const [menuAbierto, setMenuAbierto] = useState(false);
+  const { abierto, alternar, cerrar, anclaRef, menuRef, estilo } = useMenuDesplegable();
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
+  const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
 
   async function confirmarBaja() {
-    const confirmado = window.confirm(
-      `¿Dar de baja el vehículo ${vehiculo.patente}? Esta acción no se puede deshacer.`,
-    );
-    if (!confirmado) {
-      return;
-    }
-
     setMensajeError("");
     setEnviando(true);
     try {
       const resultado = await eliminarVehiculo(vehiculo.id);
       if (!resultado.ok) {
+        setConfirmacionAbierta(false);
         setMensajeError(resultado.mensaje);
         return;
       }
-      setMenuAbierto(false);
+      setConfirmacionAbierta(false);
+      cerrar();
       router.refresh();
     } finally {
       setEnviando(false);
@@ -83,14 +81,14 @@ export function FilaVehiculo({
         {fechaCorta(vehiculo.creado_en)}
       </td>
       <td className="px-4 py-1 text-right max-sm:block max-sm:text-left sm:px-0 sm:py-3">
-        <div className="relative inline-block text-left">
+        <div ref={anclaRef} className="inline-block text-left">
           <button
             type="button"
             aria-label={`Opciones de ${vehiculo.patente}`}
-            aria-expanded={menuAbierto}
+            aria-expanded={abierto}
             aria-haspopup="true"
             onClick={() => {
-              setMenuAbierto((abierto) => !abierto);
+              alternar();
               setMensajeError("");
             }}
             disabled={enviando}
@@ -98,16 +96,18 @@ export function FilaVehiculo({
           >
             <MoreHorizontal className="size-4" />
           </button>
-          {menuAbierto ? (
+          {abierto ? (
             <div
+              ref={menuRef}
+              style={estilo}
               aria-label={`Acciones de ${vehiculo.patente}`}
-              className="absolute right-0 z-10 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-lg dark:border-[#1e2c44] dark:bg-[#111c2e]"
+              className="z-50 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-xl dark:border-[#1e2c44] dark:bg-[#111c2e]"
             >
               <button
                 type="button"
                 onClick={() => {
                   setDialogoAbierto(true);
-                  setMenuAbierto(false);
+                  cerrar();
                   setMensajeError("");
                 }}
                 className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-[#16253d]"
@@ -116,22 +116,26 @@ export function FilaVehiculo({
               </button>
               <button
                 type="button"
-                onClick={confirmarBaja}
+                onClick={() => {
+                  setConfirmacionAbierta(true);
+                  cerrar();
+                  setMensajeError("");
+                }}
                 disabled={enviando}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
               >
                 <Trash2 className="size-4" />
                 Dar de baja
               </button>
-              {mensajeError ? (
-                <p
-                  role="alert"
-                  className="px-3 py-2 text-left text-xs text-red-700 dark:text-red-300"
-                >
-                  {mensajeError}
-                </p>
-              ) : null}
             </div>
+          ) : null}
+          {mensajeError ? (
+            <p
+              role="alert"
+              className="mt-2 block max-w-56 px-2 text-left text-xs text-red-700 dark:text-red-300"
+            >
+              {mensajeError}
+            </p>
           ) : null}
         </div>
         {dialogoAbierto ? (
@@ -140,6 +144,16 @@ export function FilaVehiculo({
             tiposVehiculo={tiposVehiculo}
             choferes={choferes}
             onCerrar={() => setDialogoAbierto(false)}
+          />
+        ) : null}
+        {confirmacionAbierta ? (
+          <DialogoConfirmacion
+            titulo="Dar de baja vehículo"
+            descripcion={`¿Dar de baja el vehículo ${vehiculo.patente}? Esta acción no se puede deshacer.`}
+            textoConfirmar="Sí, dar de baja"
+            enviando={enviando}
+            onConfirmar={confirmarBaja}
+            onCancelar={() => setConfirmacionAbierta(false)}
           />
         ) : null}
       </td>

@@ -101,3 +101,14 @@ export async function eliminarServicio(idServicio: number): Promise<void> {
     method: "DELETE",
   });
 }
+
+export async function cancelarServicio(
+  idServicio: number,
+  motivo: string,
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/cancelar`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motivo }),
+  });
+}

@@ -211,12 +211,16 @@ def test_cambia_estado_siguiendo_la_maquina_y_requiere_admin(cliente_api: TestCl
     servicio_id = alta.json()["id_servicio"]
     ruta = f"/api/servicios/{servicio_id}/estado"
 
+    # La UI arma el <select> con lo que el backend declara como transición válida.
+    assert alta.json()["transiciones_validas"] == ["confirmado", "cancelado"]
+
     no_admin = cliente_api.patch(ruta, headers={"X-Rol": "chofer"}, json={"estado": "confirmado"})
     assert no_admin.status_code == 403
 
     confirmado = cliente_api.patch(ruta, headers=admin, json={"estado": "confirmado"})
     assert confirmado.status_code == 200
     assert confirmado.json()["estado"] == "confirmado"
+    assert confirmado.json()["transiciones_validas"] == ["en curso", "cancelado"]
 
     salto = cliente_api.patch(ruta, headers=admin, json={"estado": "finalizado"})
     assert salto.status_code == 422

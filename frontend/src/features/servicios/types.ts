@@ -12,7 +12,13 @@ export type Disponibilidad = components["schemas"]["DisponibilidadRead"];
 export type ChoferDisponible = components["schemas"]["ChoferRead"];
 export type VehiculoDisponible = components["schemas"]["VehiculoListadoRead"];
 
-export type EstadoServicio = "pendiente" | "en curso" | "finalizado" | "cancelado";
+export type EstadoServicio =
+  | "pendiente"
+  | "confirmado"
+  | "en curso"
+  | "finalizado"
+  | "cobrado"
+  | "cancelado";
 
 export type ConsultaDisponibilidad = {
   fecha: string;

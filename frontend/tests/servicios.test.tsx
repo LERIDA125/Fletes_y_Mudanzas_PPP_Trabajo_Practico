@@ -17,6 +17,7 @@ const {
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   cambiarEstadoServicio,
+  cancelarServicio,
   eliminarServicio,
   refresh,
 } = vi.hoisted(() => ({
@@ -25,6 +26,7 @@ const {
   consultarDisponibilidadServicio: vi.fn(),
   obtenerCatalogosServicio: vi.fn(),
   cambiarEstadoServicio: vi.fn(),
+  cancelarServicio: vi.fn(),
   eliminarServicio: vi.fn(),
   refresh: vi.fn(),
 }));
@@ -35,6 +37,7 @@ vi.mock("@/features/servicios/actions", () => ({
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   cambiarEstadoServicio,
+  cancelarServicio,
   eliminarServicio,
 }));
 
@@ -80,7 +83,7 @@ const cotizacion: Cotizacion = {
   moneda: "ARS",
 };
 
-function servicioCreado(): Servicio {
+function servicioCreado(parcial: Partial<Servicio> = {}): Servicio {
   return {
     id_servicio: 41,
     id_cliente: 8,
@@ -104,9 +107,11 @@ function servicioCreado(): Servicio {
     precio_total: "9000.00",
     moneda: "ARS",
     estado: "pendiente",
+    transiciones_validas: ["confirmado", "cancelado"],
     motivo_cancelacion: null,
     creado_en: "2026-10-21T12:00:00Z",
     actualizado_en: "2026-10-21T12:00:00Z",
+    ...parcial,
   };
 }
 
@@ -297,6 +302,10 @@ describe("ListadoServicios", () => {
       ok: true,
       dato: servicioCreado(),
     });
+    cancelarServicio.mockResolvedValue({
+      ok: true,
+      dato: servicioCreado({ estado: "cancelado" }),
+    });
     eliminarServicio.mockResolvedValue({ ok: true, dato: undefined });
   });
 
@@ -316,7 +325,7 @@ describe("ListadoServicios", () => {
     expect(fila).toHaveTextContent("Sin vehículo");
   });
 
-  it("permite cambiar el estado y actualiza la tabla tras el éxito", async () => {
+  it("solo ofrece las transiciones que declara el backend y preselecciona la primera", async () => {
     const usuario = userEvent.setup();
     render(<ListadoServicios servicios={[servicioCreado()]} />);
 
@@ -324,18 +333,127 @@ describe("ListadoServicios", () => {
       screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
     );
     await usuario.click(screen.getByRole("button", { name: "Cambiar estado" }));
-    await usuario.selectOptions(screen.getByLabelText("Nuevo estado"), "en curso");
-    await usuario.click(screen.getByRole("button", { name: "Guardar estado" }));
+
+    const selector = screen.getByLabelText("Nuevo estado");
+    expect(selector).toHaveValue("confirmado");
+    expect(screen.getAllByRole("option").map((opcion) => opcion.textContent)).toEqual([
+      "Confirmado",
+      "Cancelado",
+    ]);
+  });
+
+  it("cambia el estado con una transición válida y actualiza la tabla", async () => {
+    const usuario = userEvent.setup();
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Cambiar estado" }));
+    await usuario.selectOptions(screen.getByLabelText("Nuevo estado"), "confirmado");
+    await usuario.click(screen.getByRole("button", { name: "Actualizar estado" }));
 
     await waitFor(() => {
-      expect(cambiarEstadoServicio).toHaveBeenCalledWith(41, "en curso");
+      expect(cambiarEstadoServicio).toHaveBeenCalledWith(41, "confirmado");
       expect(refresh).toHaveBeenCalledOnce();
     });
   });
 
+  it("muestra el detalle de negocio que devuelve la API en vez de un texto genérico", async () => {
+    const usuario = userEvent.setup();
+    cambiarEstadoServicio.mockResolvedValue({
+      ok: false,
+      mensaje: "No se puede pasar el servicio de pendiente a finalizado.",
+    });
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Cambiar estado" }));
+    await usuario.click(screen.getByRole("button", { name: "Actualizar estado" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No se puede pasar el servicio de pendiente a finalizado.",
+    );
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("cancela por el endpoint de cancelación y exige el motivo", async () => {
+    const usuario = userEvent.setup();
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+    await usuario.click(screen.getByRole("button", { name: "Cambiar estado" }));
+    await usuario.selectOptions(screen.getByLabelText("Nuevo estado"), "cancelado");
+
+    await usuario.click(screen.getByRole("button", { name: "Cancelar servicio" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Indicá el motivo de la cancelación.",
+    );
+    expect(cancelarServicio).not.toHaveBeenCalled();
+
+    await usuario.type(
+      screen.getByLabelText("Motivo de la cancelación"),
+      "El cliente reprogramó",
+    );
+    await usuario.click(screen.getByRole("button", { name: "Cancelar servicio" }));
+
+    await waitFor(() => {
+      expect(cancelarServicio).toHaveBeenCalledWith(41, "El cliente reprogramó");
+      expect(refresh).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("no ofrece cambios de estado cuando el servicio está en un estado final", async () => {
+    const usuario = userEvent.setup();
+    render(
+      <ListadoServicios
+        servicios={[servicioCreado({ estado: "cobrado", transiciones_validas: [] })]}
+      />,
+    );
+
+    await usuario.click(
+      screen.getByRole("button", { name: "Opciones de Mudanzas del Centro" }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Cambiar estado" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("El servicio está en un estado final: no admite más cambios."),
+    ).toBeInTheDocument();
+  });
+
+  it("cierra el menú con Escape y al hacer clic afuera", async () => {
+    const usuario = userEvent.setup();
+    render(<ListadoServicios servicios={[servicioCreado()]} />);
+    const opciones = screen.getByRole("button", {
+      name: "Opciones de Mudanzas del Centro",
+    });
+
+    await usuario.click(opciones);
+    expect(screen.getByRole("button", { name: "Cambiar estado" })).toBeInTheDocument();
+
+    await usuario.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("button", { name: "Cambiar estado" }),
+    ).not.toBeInTheDocument();
+    expect(opciones).toHaveFocus();
+
+    await usuario.click(opciones);
+    expect(screen.getByRole("button", { name: "Cambiar estado" })).toBeInTheDocument();
+
+    await usuario.click(document.body);
+    expect(
+      screen.queryByRole("button", { name: "Cambiar estado" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("pide confirmación antes de eliminar el servicio", async () => {
     const usuario = userEvent.setup();
-    const confirmacion = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<ListadoServicios servicios={[servicioCreado()]} />);
 
     await usuario.click(
@@ -343,19 +461,15 @@ describe("ListadoServicios", () => {
     );
     await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
 
-    expect(confirmacion).toHaveBeenCalledWith(
-      "¿Eliminar el servicio de Mudanzas del Centro? Esta acción no se puede deshacer.",
-    );
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Eliminar servicio");
     expect(eliminarServicio).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
 
-    confirmacion.mockReturnValue(true);
-    await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
+    await usuario.click(screen.getByRole("button", { name: "Sí, eliminar" }));
 
     await waitFor(() => {
       expect(eliminarServicio).toHaveBeenCalledWith(41);
       expect(refresh).toHaveBeenCalledOnce();
     });
-    confirmacion.mockRestore();
   });
 });

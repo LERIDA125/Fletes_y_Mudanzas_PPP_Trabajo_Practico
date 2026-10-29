@@ -14,6 +14,7 @@ import type {
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 import {
+  cancelarServicio as anularServicio,
   consultarDisponibilidad,
   crearServicio,
   cambiarEstadoServicio as actualizarEstadoServicio,
@@ -47,7 +48,7 @@ export async function obtenerCatalogosServicio(): Promise<
     return { ok: true, dato: { clientes, tiposVehiculo } };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "catalogos") };
+      return { ok: false, mensaje: mensajeDeError(error, "catalogos") };
     }
     throw error;
   }
@@ -60,7 +61,7 @@ export async function solicitarCotizacion(
     return { ok: true, dato: await cotizarServicio(solicitud) };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "cotizar") };
+      return { ok: false, mensaje: mensajeDeError(error, "cotizar") };
     }
     throw error;
   }
@@ -73,7 +74,7 @@ export async function consultarDisponibilidadServicio(
     return { ok: true, dato: await consultarDisponibilidad(consulta) };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "disponibilidad") };
+      return { ok: false, mensaje: mensajeDeError(error, "disponibilidad") };
     }
     throw error;
   }
@@ -91,7 +92,7 @@ export async function registrarServicio(
     return { ok: true, dato: servicio };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "crear") };
+      return { ok: false, mensaje: mensajeDeError(error, "crear") };
     }
     throw error;
   }
@@ -109,7 +110,25 @@ export async function cambiarEstadoServicio(
     return { ok: true, dato: servicio };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "cambiar-estado") };
+      return { ok: false, mensaje: mensajeDeError(error, "cambiar-estado") };
+    }
+    throw error;
+  }
+}
+
+export async function cancelarServicio(
+  idServicio: number,
+  motivo: string,
+): Promise<ResultadoAccion<Servicio>> {
+  try {
+    const servicio = await anularServicio(idServicio, motivo);
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "cancelar") };
     }
     throw error;
   }
@@ -126,22 +145,35 @@ export async function eliminarServicio(
     return { ok: true, dato: undefined };
   } catch (error) {
     if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error.clase, "eliminar") };
+      return { ok: false, mensaje: mensajeDeError(error, "eliminar") };
     }
     throw error;
   }
 }
 
 function mensajeDeError(
-  clase: ErrorApi["clase"],
+  error: ErrorApi,
   operacion:
-    "cotizar" | "crear" | "disponibilidad" | "catalogos" | "cambiar-estado" | "eliminar",
+    | "cotizar"
+    | "crear"
+    | "disponibilidad"
+    | "catalogos"
+    | "cambiar-estado"
+    | "cancelar"
+    | "eliminar",
 ): string {
-  if (clase === "sin-permisos" || clase === "sesion-expirada") {
+  if (error.clase === "sin-permisos" || error.clase === "sesion-expirada") {
     return "La API rechazó la operación. Verificá que el modo de demo local esté habilitado.";
   }
-  if (clase === "sin-respuesta") {
+  if (error.clase === "sin-respuesta") {
     return "No pudimos conectar con el sistema. Revisá que el servidor esté funcionando.";
+  }
+  // La API rechazó la operación por una regla de negocio (422/409/404): mostrar
+  // su detalle tal cual en vez de taparlo con un texto genérico.
+  const esErrorDeNegocio =
+    error.status !== null && error.status >= 400 && error.status < 500;
+  if (esErrorDeNegocio && error.message.trim()) {
+    return error.message;
   }
   if (operacion === "catalogos") {
     return "No pudimos cargar clientes y tipos de vehículo. Cerrá y volvé a abrir el formulario.";
@@ -154,6 +186,9 @@ function mensajeDeError(
   }
   if (operacion === "cambiar-estado") {
     return "No pudimos cambiar el estado del servicio. Revisá el estado actual e intentá de nuevo.";
+  }
+  if (operacion === "cancelar") {
+    return "No pudimos cancelar el servicio. Revisá el estado actual e intentá de nuevo.";
   }
   if (operacion === "eliminar") {
     return "No pudimos eliminar el servicio. Intentá de nuevo.";
