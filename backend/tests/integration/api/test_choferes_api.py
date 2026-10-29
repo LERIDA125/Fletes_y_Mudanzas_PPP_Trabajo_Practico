@@ -111,6 +111,19 @@ def test_choferes_api_seguridad_y_reglas(
         ).status_code
         == 422
     )
+    # Teléfono con 20 dígitos separados por espacios: el texto supera VARCHAR(20) y debe
+    # rechazarse con 422, no reventar en el INSERT con un 500.
+    assert (
+        cliente.post(
+            "/api/choferes",
+            json={
+                "nombre_completo": "Juan Pérez",
+                "telefono": "1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0",
+            },
+            headers=admin,
+        ).status_code
+        == 422
+    )
     # No se puede mandar un campo del sistema (extra="forbid")
     assert (
         cliente.post(

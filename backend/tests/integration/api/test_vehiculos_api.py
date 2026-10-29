@@ -27,11 +27,19 @@ def test_vehiculos_api_ciclo_completo_admin(
     assert resp_tipo.status_code == 201
     tipo_id = resp_tipo.json()["id"]
 
-    # 2. Registrar vehículo con el tipo creado (verifica conexión de puerto real)
+    # 2. Registrar chofer y vehículo con relaciones para verificar el listado enriquecido
+    resp_chofer = cliente.post(
+        "/api/choferes",
+        json={"nombre_completo": "Juan Pérez", "telefono": "351 555 0100"},
+        headers=admin,
+    )
+    assert resp_chofer.status_code == 201
+    chofer_id = resp_chofer.json()["id"]
+
     payload_vehiculo = {
         "patente": "AA 123 ABC",
         "id_tipo_vehiculo": tipo_id,
-        "id_chofer_habitual": None,
+        "id_chofer_habitual": chofer_id,
     }
     resp_veh = cliente.post("/api/vehiculos", json=payload_vehiculo, headers=admin)
     assert resp_veh.status_code == 201
@@ -56,7 +64,28 @@ def test_vehiculos_api_ciclo_completo_admin(
 
     resp_listar_veh = cliente.get("/api/vehiculos?q=AA", headers=admin)
     assert resp_listar_veh.status_code == 200
-    assert any(v["id"] == veh_id for v in resp_listar_veh.json()["items"])
+    vehiculo_listado = next(v for v in resp_listar_veh.json()["items"] if v["id"] == veh_id)
+    assert vehiculo_listado["descripcion_tipo_vehiculo"] == "Camioneta Mediana"
+    assert vehiculo_listado["capacidad_carga_kg"] == 1500.0
+    assert vehiculo_listado["nombre_chofer_habitual"] == "Juan Pérez"
+
+    # La baja lógica del chofer no debe ocultar su nombre en la relación histórica.
+    assert cliente.delete(f"/api/choferes/{chofer_id}", headers=admin).status_code == 204
+    resp_listar_veh_inactivo = cliente.get("/api/vehiculos?q=AA", headers=admin)
+    assert resp_listar_veh_inactivo.json()["items"][0]["nombre_chofer_habitual"] == "Juan Pérez"
+
+    # Un vehículo sin chofer sigue apareciendo y expone null para el dato opcional.
+    vehiculo_sin_chofer = cliente.post(
+        "/api/vehiculos",
+        json={"patente": "AB 456 CDE", "id_tipo_vehiculo": tipo_id, "id_chofer_habitual": None},
+        headers=admin,
+    )
+    assert vehiculo_sin_chofer.status_code == 201
+    listado_sin_chofer = cliente.get("/api/vehiculos?q=AB", headers=admin).json()
+    item_sin_chofer = next(
+        v for v in listado_sin_chofer["items"] if v["id"] == vehiculo_sin_chofer.json()["id"]
+    )
+    assert item_sin_chofer["nombre_chofer_habitual"] is None
 
     # 4. Detalle y modificación
     resp_det = cliente.get(f"/api/vehiculos/{veh_id}", headers=admin)
@@ -74,6 +103,12 @@ def test_vehiculos_api_ciclo_completo_admin(
     # 5. Baja lógica de vehículo y luego de tipo
     assert cliente.delete(f"/api/vehiculos/{veh_id}", headers=admin).status_code == 204
     assert cliente.get(f"/api/vehiculos/{veh_id}", headers=admin).status_code == 404
+    assert (
+        cliente.delete(
+            f"/api/vehiculos/{vehiculo_sin_chofer.json()['id']}", headers=admin
+        ).status_code
+        == 204
+    )
 
     assert cliente.delete(f"/api/tipos-vehiculo/{tipo_id}", headers=admin).status_code == 204
     assert cliente.get(f"/api/tipos-vehiculo/{tipo_id}", headers=admin).status_code == 404

@@ -1,0 +1,17 @@
+Set-Content -Path .cursorrules -Value @"
+
+# Reglas de Entorno y Terminal (CRÍTICO)
+
+1. **Sistema Operativo:** El entorno actual es Windows.
+2. **Terminal:** Se utiliza ESTRICTAMENTE Windows PowerShell.
+3. **Prohibición de Bash/Linux:** Tienes PROHIBIDO utilizar comandos nativos de Linux o Bash como head, tail, grep, cat, ls, rm, touch, awk o sed.
+4. **Equivalentes en PowerShell:** Debes usar exclusivamente la sintaxis y cmdlets de PowerShell:
+   - En vez de head / tail -> usa Select-Object -First N / Select-Object -Last N
+   - En vez de grep -> usa Select-String o findstr
+   - En vez de cat -> usa Get-Content
+   - En vez de ls -> usa Get-ChildItem
+   - En vez de rm -> usa Remove-Item
+   - En vez de touch -> usa New-Item -ItemType File
+
+Nunca asumas un entorno Unix. Si un comando falla por sintaxis, replantea la solución usando cmdlets nativos de PowerShell.
+"@

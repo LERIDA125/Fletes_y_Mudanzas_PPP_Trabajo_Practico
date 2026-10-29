@@ -12,6 +12,7 @@ DIRECCION_MIN = 5
 DIRECCION_MAX = 250
 TELEFONO_DIGITOS_MIN = 7
 TELEFONO_DIGITOS_MAX = 20
+TELEFONO_MAX = 20  # longitud del texto que admite la columna, separadores incluidos
 
 
 def normalizar_razon_visual(texto: str) -> str:
@@ -120,6 +121,9 @@ class Cliente:
                 f"La dirección habitual debe tener entre {DIRECCION_MIN} "
                 f"y {DIRECCION_MAX} caracteres"
             )
+
+        if len(self.telefono) > TELEFONO_MAX:
+            raise ReglaNegocioError(f"El teléfono no puede superar los {TELEFONO_MAX} caracteres")
 
         digitos = contar_digitos(self.telefono)
         if not TELEFONO_DIGITOS_MIN <= digitos <= TELEFONO_DIGITOS_MAX:

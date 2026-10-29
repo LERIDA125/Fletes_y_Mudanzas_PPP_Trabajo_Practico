@@ -72,7 +72,7 @@ def listar_vehiculos(
 ) -> VehiculoListado:
     vehiculos, total = gestor.listar(busqueda=q, offset=(page - 1) * size, limit=size)
     return VehiculoListado(
-        items=[VehiculoRead.de_vehiculo(vehiculo) for vehiculo in vehiculos],
+        items=[VehiculoRead.de_listado(vehiculo) for vehiculo in vehiculos],
         total=total,
         page=page,
         size=size,

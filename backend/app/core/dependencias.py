@@ -15,6 +15,9 @@ from app.application.choferes.gestor_choferes import GestorChoferes
 from app.application.choferes.puertos import ChoferRepository
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
+from app.application.cotizacion.calculadora import CalculadoraCotizacion
+from app.application.servicios.gestor_servicios import GestorServicios
+from app.application.servicios.puertos import ServicioRepository
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
 from app.application.tipos_vehiculo.puertos import (
     ConsultaVehiculosPorTipo,
@@ -27,10 +30,11 @@ from app.application.vehiculos.puertos import (
     ConsultaTipoVehiculo,
     VehiculoRepository,
 )
+from app.core.config import get_settings
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
-from app.infrastructure.repositories.historial_cliente_repo import HistorialClienteRepoVacio
+from app.infrastructure.repositories.servicio_repo import ServicioRepo
 from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
 from app.infrastructure.repositories.vehiculo_repo import VehiculoRepo
 
@@ -41,16 +45,19 @@ ROL_CHOFER = "chofer"
 
 def get_rol_actual(
     x_rol: Annotated[
-        str | None, Header(alias=HEADER_ROL, description="Rol del usuario autenticado.")
+        str | None, Header(alias=HEADER_ROL, description="Rol de prueba en modo desarrollo local.")
     ] = None,
 ) -> str:
-    """Devuelve el rol del usuario que hace el request.
+    """Asume admin solo en desarrollo local; sin auth configurada, falla cerrado."""
+    settings = get_settings()
+    if settings.ENVIRONMENT.lower() == "dev" and settings.DEV_ASSUME_ADMIN:
+        return (x_rol or ROL_ADMIN).strip().lower()
 
-    TODO(AGENTS): es un **stub** hasta que exista la historia de autenticación. Se lee el rol del
-    header `X-Rol` en vez de decodificar un JWT, así que cualquiera puede mandarlo. Cuando llegue
-    la historia de autenticación se cambia solo el cuerpo de esta función y las rutas no se tocan.
-    """
-    return (x_rol or ROL_CHOFER).strip().lower()
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="La autenticación no está habilitada para este entorno.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def require_rol(rol_requerido: str) -> Callable[..., str]:
@@ -77,9 +84,11 @@ def get_repo_clientes(db: Annotated[Session, Depends(get_db)]) -> ClienteReposit
     return ClienteRepo(db)
 
 
-def get_historial_clientes() -> ConsultaHistorialCliente:
-    """Inyección del puerto de historial. Ver `HistorialClienteRepoVacio` para el TODO(AGENTS)."""
-    return HistorialClienteRepoVacio()
+def get_historial_clientes(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaHistorialCliente:
+    """Consulta servicios reales antes de permitir la baja lógica de un cliente."""
+    return ServicioRepo(db)
 
 
 def get_gestor_clientes(
@@ -142,15 +151,11 @@ def get_consulta_chofer(db: Annotated[Session, Depends(get_db)]) -> ConsultaChof
     return ChoferRepo(db)
 
 
-def get_consulta_servicios_vehiculo() -> ConsultaServiciosVehiculo:
-    """Inyección del puerto de consulta de servicios por vehículo.
-
-    STUB temporal: devuelve False hasta que exista la historia de Servicios (H6).
-    Ver spec H4, DP-03.
-    """
-    from app.infrastructure.repositories.consulta_stub import ConsultaServiciosVehiculoVacio
-
-    return ConsultaServiciosVehiculoVacio()
+def get_consulta_servicios_vehiculo(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaServiciosVehiculo:
+    """Consulta servicios persistidos para proteger la baja lógica del vehículo."""
+    return ServicioRepo(db)
 
 
 def get_gestor_vehiculos(
@@ -182,3 +187,28 @@ def get_gestor_choferes(
 ) -> GestorChoferes:
     """Único punto donde se arma el gestor de choferes."""
     return GestorChoferes(repositorio_choferes=repositorio_choferes)
+
+
+# ── Servicios y Cotizaciones (H8) ─────────────────────────────────────────────
+
+
+def get_repo_servicios(db: Annotated[Session, Depends(get_db)]) -> ServicioRepository:
+    return ServicioRepo(db)
+
+
+def get_gestor_servicios(
+    repositorio: Annotated[ServicioRepository, Depends(get_repo_servicios)],
+    tipos: Annotated[TipoVehiculoRepository, Depends(get_repo_tipos_vehiculo)],
+    clientes: Annotated[ClienteRepository, Depends(get_repo_clientes)],
+    choferes: Annotated[ChoferRepository, Depends(get_repo_choferes)],
+    vehiculos: Annotated[VehiculoRepository, Depends(get_repo_vehiculos)],
+) -> GestorServicios:
+    return GestorServicios(
+        repositorio=repositorio,
+        calculadora=CalculadoraCotizacion(tipos),
+        consulta_clientes=clientes,
+        consulta_choferes=choferes,
+        consulta_vehiculos=vehiculos,
+        consulta_tipos=tipos,
+        registro_clientes=clientes,
+    )

@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.schemas.comun import Pagina
+from app.application.vehiculos.puertos import VehiculoListadoItem
 from app.domain.vehiculo import Vehiculo, normalizar_patente
 
 
@@ -61,6 +62,18 @@ class VehiculoRead(VehiculoBase):
         default=None,
         description="Fecha de la última modificación.",
     )
+    descripcion_tipo_vehiculo: str | None = Field(
+        default=None,
+        description="Descripción legible del tipo de vehículo asociado.",
+    )
+    capacidad_carga_kg: float | None = Field(
+        default=None,
+        description="Capacidad de carga en kilogramos del tipo de vehículo asociado.",
+    )
+    nombre_chofer_habitual: str | None = Field(
+        default=None,
+        description="Nombre completo del chofer habitual, si está asignado.",
+    )
 
     @property
     def id_vehiculo(self) -> int:
@@ -71,6 +84,29 @@ class VehiculoRead(VehiculoBase):
     def de_vehiculo(cls, vehiculo: Vehiculo) -> VehiculoRead:
         return cls.model_validate(vehiculo, from_attributes=True)
 
+    @classmethod
+    def de_listado(cls, item: VehiculoListadoItem) -> VehiculoListadoRead:
+        vehiculo = item.vehiculo
+        return VehiculoListadoRead(
+            id=vehiculo.id,
+            patente=vehiculo.patente,
+            id_tipo_vehiculo=vehiculo.id_tipo_vehiculo,
+            id_chofer_habitual=vehiculo.id_chofer_habitual,
+            activo=vehiculo.activo,
+            creado_en=vehiculo.creado_en,
+            actualizado_en=vehiculo.actualizado_en,
+            descripcion_tipo_vehiculo=item.descripcion_tipo_vehiculo,
+            capacidad_carga_kg=float(item.capacidad_carga_kg),
+            nombre_chofer_habitual=item.nombre_chofer_habitual,
+        )
 
-class VehiculoListado(Pagina[VehiculoRead]):
+
+class VehiculoListadoRead(VehiculoRead):
+    creado_en: datetime
+    descripcion_tipo_vehiculo: str
+    capacidad_carga_kg: float
+    nombre_chofer_habitual: str | None
+
+
+class VehiculoListado(Pagina[VehiculoListadoRead]):
     """Página de vehículos con el total de los que cumplen el filtro."""

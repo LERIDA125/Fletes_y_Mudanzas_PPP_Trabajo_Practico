@@ -59,7 +59,12 @@ def test_h1_dominio() -> None:
         with pytest.raises(ReglaNegocioError):
             Cliente.crear("Cliente Valido", "351 555 0100", dir_inv)
 
-    for tel_inv in ["", "123456", "1" * 21]:
+    for tel_inv in [
+        "",
+        "123456",
+        "1" * 21,
+        "1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0",
+    ]:
         with pytest.raises(ReglaNegocioError):
             Cliente.crear("Cliente Valido", tel_inv, "Av. Colón 1250")
 

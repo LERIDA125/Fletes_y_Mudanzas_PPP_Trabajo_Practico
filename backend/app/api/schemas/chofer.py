@@ -16,6 +16,7 @@ from app.domain.chofer import (
     NOMBRE_MIN,
     TELEFONO_DIGITOS_MAX,
     TELEFONO_DIGITOS_MIN,
+    TELEFONO_MAX,
     Chofer,
     contar_digitos,
     normalizar_nombre,
@@ -38,10 +39,12 @@ class ChoferCreate(BaseModel):
         examples=["Juan Pérez"],
     )
     telefono: str = Field(
+        max_length=TELEFONO_MAX,
         description=(
             "Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; "
             f"solo se exige que tenga entre {TELEFONO_DIGITOS_MIN} y "
-            f"{TELEFONO_DIGITOS_MAX} dígitos."
+            f"{TELEFONO_DIGITOS_MAX} dígitos y que el texto no supere los "
+            f"{TELEFONO_MAX} caracteres que admite la columna."
         ),
         examples=["351 555 0100"],
     )

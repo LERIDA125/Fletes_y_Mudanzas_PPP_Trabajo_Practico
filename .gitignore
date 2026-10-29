@@ -15,3 +15,8 @@ raw-data/
 # (`backend/data/reporte_migracion.md`) es el entregable que revisa el equipo para ver qué se
 # decidió y qué quedó pendiente, así que se versiona. Es regenerable con
 # `python -m scripts.migracion --solo-transformacion`.
+
+# Registro de skills autogenerado por el tooling del agente (`gentle-ai skill-registry refresh`).
+# Contiene rutas absolutas de la máquina de cada desarrollador y se regenera solo: es caché local,
+# no fuente del proyecto.
+.atl/

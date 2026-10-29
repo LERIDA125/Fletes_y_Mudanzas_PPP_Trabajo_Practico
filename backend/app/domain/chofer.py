@@ -9,6 +9,7 @@ NOMBRE_MIN = 3
 NOMBRE_MAX = 120
 TELEFONO_DIGITOS_MIN = 7
 TELEFONO_DIGITOS_MAX = 20
+TELEFONO_MAX = 20  # longitud del texto que admite la columna, separadores incluidos
 
 
 def normalizar_nombre(texto: str) -> str:
@@ -72,6 +73,9 @@ class Chofer:
             raise ReglaNegocioError(
                 f"El nombre completo debe tener entre {NOMBRE_MIN} y {NOMBRE_MAX} caracteres"
             )
+
+        if len(self.telefono) > TELEFONO_MAX:
+            raise ReglaNegocioError(f"El teléfono no puede superar los {TELEFONO_MAX} caracteres")
 
         digitos = contar_digitos(self.telefono)
         if not TELEFONO_DIGITOS_MIN <= digitos <= TELEFONO_DIGITOS_MAX:

@@ -2,8 +2,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.vehiculos.puertos import VehiculoListadoItem
 from app.domain.errores import PatenteDuplicada, VehiculoNoEncontrado
 from app.domain.vehiculo import Vehiculo
+from app.infrastructure.models.chofer import ChoferORM
+from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
 from app.infrastructure.models.vehiculo import VehiculoORM
 
 
@@ -54,15 +57,62 @@ class VehiculoRepo:
         orm = self._db.get(VehiculoORM, vehiculo_id)
         return a_dominio(orm) if orm is not None else None
 
-    def listar(self, busqueda: str | None, offset: int, limit: int) -> list[Vehiculo]:
+    def listar(self, busqueda: str | None, offset: int, limit: int) -> list[VehiculoListadoItem]:
         consulta = (
-            self._consulta_filtrada(busqueda).order_by(VehiculoORM.id).offset(offset).limit(limit)
+            select(
+                VehiculoORM,
+                TipoVehiculoORM.descripcion,
+                TipoVehiculoORM.capacidad_carga_kg,
+                ChoferORM.nombre_completo,
+            )
+            .join(TipoVehiculoORM, VehiculoORM.id_tipo_vehiculo == TipoVehiculoORM.id)
+            .outerjoin(ChoferORM, VehiculoORM.id_chofer_habitual == ChoferORM.id)
+            .where(VehiculoORM.activo.is_(True))
         )
-        return [a_dominio(orm) for orm in self._db.scalars(consulta)]
+        if busqueda:
+            consulta = consulta.where(VehiculoORM.patente.contains(busqueda.upper()))
+        consulta = consulta.order_by(VehiculoORM.id).offset(offset).limit(limit)
+
+        return [
+            VehiculoListadoItem(
+                vehiculo=a_dominio(vehiculo),
+                descripcion_tipo_vehiculo=descripcion,
+                capacidad_carga_kg=capacidad,
+                nombre_chofer_habitual=nombre_chofer,
+            )
+            for vehiculo, descripcion, capacidad, nombre_chofer in self._db.execute(consulta)
+        ]
 
     def contar(self, busqueda: str | None) -> int:
         consulta = self._consulta_filtrada(busqueda).with_only_columns(func.count())
         return self._db.scalar(consulta) or 0
+
+    def listar_activos_por_tipo(self, tipo_vehiculo_id: int) -> list[VehiculoListadoItem]:
+        """Catálogo de vehículos activos de un tipo, para la pantalla de Servicios."""
+        consulta = (
+            select(
+                VehiculoORM,
+                TipoVehiculoORM.descripcion,
+                TipoVehiculoORM.capacidad_carga_kg,
+                ChoferORM.nombre_completo,
+            )
+            .join(TipoVehiculoORM, VehiculoORM.id_tipo_vehiculo == TipoVehiculoORM.id)
+            .outerjoin(ChoferORM, VehiculoORM.id_chofer_habitual == ChoferORM.id)
+            .where(
+                VehiculoORM.activo.is_(True),
+                VehiculoORM.id_tipo_vehiculo == tipo_vehiculo_id,
+            )
+            .order_by(VehiculoORM.patente, VehiculoORM.id)
+        )
+        return [
+            VehiculoListadoItem(
+                vehiculo=a_dominio(vehiculo),
+                descripcion_tipo_vehiculo=descripcion,
+                capacidad_carga_kg=capacidad,
+                nombre_chofer_habitual=nombre_chofer,
+            )
+            for vehiculo, descripcion, capacidad, nombre_chofer in self._db.execute(consulta)
+        ]
 
     def actualizar(self, vehiculo: Vehiculo) -> Vehiculo:
         orm = self._db.get(VehiculoORM, vehiculo.id)
