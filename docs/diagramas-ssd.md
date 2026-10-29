@@ -378,33 +378,103 @@ sequenceDiagram
 
 ## SSD-10: Autenticación Admin con Argon2, JWT en Cookie `httpOnly` y Guardas por Rol (`009`)
 
-Cubre `US-009.1`, `US-009.2` y `US-009.3` (especificado en `/specs/009-autenticacion-roles`).
+Cubre `US-009.1`, `US-009.2` y `US-009.3` (especificado en `/specs/009-autenticacion-roles/ssd.md`).
+
+### SSD-10.1 — Autenticación JWT, Multi-Admin y Creación de Usuarios (`admin` / `chofer`)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador (Dueño 1)
+    actor Chofer as Chofer
+    participant UI as Frontend Next.js (/login, /usuarios)
+    participant API as FastAPI (/api/auth, /api/choferes)
+    participant Auth as GestorAutenticacion
+    participant Sec as PasswordHasher + JWTService
+    participant Repo as UsuarioRepo + ChoferRepo
+    participant DB as PostgreSQL
+
+    Admin->>UI: Ingresa username y password en /login
+    UI->>API: POST /api/auth/login {username, password}
+    API->>Auth: iniciar_sesion(username, password)
+    Auth->>Repo: obtener_por_username(username_key)
+    Repo->>DB: SELECT * FROM usuarios WHERE username = :u
+    Auth->>Sec: verificar_password(password, password_hash)
+    Auth->>Sec: emitir_token(sub=id, rol='admin', id_chofer=None)
+    API-->>UI: 200 OK {access_token, token_type: "bearer", usuario}
+
+    Admin->>UI: Crea nuevo Administrador (Multi-Admin) o cuenta de Chofer en /usuarios
+    UI->>API: POST /api/auth/usuarios (Bearer JWT Admin 1)<br/>{username, password, rol, id_chofer}
+    API->>API: require_rol("admin")
+    API->>Auth: crear_usuario(..., creado_por_id=Admin1.id)
+    Auth->>Sec: hashear_password(password)
+    Auth->>Repo: INSERT INTO usuarios (..., creado_por_id=1)
+    API-->>UI: 201 Created UsuarioRead
+
+    Chofer->>UI: Inicia sesión con su usuario creado por el Admin
+    UI->>API: POST /api/auth/login {username, password}
+    API-->>UI: 200 OK JWT {sub, rol: "chofer", id_chofer} -> Redirige a /chofer
+```
+
+### SSD-10.2 — Trazabilidad y Auditoría ("El Quién hizo qué")
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor AdminA as Admin 1 (id=1)
+    actor AdminB as Admin 2 (id=2)
+    participant API as FastAPI Router
+    participant Dep as get_usuario_actual (JWT)
+    participant Gestor as Gestor de Aplicación
+    participant Repo as Repositorio SQLAlchemy
+    participant DB as PostgreSQL
+
+    AdminA->>API: POST /api/servicios (Bearer JWT sub=1)
+    API->>Dep: Resolver usuario autenticado (id=1)
+    API->>Gestor: crear(..., usuario_id=1)
+    Gestor->>Repo: crear(servicio con creado_por_id=1, modificado_por_id=1)
+    Repo->>DB: INSERT INTO servicios (..., creado_por_id=1, modificado_por_id=1)
+    API-->>AdminA: 201 Created {creado_por_id: 1, modificado_por_id: 1}
+
+    AdminB->>API: PATCH /api/servicios/50/estado (Bearer JWT sub=2)
+    API->>Dep: Resolver usuario autenticado (id=2)
+    API->>Gestor: cambiar_estado(50, "confirmado", usuario_id=2)
+    Gestor->>Repo: actualizar(servicio con modificado_por_id=2)
+    Repo->>DB: UPDATE servicios SET estado='confirmado', modificado_por_id=2 WHERE id=50
+    API-->>AdminB: 200 OK {creado_por_id: 1, modificado_por_id: 2}
+```
+
+### SSD-10.3 — Vista Restringida del Chofer y Sincronización en Tiempo Real
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Admin as Administrador
-    participant LoginUI as Frontend (/login + Server Action)
-    participant Cookie as Cookie httpOnly (sameSite=lax)
-    participant API as FastAPI (/api/auth & require_rol)
-    participant DB as PostgreSQL (Tabla usuarios)
+    actor Chofer as Chofer (id_chofer=10, user_id=3)
+    participant Portal as Portal Móvil Chofer (/chofer)
+    participant Http as Cliente HTTP + Polling (lib/api/servicios.ts)
+    participant API as FastAPI (/api/servicios)
+    participant Gestor as GestorServicios
+    participant Repo as ServicioRepo
+    participant DB as PostgreSQL
 
-    Admin->>LoginUI: Ingresa username y contraseña
-    LoginUI->>API: POST /api/auth/login { username, password }
-    API->>DB: Busca usuario por username.strip().casefold()
-    API->>API: Verifica hash Argon2 (resistente a timing) y activo == True
-    alt Credenciales inválidas o cuenta inactiva
-        API-->>LoginUI: 401 Unauthorized (mensaje genérico)
-    else Credenciales válidas
-        API-->>LoginUI: 200 OK { access_token (JWT 30 min), username, rol: "admin" }
-        LoginUI->>Cookie: Set-Cookie httpOnly, SameSite=Lax, Path=/
-        LoginUI-->>Admin: Redirige a ruta protegida (admin)
-    end
+    Chofer->>Portal: Abre /chofer en su celular
+    Portal->>Http: Inicia polling cada 5s contra GET /api/servicios
+    Http->>API: GET /api/servicios (Bearer JWT rol="chofer", id_chofer=10)
+    API->>Gestor: listar(offset=0, limit=50, id_chofer=10)
+    Gestor->>Repo: SELECT ... FROM servicios WHERE id_chofer = 10
+    Repo->>DB: Consulta filtrada estrictamente por id_chofer=10
+    API-->>Portal: 200 OK (solo viajes asignados al Chofer 10)
 
-    Admin->>LoginUI: Ejecuta operación protegida (Server Component / Server Action)
-    LoginUI->>Cookie: Lee JWT desde el servidor Next.js
-    LoginUI->>API: Request con Header Authorization: Bearer <JWT>
-    API->>API: Valida firma y expiración del JWT
-    API->>DB: Verifica que el usuario sigue activo y conserva el rol requerido
-    API-->>LoginUI: Ejecuta caso de uso autorizado (o 401/403 si fue desactivado)
+    Admin->>API: POST /api/servicios {id_chofer: 10, ...}
+    API-->>Admin: 201 Created
+
+    Portal->>Http: Siguiente tick automático (5s)
+    Http->>API: GET /api/servicios (Bearer JWT Chofer 10)
+    API-->>Portal: 200 OK -> Muestra el nuevo viaje asignado en tiempo real
+
+    Chofer->>Portal: Avanza estado a "en curso" / "finalizado"
+    Portal->>Http: PATCH /api/servicios/{id}/estado (Bearer JWT Chofer 10)
+    API->>Gestor: Verifica servicio.id_chofer == 10 y actualiza modificado_por_id=3
+    API-->>Portal: 200 OK ServicioRead
 ```
