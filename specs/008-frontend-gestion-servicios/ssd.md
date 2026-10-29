@@ -270,6 +270,48 @@ sequenceDiagram
 
 ---
 
+### SSD-06: Refactorización — Simetría de Alta/Edición en `/clientes` y Normalización Compartida en Dominio
+
+Representa la consolidación del flujo de alta y edición en `/clientes` (`NuevoCliente` + `DialogoCliente` + `guardarCliente(datos, id?)`) junto con la centralización de las primitivas de normalización de texto y conteo de dígitos en `app/domain/normalizacion.py`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador
+    participant Btn as NuevoCliente / FilaCliente (/clientes)
+    participant Modal as DialogoCliente (cliente?: Cliente)
+    participant SA as guardarCliente(datos, id?)
+    participant API as FastAPI (POST / PUT /api/clientes)
+    participant Dom as Dominio (Cliente + normalizacion.py)
+    participant DB as PostgreSQL
+
+    alt 1. Alta Directa desde /clientes (id === undefined)
+        Admin->>Btn: Clic en "+ Nuevo cliente"
+        Btn->>Modal: Abre DialogoCliente sin cliente inicial (modo alta)
+        Admin->>Modal: Completa razón social, teléfono, dirección y cuenta corriente
+        Modal->>SA: guardarCliente(valores, undefined)
+        SA->>API: POST /api/clientes
+        API->>Dom: Cliente.crear(...) -> normalizar_espacios() + normalizar_clave_comparacion() + contar_digitos()
+        Dom->>DB: Verifica unicidad de razon_social_key e inserta registro activo
+        DB-->>SA: 201 Created
+        SA->>SA: revalidatePath("/clientes", "/servicios", "/agenda", "/")
+        SA-->>Modal: Cierra modal y refresca listado
+    else 2. Edición desde FilaCliente (id !== undefined)
+        Admin->>Btn: Clic en "Editar" en el menú de la fila
+        Btn->>Modal: Abre DialogoCliente precargado con cliente existente
+        Admin->>Modal: Modifica campos y guarda
+        Modal->>SA: guardarCliente(valores, cliente.id)
+        SA->>API: PUT /api/clientes/{id}
+        API->>Dom: cliente.actualizar(...) -> normalizar_espacios() + normalizar_clave_comparacion()
+        Dom->>DB: Verifica unicidad excluyendo id actual y actualiza registro
+        DB-->>SA: 200 OK
+        SA->>SA: revalidatePath("/clientes", "/servicios", "/agenda", "/")
+        SA-->>Modal: Cierra modal y refresca listado
+    end
+```
+
+---
+
 ## 3. Matriz de Trazabilidad Actualizada: Vistas vs. Capacidades y Endpoints
 
 | Vista | Ruta | Componentes Clave | Modo Oscuro | Integración con Backend FastAPI |
