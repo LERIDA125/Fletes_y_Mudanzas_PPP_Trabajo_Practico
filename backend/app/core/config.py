@@ -50,7 +50,7 @@ def _buscar_url_postgres_entorno() -> str | None:
 
 
 def url_sqlite_respaldo() -> str:
-    ruta = Path(tempfile.gettempdir()) / "fletes_express_mvp.db"
+    ruta = Path(tempfile.gettempdir()) / "fletes_express_mvp_v2.db"
     return f"sqlite:///{ruta.as_posix()}"
 
 

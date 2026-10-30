@@ -119,7 +119,7 @@ def _poblar_catalogo_inicial_si_vacio(db: Session, admin_id: int | None) -> None
     for c in db_choferes:
         db.refresh(c)
 
-    patentes = ["AB 123 CD", "AE 456 FG", "AF 789 HJ", "AA 321 KL", "AC 654 MN"]
+    patentes = ["ABC 123", "DEF 456", "GHI 789", "JKL 321", "MNO 654"]
     db_vehiculos = [
         VehiculoORM(
             patente=patentes[i],
