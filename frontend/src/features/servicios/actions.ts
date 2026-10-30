@@ -163,7 +163,7 @@ function mensajeDeError(
     | "eliminar",
 ): string {
   if (error.clase === "sin-permisos" || error.clase === "sesion-expirada") {
-    return "La API rechazó la operación. Verificá que el modo de demo local esté habilitado.";
+    return "Tu sesión venció o no tenés permisos. Volvé a iniciar sesión.";
   }
   if (error.clase === "sin-respuesta") {
     return "No pudimos conectar con el sistema. Revisá que el servidor esté funcionando.";

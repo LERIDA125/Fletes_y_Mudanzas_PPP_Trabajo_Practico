@@ -157,6 +157,10 @@ erDiagram
     VEHICULOS |o--o{ SERVICIOS : "asignado a"
 ```
 
+> **Nota**: este ERD refleja las migraciones `0001` a `0005`. El modelo RBAC objetivo del Ticket 1
+> (`roles`, `usuarios` y la relación con `choferes`) se especifica en
+> [`especificacion-rbac.md`](./especificacion-rbac.md), sección 6.
+
 ---
 
 ## 3. Diagrama de Clases del Dominio y Patrón Strategy de Cotización

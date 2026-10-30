@@ -9,8 +9,11 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.application.autenticacion.gestor_autenticacion import GestorAutenticacion
+from app.application.autenticacion.puertos import UsuarioRepository
 from app.application.choferes.gestor_choferes import GestorChoferes
 from app.application.choferes.puertos import ChoferRepository
 from app.application.clientes.gestor_clientes import GestorClientes
@@ -23,6 +26,7 @@ from app.application.tipos_vehiculo.puertos import (
     ConsultaVehiculosPorTipo,
     TipoVehiculoRepository,
 )
+from app.application.usuarios.gestor_usuarios import GestorUsuarios
 from app.application.vehiculos.gestor_vehiculos import GestorVehiculos
 from app.application.vehiculos.puertos import (
     ConsultaChofer,
@@ -31,33 +35,100 @@ from app.application.vehiculos.puertos import (
     VehiculoRepository,
 )
 from app.core.config import get_settings
+from app.core.seguridad import TokenInvalido, decodificar_token
+from app.domain.rol import ROL_CHOFER as ROL_CHOFER_CANONICO
+from app.domain.usuario import Usuario
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 from app.infrastructure.repositories.servicio_repo import ServicioRepo
 from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
+from app.infrastructure.repositories.usuario_repo import UsuarioRepo
 from app.infrastructure.repositories.vehiculo_repo import VehiculoRepo
 
 HEADER_ROL = "X-Rol"
 ROL_ADMIN = "admin"
 ROL_CHOFER = "chofer"
 
+esquema_bearer = HTTPBearer(auto_error=False)
+
+
+def _error_no_autenticado() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales inválidas o ausentes.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def get_repo_usuarios(db: Annotated[Session, Depends(get_db)]) -> UsuarioRepository:
+    return UsuarioRepo(db)
+
+
+def get_gestor_autenticacion(
+    repositorio_usuarios: Annotated[UsuarioRepository, Depends(get_repo_usuarios)],
+) -> GestorAutenticacion:
+    return GestorAutenticacion(repositorio_usuarios)
+
+
+def get_gestor_usuarios(
+    repositorio_usuarios: Annotated[UsuarioRepository, Depends(get_repo_usuarios)],
+) -> GestorUsuarios:
+    return GestorUsuarios(repositorio_usuarios)
+
+
+def _resolver_usuario(
+    credenciales: HTTPAuthorizationCredentials,
+    repo: UsuarioRepository,
+) -> Usuario:
+    try:
+        payload = decodificar_token(credenciales.credentials)
+        usuario_id = int(str(payload["sub"]))
+    except (TokenInvalido, KeyError, TypeError, ValueError) as exc:
+        raise _error_no_autenticado() from exc
+
+    usuario = repo.obtener_por_id(usuario_id)
+    if usuario is None or not usuario.activo:
+        raise _error_no_autenticado()
+
+    if usuario.rol == ROL_CHOFER_CANONICO and usuario.chofer_activo is not True:
+        raise _error_no_autenticado()
+
+    return usuario
+
+
+def get_usuario_actual_opcional(
+    credenciales: Annotated[HTTPAuthorizationCredentials | None, Depends(esquema_bearer)],
+    repositorio: Annotated[UsuarioRepo, Depends(get_repo_usuarios)],
+) -> Usuario | None:
+    if credenciales is None:
+        return None
+    return _resolver_usuario(credenciales, repositorio)
+
+
+def get_current_user(
+    usuario: Annotated[Usuario | None, Depends(get_usuario_actual_opcional)],
+) -> Usuario:
+    if usuario is None:
+        raise _error_no_autenticado()
+    return usuario
+
 
 def get_rol_actual(
     x_rol: Annotated[
         str | None, Header(alias=HEADER_ROL, description="Rol de prueba en modo desarrollo local.")
     ] = None,
+    usuario: Annotated[Usuario | None, Depends(get_usuario_actual_opcional)] = None,
 ) -> str:
-    """Asume admin solo en desarrollo local; sin auth configurada, falla cerrado."""
+    """Devuelve el rol en minúsculas que consumen los routers existentes."""
+    if usuario is not None:
+        return usuario.rol_minusculas
+
     settings = get_settings()
     if settings.ENVIRONMENT.lower() == "dev" and settings.DEV_ASSUME_ADMIN:
         return (x_rol or ROL_ADMIN).strip().lower()
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="La autenticación no está habilitada para este entorno.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    raise _error_no_autenticado()
 
 
 def require_rol(rol_requerido: str) -> Callable[..., str]:
@@ -73,6 +144,24 @@ def require_rol(rol_requerido: str) -> Callable[..., str]:
                 detail=f"Se requiere el rol {rol_requerido!r} para esta operación",
             )
         return rol_actual
+
+    return _exigir_rol
+
+
+def require_rol_autenticado(rol_requerido: str) -> Callable[..., Usuario]:
+    """Exige un JWT válido y el rol indicado, sin aceptar el modo demo `X-Rol`.
+
+    Las rutas nuevas de RBAC usan esta dependencia para que un request anónimo sea siempre
+    `401`, incluso cuando `DEV_ASSUME_ADMIN` está activo (CA-04).
+    """
+
+    def _exigir_rol(usuario: Annotated[Usuario, Depends(get_current_user)]) -> Usuario:
+        if usuario.rol_minusculas != rol_requerido:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Se requiere el rol {rol_requerido!r} para esta operación",
+            )
+        return usuario
 
     return _exigir_rol
 

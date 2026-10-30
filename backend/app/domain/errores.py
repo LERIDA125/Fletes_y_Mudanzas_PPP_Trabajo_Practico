@@ -164,3 +164,25 @@ class ChoferNoEncontrado(RecursoNoEncontrado):
     def __init__(self, chofer_id: int) -> None:
         super().__init__(f"No existe un chofer con id {chofer_id}")
         self.chofer_id = chofer_id
+
+
+# ── Autenticación y Usuarios (H9) ─────────────────────────────────────────────
+
+
+class CredencialesInvalidas(ReglaNegocioError):
+    """El login falla siempre con el mismo error, sin revelar la causa (FR-011/CA-11)."""
+
+    def __init__(self) -> None:
+        super().__init__("Credenciales inválidas o cuenta no habilitada")
+
+
+class UsernameDuplicado(ConflictoOperacion):
+    def __init__(self, username: str) -> None:
+        super().__init__(f"Ya existe un usuario con el nombre {username!r}")
+        self.username = username
+
+
+class ChoferYaVinculado(ConflictoOperacion):
+    def __init__(self, chofer_id: int) -> None:
+        super().__init__(f"El chofer {chofer_id} ya tiene una cuenta de usuario asociada")
+        self.chofer_id = chofer_id

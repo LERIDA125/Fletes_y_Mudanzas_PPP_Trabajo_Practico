@@ -2,7 +2,23 @@
 
 **Branch**: `009-autenticacion-roles` | **Date**: 2026-10-21 | **Spec**: [spec.md](./spec.md)
 
-**Status**: Paused — no implementar en el MVP actual.
+**Status**: Especificado — Ticket 1 reactiva la implementación con alcance ampliado (ver Enmienda).
+
+## Enmienda — Ticket 1 (2026-10-30)
+
+El **Ticket 1 — Autenticación, Multi-Admin y Creación de Usuarios** amplía esta historia:
+
+- Incorpora cuentas `CHOFER` con login y asociación 1:1 a un chofer activo.
+- Habilita que un `ADMIN` autenticado cree cuentas `ADMIN` y `CHOFER`; el primer `ADMIN` sigue
+  aprovisionándose por CLI.
+- Agrega la tabla `roles` y la tabla `usuarios` con `rol_id`, `id_chofer`, `activo` y auditoría.
+- Mantiene las rutas operativas del chofer fuera de alcance.
+- Mantiene `require_rol` y normaliza la resolución del rol a `admin`/`chofer` en `get_rol_actual`.
+- **Corrige la migración**: la nueva migración es `0006_crear_usuarios_rbac.py` con
+  `down_revision = "0005"`, porque `0005_cancelacion_servicios.py` ya existe. No se reutiliza
+  `0005_crear_usuarios.py`.
+- El detalle de modelo, ERD y contrato está en
+  [`docs/especificacion-rbac.md`](../../docs/especificacion-rbac.md).
 
 ## Resumen
 
@@ -10,7 +26,8 @@ Agregar cuentas autenticables admin separadas de las entidades operativas, login
 reemplazar el stub `X-Rol` dentro de `get_rol_actual` y establecer una sesión server-side en
 Next.js mediante cookie `httpOnly`. Cada API request, layout y Server Action protegido vuelve a
 verificar usuario y rol; el `proxy.ts` de Next.js solo hace redirección optimista. La autenticación
-de choferes queda fuera de esta historia.
+de choferes se incorpora en el Ticket 1 (ver Enmienda); las rutas operativas del chofer siguen fuera
+de alcance.
 
 El cambio habilita a la historia 008 para integrar Servicios sin simular el rol `admin` en el
 frontend.
@@ -19,7 +36,7 @@ frontend.
 
 | Principio | Resultado | Aplicación |
 |---|---|---|
-| I. Spec antes de código | PASS | Spec y plan aprobados con username admin, provisión CLI, JWT de 30 min y sin login de chofer. |
+| I. Spec antes de código | PASS | Spec y plan aprobados con username, provisión CLI del primer ADMIN, JWT de 30 min y login de chofer incorporado por Ticket 1. |
 | II. Capas y puertos | PASS propuesto | Aplicación consume puertos; SQL queda en repositorios; routers no decodifican JWT. |
 | III. Seguridad/API como contrato | PASS propuesto | Backend autoriza; OpenAPI documenta Bearer; frontend solo reenvía token desde servidor. |
 | IV. Tests primero en reglas críticas | PASS propuesto | Unitarios para autenticación/token y cobertura de integración para login y roles. |
@@ -39,7 +56,7 @@ frontend.
   un check optimista de cookie; llamadas a `/auth/me` y permisos se validarán en servidor.
 - El branch actual `008-frontend-gestion-servicios` tiene cambios backend sin commit, incluida la
   migración `0004`. Esta historia debe iniciar sobre 008 integrado o sobre una rama apilada
-  explícitamente; su migración propuesta es `0005` descendiente de `0004`.
+  explícitamente; su migración es `0006` descendiente de `0005` (ver Enmienda Ticket 1).
 
 ## Contrato API propuesto
 
@@ -62,22 +79,25 @@ frontend.
 
 | Archivo | Responsabilidad |
 |---|---|
-| `backend/app/domain/usuario.py` | Entidad pura de Usuario admin con username, rol y estado; sin SQLAlchemy ni Pydantic. |
+| `backend/app/domain/usuario.py` | Entidad pura de Usuario con username, rol, estado y vínculo opcional a chofer; sin SQLAlchemy ni Pydantic. |
 | `backend/app/domain/errores.py` | Errores tipados de autenticación/cuenta inválida si las operaciones de aplicación los requieren. |
 | `backend/app/application/autenticacion/puertos.py` | Protocolos de repositorio de usuario, verificador de contraseñas y emisor/validador de tokens. |
 | `backend/app/application/autenticacion/gestor_autenticacion.py` | Casos de uso de autenticar credenciales y resolver identidad actual; errores genéricos de login. |
-| `backend/app/infrastructure/models/usuario.py` | Tabla `usuarios`: username normalizado único, hash Argon2, rol admin, activo y auditoría; no altera Chofer. |
+| `backend/app/infrastructure/models/usuario.py` | Tabla `usuarios`: username único, hash Argon2, rol `ADMIN`/`CHOFER`, vínculo opcional a chofer, activo y auditoría. |
 | `backend/app/infrastructure/models/__init__.py` | Registrar el nuevo ORM para metadata/Alembic. |
-| `backend/app/infrastructure/repositories/usuario_repo.py` | Buscar por username/id, crear cuenta admin y resolver rol/estado sin SQL fuera de Infraestructura. |
+| `backend/app/infrastructure/repositories/usuario_repo.py` | Buscar por username/id, crear cuentas `ADMIN`/`CHOFER` y resolver rol/estado sin SQL fuera de Infraestructura. |
 | `backend/app/infrastructure/security/password_hasher.py` | Hash y verificación con Argon2 usando `pwdlib[argon2]`; no loguear credenciales/hash. |
 | `backend/app/infrastructure/security/jwt_service.py` | Crear/verificar JWT con `PyJWT`, algoritmo fijado y validación estricta de `sub`/`exp`. |
 | `backend/app/api/schemas/autenticacion.py` | Schemas estrictos `LoginRequest`, `TokenRead` y `UsuarioActualRead`; nunca exponer hash. |
 | `backend/app/api/autenticacion.py` | Router login y `/me`; delegar a Aplicación y publicar contrato Bearer. |
+| `backend/app/application/usuarios/gestor_usuarios.py` | Casos de uso de alta, listado, edición y baja lógica; multi-admin, vínculo con chofer y protección del último ADMIN. |
+| `backend/app/api/schemas/usuarios.py` | Schemas estrictos `UsuarioCreate`, `UsuarioUpdate` y `UsuarioRead`; nunca exponer hash. |
+| `backend/app/api/usuarios.py` | Router ABM de usuarios con `require_rol("admin")`; delega reglas a Aplicación. |
 | `backend/app/core/dependencias.py` | Componer repo/gestor; sustituir solo la implementación de `get_rol_actual` para validar Bearer y obtener rol actual desde Aplicación/Infraestructura. |
 | `backend/app/core/config.py` | Configurar `JWT_SECRET` como secreto requerido, algoritmo constante y TTL validado. No default productivo. |
 | `backend/app/main.py` | Registrar router auth y mantener handlers existentes sin exponer detalles sensibles. |
-| `backend/alembic/versions/0005_crear_usuarios.py` | Migración aditiva de usuarios, constraints e índice único del username; down revision `0004`. |
-| `backend/scripts/crear_usuario.py` | Provisión restringida por CLI de cuentas admin; solicitar contraseña interactivamente y no imprimirla ni aceptarla como argumento. |
+| `backend/alembic/versions/0006_crear_usuarios_rbac.py` | Migración aditiva de `roles` y `usuarios`, constraints e índice único del username; down revision `0005`. |
+| `backend/scripts/crear_usuario.py` | Bootstrap por CLI del primer `ADMIN`; solicitar contraseña interactivamente y no imprimirla ni aceptarla como argumento. |
 | `backend/.env.example` | Documentar `JWT_SECRET` solo con marcador de configuración, nunca un secreto reutilizable. |
 | `docker-compose.yml` | Requerir secreto de entorno en dev, sin valor de producción embebido en el YAML. |
 | `.github/workflows/ci.yml` | Inyectar clave de test desechable solo para CI, no reutilizable en despliegue. |
@@ -99,13 +119,15 @@ frontend.
 | `frontend/src/lib/api/servidor.ts` | Wrapper server-only para enviar Bearer desde cookie en requests autenticados. |
 | `frontend/src/proxy.ts` | Check optimista de cookie para redirigir a `/login`; no es frontera de autorización. |
 | `frontend/src/app/(admin)/layout.tsx` | Exigir rol `admin` antes de renderizar rutas admin. |
+| `frontend/src/app/(admin)/usuarios/page.tsx` | Listado y alta de cuentas `ADMIN`/`CHOFER`; solo accesible para ADMIN. |
+| `frontend/src/features/usuarios/actions.ts` | Server Actions de alta, edición y baja; revalidan sesión y rol ADMIN. |
 | `frontend/src/types/openapi.d.ts` | Generar contrato auth actualizado con `npm run gen:api`; no editar manualmente. |
 | `frontend/src/features/auth/**/*.test.tsx` | RTL para formulario, errores y estado accesible. |
 | `frontend/tests/auth/**` | Pruebas de guards, cookies y navegación por rol con API simulada. |
 
 ## Persistencia y seguridad
 
-- La tabla `usuarios` no altera `choferes` ni tiene FK a `choferes` en esta historia.
+- La tabla `usuarios` agrega una FK opcional y única a `choferes.id` (`id_chofer`), pero no altera la tabla `choferes`.
 - Username único tras `strip().casefold()`; guardar el valor normalizado para búsquedas y unicidad.
 - `password_hash` no se expone por schema ni se registra en logs.
 - El secreto JWT se configura externamente; en producción no se permite fallback ni secreto
@@ -113,7 +135,7 @@ frontend.
 - El algoritmo queda fijado en código/config validada; el token no puede seleccionar el algoritmo.
 - Lookup de usuario activo/rol vigente en cada request evita que un JWT con claims obsoletos
   mantenga permisos.
-- No hay registro público. CLI crea cuentas admin y toma la contraseña con `getpass`.
+- No hay registro público. La CLI crea el primer `ADMIN`; las cuentas siguientes las crea un `ADMIN` autenticado. Toda contraseña se toma con `getpass` o se recibe por el canal seguro del alta.
 - No hay refresh token en esta versión. Logout invalida la sesión del navegador borrando
   cookie, pero JWT capturado puede usarse hasta expiración; revisar si esto es aceptable.
 - Las llamadas web a endpoints protegidos salen desde Server Components/Actions; el navegador no
@@ -122,9 +144,10 @@ frontend.
 
 ## Pruebas y verificación
 
-1. Unit tests de password, JWT y casos de uso sin PostgreSQL.
-2. Integración API cubre login, cuenta inactiva, `GET /me`, expiración, roles y rechazo de
-   `X-Rol` spoofed.
+1. Unit tests de password, JWT y casos de uso de autenticación y usuarios sin PostgreSQL,
+   incluyendo multi-admin, vínculo con chofer y protección del último ADMIN.
+2. Integración API cubre login, cuenta inactiva, `GET /me`, expiración, roles, alta de usuarios,
+   conflictos de username/chofer y rechazo de `X-Rol` spoofed.
 3. Regresión: los endpoints existentes admin con `require_rol` responden para JWT admin válido y
    deniegan requests anónimos; actualizar fixtures que antes usaban `X-Rol`.
 4. Frontend: tests de cookie flags, guards por rol, Server Actions, login fallido/sin respuesta,
@@ -136,14 +159,14 @@ frontend.
 
 ## Orden propuesto
 
-1. Asegurar que 008 está integrado o acordar branch apilado; `0005` depende de la migración `0004`.
+1. Asegurar que 008 está integrado o acordar branch apilado; `0006` depende de la migración `0005`.
 2. Implementar entidad/puertos/casos de uso y pruebas unitarias.
 3. Añadir ORM, migración y repositorio; implementar hash/token y tests.
-4. Crear endpoints login/me, cambiar `get_rol_actual` manteniendo `require_rol` y probar todas las
-   rutas protegidas.
-5. Crear comando de provisión y ajustar configuración/compose/CI.
-6. Implementar cookie, Server Actions, guard server-side y Proxy; proteger layouts y regenerar
-   tipos OpenAPI.
+4. Crear endpoints login/me y ABM de usuarios, cambiar `get_rol_actual` manteniendo `require_rol` y
+   probar todas las rutas protegidas.
+5. Crear comando de bootstrap y ajustar configuración/compose/CI.
+6. Implementar cookie, Server Actions, guard server-side y Proxy; proteger layouts, agregar la
+   pantalla `/usuarios` y regenerar tipos OpenAPI.
 7. Ejecutar pruebas completas, verificar login admin y confirmar que `X-Rol` no concede acceso.
 
 ## Decisiones aprobadas y dependencias
@@ -151,10 +174,10 @@ frontend.
 | Riesgo/decisión | Resolución aprobada |
 |---|---|
 | No existe identidad de usuario ni email en Chofer | Cuenta admin separada con username y contraseña. |
-| Admin inicial y altas de cuentas | CLI interactiva, sin registro público ni UI de gestión. |
+| Admin inicial y altas de cuentas | Primer `ADMIN` por CLI; altas posteriores por API/UI de un `ADMIN`; sin registro público. |
 | Robo/expiración de JWT tras logout | Access token 30 min, sin refresh; baja/rol se consulta en DB por request. |
-| Autenticación de choferes | Diferida; no crear login ni rutas de chofer en esta historia. |
-| Ramas/migraciones | Empezar 009 después de integrar 008; migración 0005 depende de 0004. |
+| Autenticación de choferes | Incluida por Ticket 1: login y cuenta `CHOFER` vinculada a chofer; rutas operativas del chofer siguen diferidas. |
+| Ramas/migraciones | Empezar 009 después de integrar 008; migración 0006 depende de 0005 (Ticket 1). |
 | Header X-Rol en OpenAPI | Retirarlo al cambiar `get_rol_actual`; todos los clientes admin deben autenticarse. |
 
 ## Referencias técnicas

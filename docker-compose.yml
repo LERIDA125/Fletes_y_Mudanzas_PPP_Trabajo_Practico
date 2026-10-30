@@ -24,6 +24,7 @@ services:
       DATABASE_URL: postgresql+psycopg://fletes:fletes@postgres:5432/fletes
       ENVIRONMENT: dev
       DEV_ASSUME_ADMIN: "true"
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-32-bytes-min}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

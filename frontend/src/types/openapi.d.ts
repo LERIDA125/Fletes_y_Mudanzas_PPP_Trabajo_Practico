@@ -16,6 +16,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Iniciar sesión
+         * @description Valida las credenciales contra el hash Argon2id y devuelve un JWT de 30 minutos. Un usuario inexistente, inactivo o una contraseña incorrecta responden el mismo 401.
+         */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver el perfil autenticado
+         * @description Devuelve la identidad resuelta desde el token y la base, sin datos sensibles.
+         */
+        get: operations["me_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/usuarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear una cuenta de usuario
+         * @description Crea una cuenta ADMIN o CHOFER. Solo un ADMIN autenticado puede hacerlo; una cuenta CHOFER exige un chofer activo y sin otra cuenta asociada.
+         */
+        post: operations["crear_usuario_api_usuarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clientes": {
         parameters: {
             query?: never;
@@ -646,6 +706,24 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * LoginRequest
+         * @description Credenciales de login. No se valida aquí la política de alta: un error de login es 401.
+         */
+        LoginRequest: {
+            /**
+             * Username
+             * @description Nombre de usuario normalizado por el backend.
+             * @example admin
+             */
+            username: string;
+            /**
+             * Password
+             * @description Contraseña en claro; nunca se registra ni se devuelve.
+             * @example una-clave-segura
+             */
+            password: string;
+        };
         /** ServicioCancelar */
         ServicioCancelar: {
             /**
@@ -931,6 +1009,94 @@ export interface components {
              */
             tarifa_km_excedente: number | string;
         };
+        /** TokenRead */
+        TokenRead: {
+            /**
+             * Access Token
+             * @description JWT de acceso.
+             */
+            access_token: string;
+            /**
+             * Token Type
+             * @description Esquema del token.
+             * @default bearer
+             * @constant
+             */
+            token_type: "bearer";
+            /**
+             * Expires In
+             * @description Vigencia del token en segundos.
+             */
+            expires_in: number;
+        };
+        /**
+         * UsuarioActualRead
+         * @description Perfil del usuario autenticado; nunca incluye `password_hash` (CA-10).
+         */
+        UsuarioActualRead: {
+            /** Id */
+            id: number;
+            /** Username */
+            username: string;
+            /**
+             * Rol
+             * @description Código canónico: ADMIN o CHOFER.
+             */
+            rol: string;
+            /** Id Chofer */
+            id_chofer: number | null;
+        };
+        /**
+         * UsuarioCreate
+         * @description Alta de cuenta ADMIN o CHOFER; la coherencia rol/chofer la valida el dominio.
+         */
+        UsuarioCreate: {
+            /**
+             * Username
+             * @description Nombre de usuario único; se normaliza a minúsculas.
+             */
+            username: string;
+            /**
+             * Password
+             * @description Contraseña; la política completa se valida en dominio.
+             */
+            password: string;
+            /**
+             * Rol
+             * @description ADMIN o CHOFER.
+             */
+            rol: string;
+            /**
+             * Id Chofer
+             * @description Chofer activo y libre para cuentas CHOFER; debe ser null para ADMIN.
+             */
+            id_chofer?: number | null;
+        };
+        /**
+         * UsuarioRead
+         * @description Cuenta de usuario sin datos sensibles (CA-10).
+         */
+        UsuarioRead: {
+            /** Id */
+            id: number;
+            /** Username */
+            username: string;
+            /**
+             * Rol
+             * @description Código canónico: ADMIN o CHOFER.
+             */
+            rol: string;
+            /** Id Chofer */
+            id_chofer: number | null;
+            /** Activo */
+            activo: boolean;
+            /** Creado Por */
+            creado_por: number | null;
+            /** Creado En */
+            creado_en: string | null;
+            /** Actualizado En */
+            actualizado_en: string | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -939,10 +1105,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /**
          * VehiculoCreate
@@ -1143,6 +1305,125 @@ export interface operations {
                         [key: string]: string;
                     };
                 };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenRead"];
+                };
+            };
+            /** @description Credenciales inválidas o cuenta no habilitada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioActualRead"];
+                };
+            };
+            /** @description Token ausente, inválido o cuenta no habilitada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crear_usuario_api_usuarios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsuarioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"];
+                };
+            };
+            /** @description Token ausente, inválido o cuenta no habilitada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El rol del usuario no es ADMIN. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El username ya existe o el chofer ya tiene una cuenta. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Payload inválido, rol/chofer inconsistente, chofer inexistente o inactivo. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

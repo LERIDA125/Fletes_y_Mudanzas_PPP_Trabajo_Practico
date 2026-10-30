@@ -260,9 +260,9 @@
 
 ---
 
-## Módulo 009 — Autenticación y Autorización por Rol (Especificado para siguiente fase)
+## Módulo 009 — Autenticación y Autorización por Rol (Ticket 1: Multi-Admin y Alta de Usuarios)
 
-> **Objetivo del módulo**: Reemplazar el modo demo local (`DEV_ASSUME_ADMIN`) por autenticación real de cuentas `admin` con hash Argon2, JWT firmado en cookie `httpOnly` y guardas en servidor Next.js y FastAPI.
+> **Objetivo del módulo**: Reemplazar el modo demo local (`DEV_ASSUME_ADMIN`) por autenticación real de cuentas `ADMIN` y `CHOFER` con hash Argon2, JWT firmado en cookie `httpOnly`, guardas en servidor Next.js y FastAPI, múltiples administradores y alta de cuentas restringida a un administrador autenticado.
 
 ### US-009.1 — Iniciar sesión como administrador (Prioridad: P1)
 - **Como** administrador con cuenta activa,
@@ -278,3 +278,17 @@
 - **Como** administrador autenticado,
 - **quiero** que mi sesión se almacene en una cookie `httpOnly` (`sameSite=lax`), que las rutas protegidas redirijan a `/login` si expira y poder cerrar sesión desde el layout,
 - **para** operar de forma segura desde cualquier navegador.
+
+### US-009.4 — Soportar múltiples administradores (Prioridad: P1)
+- **Como** responsable del sistema,
+- **quiero** que coexistan varias cuentas con rol `ADMIN` activas, creadas por otro administrador o por la CLI de bootstrap,
+- **para** distribuir la operación administrativa sin depender de una cuenta única y sin bloquear el sistema si una cuenta se desactiva.
+
+### US-009.5 — Crear cuentas de chofer desde un administrador (Prioridad: P1)
+- **Como** administrador autenticado,
+- **quiero** crear una cuenta de usuario con rol `CHOFER` vinculada a un chofer existente y activo, y crear también cuentas `ADMIN` adicionales,
+- **para** habilitar el acceso de cada chofer sin registro público y sin que un chofer pueda crear cuentas de otros usuarios.
+
+> **Ticket 1**: el detalle técnico de roles, reglas, contrato API y ERD está en
+> [`docs/especificacion-rbac.md`](./especificacion-rbac.md). Las rutas operativas del chofer se
+> difieren a una historia posterior.

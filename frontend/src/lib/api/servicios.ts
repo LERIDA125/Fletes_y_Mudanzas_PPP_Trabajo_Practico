@@ -9,7 +9,7 @@ import type {
   SolicitudCotizacion,
 } from "@/features/servicios/types";
 import type { components } from "@/types/openapi";
-import { request } from "./http";
+import { requestAutenticado as request } from "./servidor";
 
 export const TAMANO_DE_PAGINA = 20;
 const TAMANO_DE_CATALOGOS = 100;

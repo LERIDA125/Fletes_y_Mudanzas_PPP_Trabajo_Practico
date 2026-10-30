@@ -136,4 +136,16 @@ describe("request", () => {
     ).rejects.toMatchObject({ clase: "sin-respuesta" });
     expect(fetchFalso).toHaveBeenCalledTimes(1);
   });
+
+  it("no inyecta X-Rol y respeta el Bearer enviado por el servidor", async () => {
+    fetchFalso.mockResolvedValue(responder(200, { ok: true }));
+
+    await request("/api/auth/me", {
+      headers: { Authorization: "Bearer token-de-prueba" },
+    });
+
+    const headers = fetchFalso.mock.calls[0][1].headers as Headers;
+    expect(headers.get("X-Rol")).toBeNull();
+    expect(headers.get("Authorization")).toBe("Bearer token-de-prueba");
+  });
 });

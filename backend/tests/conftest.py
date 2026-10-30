@@ -4,6 +4,7 @@ import pytest
 
 os.environ["ENVIRONMENT"] = "dev"
 os.environ["DEV_ASSUME_ADMIN"] = "true"
+os.environ["JWT_SECRET"] = "test-only-secret-change-me-32-bytes-min"
 
 
 @pytest.fixture(scope="session", autouse=True)

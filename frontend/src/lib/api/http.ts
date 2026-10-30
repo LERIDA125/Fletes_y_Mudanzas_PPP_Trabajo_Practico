@@ -132,11 +132,8 @@ export async function request<T>(ruta: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  // Inyección global del rol para autorizar las peticiones en FastAPI
-  if (!headers.has("X-Rol")) {
-    headers.set("X-Rol", "admin");
-  }
-
+  // La autorización se resuelve en el servidor: `requestAutenticado` agrega el
+  // Bearer desde la cookie httpOnly. El cliente nunca envía un rol.
   let res: Response | null = null;
   let ultimoError: unknown = null;
   const intentos: string[] = [];
