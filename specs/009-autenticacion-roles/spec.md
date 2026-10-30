@@ -29,7 +29,7 @@ aceptación) vive en [`docs/especificacion-rbac.md`](../../docs/especificacion-r
 
 | Tema | Decisión anterior | Decisión vigente |
 |---|---|---|
-| Autenticación de choferes | Diferida a una historia posterior | **Incluida**: login y cuenta de usuario para `CHOFER`; rutas operativas del chofer siguen diferidas. |
+| Autenticación de choferes | Diferida a una historia posterior | **Incluida**: login y cuenta de usuario para `CHOFER`; la vista operativa móvil se incorpora en Ticket 3. |
 | Alta de cuentas | Solo CLI para `admin`; sin UI de gestión | Primer `ADMIN` por CLI; las cuentas siguientes las crea un `ADMIN` autenticado vía API/UI. |
 | Multi-admin | No explicitado | **Soportado**: N cuentas `ADMIN` activas. |
 | Asociación Usuario–Chofer | Ninguna en esta fase | **Obligatoria** para rol `CHOFER`: 1 cuenta ↔ 1 chofer activo. |
@@ -72,6 +72,19 @@ aceptación) vive en [`docs/especificacion-rbac.md`](../../docs/especificacion-r
 - *Fuera de alcance* ahora excluye solo las pantallas y rutas operativas del chofer; el login de
   chofer sí queda incluido.
 - La migración `0005_crear_usuarios.py` del plan original se reemplaza por `0006_crear_usuarios_rbac.py`.
+
+### Enmienda — Ticket 3: Vista móvil del chofer
+
+Se reemplaza el placeholder de `/chofer/dashboard` por una agenda móvil de servicios del día.
+La página requiere `exigirRol("CHOFER")`, consulta `GET /api/servicios` con el Bearer de la sesión
+y actualiza la lista mediante polling cada 10 segundos.
+
+El endpoint conserva la vista completa para `ADMIN`; para `CHOFER`, filtra en backend usando el
+`id_chofer` asociado a la identidad autenticada. El cliente no puede elegir otro chofer ni obtener
+servicios ajenos mediante parámetros manipulados.
+
+La interfaz utiliza los datos disponibles en `ServicioRead`; no inventa direcciones, carga, notas
+ni operaciones de cobro que no formen parte del modelo/API vigente.
 
 ## Situación actual verificada
 

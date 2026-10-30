@@ -97,7 +97,7 @@ frontend.
 | `backend/app/core/config.py` | Configurar `JWT_SECRET` como secreto requerido, algoritmo constante y TTL validado. No default productivo. |
 | `backend/app/main.py` | Registrar router auth y mantener handlers existentes sin exponer detalles sensibles. |
 | `backend/alembic/versions/0006_crear_usuarios_rbac.py` | Migración aditiva de `roles` y `usuarios`, constraints e índice único del username; down revision `0005`. |
-| `backend/scripts/crear_usuario.py` | Bootstrap por CLI del primer `ADMIN`; solicitar contraseña interactivamente y no imprimirla ni aceptarla como argumento. |
+| `backend/scripts/crear_admin.py` | Bootstrap por CLI del primer `ADMIN`; solicitar contraseña interactivamente y no imprimirla ni aceptarla como argumento. |
 | `backend/.env.example` | Documentar `JWT_SECRET` solo con marcador de configuración, nunca un secreto reutilizable. |
 | `docker-compose.yml` | Requerir secreto de entorno en dev, sin valor de producción embebido en el YAML. |
 | `.github/workflows/ci.yml` | Inyectar clave de test desechable solo para CI, no reutilizable en despliegue. |
@@ -176,9 +176,20 @@ frontend.
 | No existe identidad de usuario ni email en Chofer | Cuenta admin separada con username y contraseña. |
 | Admin inicial y altas de cuentas | Primer `ADMIN` por CLI; altas posteriores por API/UI de un `ADMIN`; sin registro público. |
 | Robo/expiración de JWT tras logout | Access token 30 min, sin refresh; baja/rol se consulta en DB por request. |
-| Autenticación de choferes | Incluida por Ticket 1: login y cuenta `CHOFER` vinculada a chofer; rutas operativas del chofer siguen diferidas. |
+| Autenticación de choferes | Incluida por Ticket 1; Ticket 3 añade la vista móvil y listado de asignaciones propias. |
 | Ramas/migraciones | Empezar 009 después de integrar 008; migración 0006 depende de 0005 (Ticket 1). |
 | Header X-Rol en OpenAPI | Retirarlo al cambiar `get_rol_actual`; todos los clientes admin deben autenticarse. |
+
+### Ticket 3 — Vista móvil del chofer
+
+| Archivo | Responsabilidad |
+|---|---|
+| `backend/app/api/servicios.py` | Permitir que `CHOFER` liste servicios, manteniendo el listado completo para `ADMIN`. |
+| `backend/app/application/servicios/gestor_servicios.py` | Aplicar el filtro opcional por `id_chofer` al listar y contar. |
+| `backend/app/infrastructure/repositories/servicio_repo.py` | Filtrar items y total por el chofer asociado al usuario autenticado. |
+| `frontend/src/app/chofer/dashboard/page.tsx` | Validar rol, cargar identidad visible y datos iniciales. |
+| `frontend/src/features/servicios/components/portal-chofer.tsx` | Interfaz móvil y actualización periódica mediante Server Action autorizada. |
+| `frontend/src/features/servicios/actions.ts` | Revalidar rol `CHOFER` en cada polling y obtener servicios mediante `requestAutenticado`. |
 
 ## Referencias técnicas
 

@@ -207,9 +207,9 @@ La base de datos refuerza la consistencia: si `estado = 'cancelado'`, entonces
   informan, deben estar activos. El vehículo asignado debe pertenecer al tipo indicado.
 - **FR-009**: `GET /api/servicios` MUST ser paginado, de orden estable y devolver nombres legibles
   relacionados; las asignaciones opcionales no deben eliminar filas.
-- **FR-010**: Cotizar, alta y listado MUST declararse en OpenAPI y requieren rol `admin`. En la
-  demo local se asume admin solo con la bandera dev explícita; fuera de dev la API rechaza sin
-  autenticación implementada.
+- **FR-010**: Cotizar y alta MUST declararse en OpenAPI y requerir rol `admin`. El listado MUST
+  permitir `admin` y `chofer`: admin ve todos los servicios y chofer solo los asignados a su
+  identidad autenticada. En la demo local se asume admin solo con la bandera dev explícita.
 - **FR-011**: Cada router MUST delegar la operación a un único método de Aplicación y no contener
   reglas de negocio ni consultas SQL.
 - **FR-012**: Los repositorios MUST ser el único acceso a SQLAlchemy; Dominio/Aplicación no
@@ -267,12 +267,14 @@ temporal ni se acepta precio desde el request.
 Salida: servicio con ID, asociaciones y nombres legibles, datos del viaje, tarifas snapshot,
 importe ARS, estado y auditoría.
 
-### `GET /api/servicios` — admin
+### `GET /api/servicios` — admin o chofer
 
 Query params `page` (default 1, mínimo 1) y `size` (default 20, 1–100). Respuesta `items`, `total`,
 `page`, `size`; orden ascendente estable por ID. Incluye cliente, tipo, estado, nombre de chofer y
 patente de vehículo; nombres de asignaciones opcionales pueden ser nulos. Cada item incluye
-`motivo_cancelacion` y `hora_fin` (nulos si el servicio no fue cancelado).
+`motivo_cancelacion` y `hora_fin` (nulos si el servicio no fue cancelado). Admin recibe todos los
+servicios; chofer recibe únicamente los asignados al chofer vinculado a su cuenta, sin aceptar un
+identificador de chofer en el request.
 
 ### `PATCH /api/servicios/{id}/cancelar` — admin
 

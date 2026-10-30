@@ -277,7 +277,8 @@ uvicorn app.main:app --reload          # levantar el servidor de desarrollo en :
 pytest tests/unit                       # 44 tests unitarios (correr siempre antes de un PR)
 pytest tests/integration                # tests de integración contra PostgreSQL
 ruff check .                            # linter de Python
-alembic upgrade head                    # aplicar migraciones hasta 0005
+alembic upgrade head                    # aplicar todas las migraciones, incluida RBAC
+python -m scripts.crear_admin           # aprovisionar el primer ADMIN de forma interactiva
 python -m scripts.seed                  # poblar base local con clientes, flota, tarifas y servicios
 
 # Frontend (desarrollo local)

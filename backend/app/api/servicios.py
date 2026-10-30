@@ -4,7 +4,7 @@ from datetime import date, time
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 
 from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.servicio import (
@@ -19,8 +19,16 @@ from app.api.schemas.servicio import (
 )
 from app.api.schemas.vehiculo import VehiculoRead
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.core.dependencias import ROL_ADMIN, get_gestor_servicios, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    ROL_CHOFER,
+    get_gestor_servicios,
+    get_rol_actual,
+    get_usuario_actual_opcional,
+    require_rol,
+)
 from app.domain.cliente import Cliente
+from app.domain.usuario import Usuario
 
 router = APIRouter(prefix="/api/servicios", tags=["servicios"])
 
@@ -257,17 +265,20 @@ def eliminar_servicio(
     summary="Listar servicios",
     description=(
         "Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las "
-        "asignaciones opcionales."
+        "asignaciones opcionales. Los administradores ven todos los servicios; los choferes "
+        "solo ven los que están asignados a su cuenta."
     ),
     responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "description": "La autenticación no está habilitada para este entorno."
+        status.HTTP_401_UNAUTHORIZED: {"description": "Se requiere una sesión autenticada."},
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Se requiere el rol admin o chofer para listar servicios."
         },
     },
-    dependencies=[Depends(require_rol(ROL_ADMIN))],
 )
 def listar_servicios(
     gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    rol_actual: Annotated[str, Depends(get_rol_actual)],
+    usuario: Annotated[Usuario | None, Depends(get_usuario_actual_opcional)],
     page: Annotated[int, Query(ge=1, description="Número de página, empezando en 1.")] = 1,
     size: Annotated[
         int,
@@ -278,7 +289,25 @@ def listar_servicios(
         ),
     ] = TAMANO_DE_PAGINA_POR_DEFECTO,
 ) -> ServicioListado:
-    items, total = gestor.listar(offset=(page - 1) * size, limit=size)
+    id_chofer = None
+    if rol_actual == ROL_CHOFER:
+        if usuario is None or usuario.id_chofer is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="La cuenta de chofer no tiene un chofer asociado.",
+            )
+        id_chofer = usuario.id_chofer
+    elif rol_actual != ROL_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere el rol admin o chofer para listar servicios.",
+        )
+
+    items, total = gestor.listar(
+        offset=(page - 1) * size,
+        limit=size,
+        id_chofer=id_chofer,
+    )
     return ServicioListado(
         items=[ServicioRead.de_item(item) for item in items],
         total=total,

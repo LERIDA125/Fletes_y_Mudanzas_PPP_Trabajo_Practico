@@ -1,5 +1,6 @@
 import { PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { FormularioLogin } from "@/features/auth/components/formulario-login";
 import { ErrorApi } from "@/lib/api/http";
@@ -15,6 +16,8 @@ export const metadata = {
 };
 
 export default async function LoginPage() {
+  await connection();
+
   let usuario: UsuarioSesion | null = null;
 
   try {

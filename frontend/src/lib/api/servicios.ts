@@ -25,6 +25,23 @@ export async function listarServicios(
   return request<ListadoServicios>(`/api/servicios?${parametros.toString()}`);
 }
 
+export async function listarServiciosAsignados(): Promise<Servicio[]> {
+  const primeraPagina = await listarServicios(1, 100);
+  const servicios = [...primeraPagina.items];
+
+  const totalPaginas = Math.ceil(primeraPagina.total / primeraPagina.size);
+  for (
+    let pagina = 2;
+    pagina <= totalPaginas && servicios.length < primeraPagina.total;
+    pagina += 1
+  ) {
+    const siguientePagina = await listarServicios(pagina, primeraPagina.size);
+    servicios.push(...siguientePagina.items);
+  }
+
+  return servicios;
+}
+
 export async function listarClientesParaAlta(): Promise<
   components["schemas"]["ClienteRead"][]
 > {

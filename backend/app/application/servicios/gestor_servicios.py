@@ -217,9 +217,24 @@ class GestorServicios:
         actual.servicio.cancelar(motivo=motivo, hora_fin=hora_fin)
         return self._repo.actualizar(actual.servicio)
 
-    def listar(self, *, offset: int, limit: int) -> tuple[list[ServicioListadoItem], int]:
-        total = self._repo.contar()
-        return self._repo.listar(offset=offset, limit=limit), total
+    def listar(
+        self,
+        *,
+        offset: int,
+        limit: int,
+        id_chofer: int | None = None,
+    ) -> tuple[list[ServicioListadoItem], int]:
+        if id_chofer is None:
+            total = self._repo.contar()
+            items = self._repo.listar(offset=offset, limit=limit)
+        else:
+            total = self._repo.contar(id_chofer=id_chofer)
+            items = self._repo.listar(
+                offset=offset,
+                limit=limit,
+                id_chofer=id_chofer,
+            )
+        return items, total
 
     def _resolver_cliente(
         self,

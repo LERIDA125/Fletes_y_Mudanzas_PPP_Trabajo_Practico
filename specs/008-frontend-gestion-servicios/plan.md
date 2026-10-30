@@ -95,12 +95,14 @@ cancelar permanece como flujo separado con motivo y hora de finalización.
 | Archivo | Responsabilidad |
 |---|---|
 | `backend/app/api/schemas/servicio.py` | `CotizacionRequest/Read`, `ServicioCreate`, `ServicioCancelar`, `ServicioEstadoUpdate`, `ServicioRead`, `ServicioListado`; entrada estricta `extra="forbid"`, campos calculados solo en salida y `motivo_cancelacion`/`hora_fin` en la lectura. |
-| `backend/app/api/servicios.py` | Router `/api/servicios`: `POST /cotizar`, `POST ""` con 201, `GET ""` paginado, `PATCH /{id}/cancelar`, `PATCH /{id}/estado` y `DELETE /{id}` con 204. Todas las operaciones requieren `admin`; handlers solo validan schema/dependencia y delegan. |
+| `backend/app/api/servicios.py` | Router `/api/servicios`: cotización, alta, cambio de estado, cancelación y baja requieren `admin`; `GET ""` admite admin o chofer autenticado y filtra asignaciones propias para choferes. |
 | `backend/app/core/dependencias.py` | Construir repositorio/gestor de servicios y calculadora con repositorio de tarifas; reemplazar adaptadores stub de historial de Cliente y servicios por Vehículo por consultas reales, sin dependencias circulares. |
 | `backend/app/main.py` | Registrar router de servicios. Los handlers globales actuales traducen errores de dominio a 404/409/422. |
 
-Contrato GET: requiere rol admin, `page` default 1, `size` default 20, máximo 100; devuelve `items`,
-`total`, `page`, `size`; orden ascendente por ID. Proyección con joins a cliente, tipo y LEFT JOINs
+Contrato GET: requiere rol admin o chofer autenticado, `page` default 1, `size` default 20, máximo
+100; devuelve `items`, `total`, `page`, `size`; orden ascendente por ID. El chofer solo recibe
+servicios asignados a su identidad; no se acepta un filtro de chofer desde el cliente. Proyección
+con joins a cliente, tipo y LEFT JOINs
 a chofer y vehículo. Cotización devuelve tarifas, inputs, distancia derivada, franquicia,
 excedente y precio en ARS.
 Alta recalcula tarifa/precio dentro del gestor antes de persistir; request prohíbe datos calculados.
