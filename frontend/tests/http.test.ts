@@ -91,9 +91,39 @@ describe("request", () => {
     }
   });
 
+  it("en el servidor prioriza el binding BACKEND_URL sobre API_URL", async () => {
+    const originalBackend = process.env.BACKEND_URL;
+    const originalApi = process.env.API_URL;
+    process.env.BACKEND_URL = "https://backend-binding.invalid";
+    process.env.API_URL = "http://api-caida:8000";
+    vi.stubGlobal("window", undefined);
+    fetchFalso.mockResolvedValue(responder(200, { ok: true }));
+
+    try {
+      await expect(request("/api/clientes")).resolves.toEqual({ ok: true });
+      expect(fetchFalso).toHaveBeenCalledTimes(1);
+      expect(String(fetchFalso.mock.calls[0][0])).toBe(
+        "https://backend-binding.invalid/api/clientes",
+      );
+    } finally {
+      if (originalBackend === undefined) {
+        delete process.env.BACKEND_URL;
+      } else {
+        process.env.BACKEND_URL = originalBackend;
+      }
+      if (originalApi === undefined) {
+        delete process.env.API_URL;
+      } else {
+        process.env.API_URL = originalApi;
+      }
+    }
+  });
+
   it("en el servidor usa API_URL y cae a backend si no responde", async () => {
+    const originalBackend = process.env.BACKEND_URL;
     const originalApi = process.env.API_URL;
     const originalPublic = process.env.NEXT_PUBLIC_API_URL;
+    delete process.env.BACKEND_URL;
     process.env.API_URL = "http://api-caida:8000";
     delete process.env.NEXT_PUBLIC_API_URL;
     vi.stubGlobal("window", undefined);
@@ -107,6 +137,11 @@ describe("request", () => {
       expect(String(fetchFalso.mock.calls[0][0])).toContain("api-caida");
       expect(String(fetchFalso.mock.calls[1][0])).toContain("backend");
     } finally {
+      if (originalBackend === undefined) {
+        delete process.env.BACKEND_URL;
+      } else {
+        process.env.BACKEND_URL = originalBackend;
+      }
       if (originalApi === undefined) {
         delete process.env.API_URL;
       } else {

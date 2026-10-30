@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     # Next.js local; en producción se setea por variable de entorno con la URL
     # real del frontend.
     ORIGENES_CORS: list[str] = ["http://localhost:3000"]
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _usar_driver_psycopg(cls, valor: str) -> str:
+        if valor.startswith("postgresql://"):
+            return valor.replace("postgresql://", "postgresql+psycopg://", 1)
+        return valor
 
     @model_validator(mode="after")
     def _validar_secreto_jwt(self) -> Settings:

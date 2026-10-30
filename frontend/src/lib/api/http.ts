@@ -1,7 +1,5 @@
-// Dentro de Docker Compose el backend se llama `backend`; en desarrollo local
-// sobre el host se llega por `localhost`. El servidor de Next prueba primero la
-// URL configurada y luego ambos hosts conocidos, para que un `API_URL`
-// ausente o mal configurado no deje toda la UI sin datos.
+// BACKEND_URL es el binding interno de Vercel. API_URL se conserva para Docker
+// Compose y el fallback a localhost para desarrollo local.
 const URL_SERVIDOR_POR_DEFECTO = "http://backend:8000";
 const URL_LOCAL_POR_DEFECTO = "http://localhost:8000";
 const TIMEOUT_MS_POR_DEFECTO = 10_000;
@@ -51,9 +49,8 @@ function unicos(valores: Array<string | null>): string[] {
 /**
  * URLs candidatas en orden de preferencia.
  *
- * En el servidor la prioridad es `API_URL` (URL interna, p. ej. el nombre del
- * servicio de Docker) y luego los hosts por defecto. En el navegador solo tiene
- * sentido la URL pública (`NEXT_PUBLIC_API_URL`) porque no resuelve `backend`.
+ * En el servidor se prioriza el binding de Vercel y luego `API_URL` para Docker.
+ * En el navegador solo tiene sentido la URL pública (`NEXT_PUBLIC_API_URL`).
  */
 export function resolverBaseUrls(): string[] {
   if (typeof window !== "undefined") {
@@ -63,6 +60,7 @@ export function resolverBaseUrls(): string[] {
     ]);
   }
   return unicos([
+    normalizarBaseUrl(process.env.BACKEND_URL),
     normalizarBaseUrl(process.env.API_URL),
     URL_SERVIDOR_POR_DEFECTO,
     normalizarBaseUrl(process.env.NEXT_PUBLIC_API_URL),

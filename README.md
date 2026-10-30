@@ -167,6 +167,19 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 🧪 6. Testing y Calidad de Código
 
+### Despliegue en Vercel
+
+El archivo `vercel.json` configura dos servicios: `frontend` recibe el tráfico general y
+`backend` recibe las rutas `/api/*`. El frontend llega al backend mediante el binding interno
+`BACKEND_URL`; Vercel proporciona esa URL, no hay que crearla manualmente como variable.
+
+Para probar el enrutamiento localmente, ejecuta `vercel dev` desde la raíz del repositorio. Conecta
+Neon al proyecto Vercel para que inyecte `DATABASE_URL` y `DATABASE_URL_UNPOOLED`; el runtime usa
+la URL agrupada y adapta el esquema `postgresql://` al driver Psycopg 3 instalado. Usa la URL
+directa (`DATABASE_URL_UNPOOLED`) como valor temporal de `DATABASE_URL` al aplicar las migraciones
+Alembic antes de enviar tráfico. Configura además `JWT_SECRET` (secreto de producción),
+`ENVIRONMENT=production` y `DEV_ASSUME_ADMIN=false`.
+
 ### Tests Unitarios (Capa de Aplicación y Dominio)
 Se ejecutan con repositorios en memoria (fakes/dobles) sin requerir PostgreSQL:
 ```bash
