@@ -139,12 +139,12 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
   }
 
   return (
-    <tr className="transition-colors hover:bg-slate-50/70">
+    <tr className="transition-colors hover:bg-slate-50/70 dark:hover:bg-[#16253d]">
       <td className="whitespace-nowrap py-3.5 pl-5 sm:pl-6">
-        <span className="block font-semibold text-slate-900">
+        <span className="block font-semibold text-slate-900 dark:text-white">
           {servicio.hora_inicio ?? "—"}
         </span>
-        <span className="block text-xs text-slate-500">
+        <span className="block text-xs text-slate-500 dark:text-slate-400">
           {fechaLegible(servicio.fecha)}
         </span>
       </td>
@@ -153,10 +153,10 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
         scope="row"
         className="max-w-56 px-4 py-3.5 text-left font-normal whitespace-nowrap"
       >
-        <span className="block truncate font-semibold text-slate-900">
+        <span className="block truncate font-semibold text-slate-900 dark:text-white">
           {servicio.razon_social_cliente}
         </span>
-        <span className="mt-0.5 block text-xs text-slate-500">
+        <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
           Cliente #{servicio.id_cliente}
         </span>
       </th>
@@ -165,14 +165,16 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
         <div className="flex items-center gap-2">
           {servicio.nombre_chofer ? (
             <>
-              <div className="flex size-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600">
+              <div className="flex size-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 dark:bg-[#1e2c44] dark:text-slate-200">
                 {iniciales(servicio.nombre_chofer)}
               </div>
-              <span className="font-medium text-slate-900">{servicio.nombre_chofer}</span>
+              <span className="font-medium text-slate-900 dark:text-white">
+                {servicio.nombre_chofer}
+              </span>
             </>
           ) : (
             <>
-              <div className="flex size-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-xs text-slate-400">
+              <div className="flex size-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-xs text-slate-400 dark:border-slate-600">
                 —
               </div>
               <span className="text-slate-400">Sin chofer</span>
@@ -182,21 +184,28 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
       </td>
 
       <td className="px-4 py-3.5 whitespace-nowrap">
-        <span className="inline-flex items-center gap-1.5 text-slate-700">
+        <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
           <CarFront className="size-4 text-slate-400" />
-          <span>{servicio.descripcion_tipo_vehiculo}</span>
           {servicio.patente_vehiculo ? (
-            <span className="font-mono text-xs text-slate-500">
-              ({servicio.patente_vehiculo})
-            </span>
+            <>
+              <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                {servicio.patente_vehiculo}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                ({servicio.descripcion_tipo_vehiculo})
+              </span>
+            </>
           ) : (
-            <span className="text-xs text-slate-400">· Sin vehículo</span>
+            <>
+              <span>{servicio.descripcion_tipo_vehiculo}</span>
+              <span className="text-xs text-slate-400">· Sin vehículo</span>
+            </>
           )}
         </span>
       </td>
 
       <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
-        <span className="block font-medium text-slate-800">
+        <span className="block font-medium text-slate-800 dark:text-slate-200">
           {Number(servicio.distancia_total_km).toLocaleString("es-AR")} km
         </span>
         <span className="mt-0.5 block text-xs text-slate-400">
@@ -212,7 +221,7 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
         </span>
       </td>
 
-      <td className="whitespace-nowrap px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums">
+      <td className="whitespace-nowrap px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums dark:text-white">
         {formatoMoneda.format(Number(servicio.precio_total))}
       </td>
 

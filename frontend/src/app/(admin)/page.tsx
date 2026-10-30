@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowRight,
   CalendarDays,
   CircleDollarSign,
@@ -226,7 +226,18 @@ export default async function DashboardPage() {
                     <td className="px-5 py-4 text-[#5c6d83] sm:px-6 dark:text-[#cbd5e1]">
                       <span className="inline-flex items-center gap-1.5">
                         <Truck size={13} className="text-[#9aa7b7] dark:text-[#64748b]" />
-                        {servicio.descripcion_tipo_vehiculo}
+                        {servicio.patente_vehiculo ? (
+                          <>
+                            <span className="font-mono font-semibold text-[#172b4d] dark:text-white">
+                              {servicio.patente_vehiculo}
+                            </span>
+                            <span className="text-[11px] text-[#8a98aa] dark:text-[#94a3b8]">
+                              ({servicio.descripcion_tipo_vehiculo})
+                            </span>
+                          </>
+                        ) : (
+                          <span>{servicio.descripcion_tipo_vehiculo} · Sin patente</span>
+                        )}
                       </span>
                     </td>
                     <td className="px-5 py-4 sm:px-6">

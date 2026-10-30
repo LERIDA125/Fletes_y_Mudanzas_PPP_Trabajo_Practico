@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ChevronLeft, ChevronRight, MapPin, Plus, Truck, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -270,7 +270,13 @@ export function AgendaCliente({
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Truck size={11} className="text-[#9aa7b7] dark:text-[#64748b]" />
-                        {servicio.descripcion_tipo_vehiculo}
+                        {servicio.patente_vehiculo ? (
+                          <span className="font-mono font-semibold text-[#172b4d] dark:text-white">
+                            {servicio.patente_vehiculo}
+                          </span>
+                        ) : (
+                          servicio.descripcion_tipo_vehiculo
+                        )}
                       </span>
                     </div>
                   </div>

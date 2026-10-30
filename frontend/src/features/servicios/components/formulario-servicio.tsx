@@ -684,7 +684,7 @@ export function FormularioServicio({
                   <option value="">Sin asignar</option>
                   {disponibilidad?.vehiculos.map((vehiculo) => (
                     <option key={vehiculo.id} value={vehiculo.id}>
-                      {vehiculo.patente}
+                      {vehiculo.patente} — {vehiculo.descripcion_tipo_vehiculo}
                     </option>
                   ))}
                 </select>

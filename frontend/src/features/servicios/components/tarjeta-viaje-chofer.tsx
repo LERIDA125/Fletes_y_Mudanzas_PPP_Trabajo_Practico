@@ -118,8 +118,9 @@ export function TarjetaViajeChofer({
           <div className="mt-2.5 flex items-center gap-2 border-t border-[#e5eeea] pt-2">
             <Truck aria-hidden="true" className="shrink-0 text-[#82978f]" size={13} />
             <p className="truncate text-[10px] text-[#526b62]">
-              {servicio.descripcion_tipo_vehiculo}
-              {servicio.patente_vehiculo ? ` · ${servicio.patente_vehiculo}` : ""}
+              {servicio.patente_vehiculo
+                ? `${servicio.patente_vehiculo} · ${servicio.descripcion_tipo_vehiculo}`
+                : servicio.descripcion_tipo_vehiculo}
             </p>
           </div>
         </div>

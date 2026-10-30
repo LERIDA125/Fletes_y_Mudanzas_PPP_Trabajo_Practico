@@ -8,7 +8,7 @@ export function ListadoServicios({ servicios }: { servicios: Servicio[] }) {
       <table className="w-full text-left" aria-label="Servicios registrados">
         <caption className="sr-only">Servicios registrados</caption>
         <thead>
-          <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-[#1e2c44] dark:bg-[#0d1626] dark:text-slate-400">
             <th scope="col" className="py-3.5 pl-5 sm:pl-6">
               Horario
             </th>
@@ -35,7 +35,7 @@ export function ListadoServicios({ servicios }: { servicios: Servicio[] }) {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 text-sm">
+        <tbody className="divide-y divide-slate-100 text-sm dark:divide-[#1e2c44]">
           {servicios.map((servicio) => (
             <FilaServicio key={servicio.id_servicio} servicio={servicio} />
           ))}
