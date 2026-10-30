@@ -34,6 +34,12 @@ class PasswordHasher:
 
     def verificar(self, password: str, password_hash: str) -> bool:
         try:
+            if password_hash.startswith("$argon2"):
+                from pwdlib import PasswordHash
+                from pwdlib.hashers.argon2 import Argon2Hasher
+
+                return PasswordHash((Argon2Hasher(),)).verify(password, password_hash)
+
             esquema, n_str, r_str, p_str, salt_b64, hash_b64 = password_hash.split("$")
             if esquema != "scrypt":
                 return False

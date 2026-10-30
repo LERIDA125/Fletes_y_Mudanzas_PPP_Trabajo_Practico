@@ -46,9 +46,16 @@ export async function iniciarSesion(
     });
   } catch (error) {
     if (error instanceof ErrorApi) {
+      if (error.clase === "sin-respuesta") {
+        return { error: MENSAJE_SIN_CONEXION };
+      }
+      if (error.status === 401 || error.status === 422) {
+        return { error: MENSAJE_CREDENCIALES };
+      }
       return {
         error:
-          error.clase === "sin-respuesta" ? MENSAJE_SIN_CONEXION : MENSAJE_CREDENCIALES,
+          error.message ||
+          "El servidor tuvo un problema al procesar el inicio de sesión.",
       };
     }
     throw error;

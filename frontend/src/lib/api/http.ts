@@ -56,6 +56,9 @@ function unicos(valores: Array<string | null>): string[] {
  * sentido la URL pública (`NEXT_PUBLIC_API_URL`) porque no resuelve `backend`.
  */
 export function resolverBaseUrls(): string[] {
+  const vercelUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL.trim().replace(/^https?:\/\//, "")}`
+    : undefined;
   if (typeof window !== "undefined") {
     return unicos([
       normalizarBaseUrl(process.env.NEXT_PUBLIC_API_URL),
@@ -63,7 +66,9 @@ export function resolverBaseUrls(): string[] {
     ]);
   }
   return unicos([
+    normalizarBaseUrl(process.env.BACKEND_URL),
     normalizarBaseUrl(process.env.API_URL),
+    normalizarBaseUrl(vercelUrl),
     URL_SERVIDOR_POR_DEFECTO,
     normalizarBaseUrl(process.env.NEXT_PUBLIC_API_URL),
     URL_LOCAL_POR_DEFECTO,
