@@ -61,7 +61,7 @@ async def permiso_denegado(_request: Request, error: PermisoDenegado) -> JSONRes
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
         content={"detail": str(error)},
-        )
+    )
 
 
 @app.exception_handler(RecursoNoEncontrado)
@@ -93,6 +93,14 @@ async def regla_de_negocio(_request: Request, error: ReglaNegocioError) -> JSONR
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": str(error)},
+    )
+
+
+@app.exception_handler(Exception)
+async def error_interno_no_controlado(_request: Request, error: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": f"Error interno ({type(error).__name__}): {error}"},
     )
 
 
