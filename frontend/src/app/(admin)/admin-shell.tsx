@@ -11,10 +11,9 @@ import {
   Moon,
   PackageCheck,
   Plus,
-  ShieldCheck,
-  Smartphone,
   Sun,
   Truck,
+  UserPlus,
   UserRound,
   UsersRound,
   X,
@@ -22,6 +21,9 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore, useState, type ReactNode } from "react";
+
+import { BotonCerrarSesion } from "@/features/auth/components/boton-cerrar-sesion";
+import type { UsuarioSesion } from "@/lib/auth/tipos";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -32,9 +34,21 @@ const navItems = [
   { label: "Cotizaciones", href: "/cotizaciones", icon: FileText },
   { label: "Servicios", href: "/servicios", icon: PackageCheck },
   { label: "Rendiciones", href: "/rendiciones", icon: CircleDollarSign },
-  { label: "Usuarios y Auditoría", href: "/usuarios", icon: ShieldCheck },
-  { label: "Portal Chofer", href: "/chofer", icon: Smartphone },
+  { label: "Usuarios", href: "/usuarios", icon: UserPlus },
 ];
+
+function iniciales(username: string): string {
+  const partes = username
+    .trim()
+    .split(/[.\s_-]+/)
+    .filter(Boolean);
+
+  if (partes.length >= 2) {
+    return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+  }
+
+  return username.trim().slice(0, 2).toUpperCase() || "US";
+}
 
 function subscribeTheme(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -61,7 +75,13 @@ function getServerThemeSnapshot(): "dark" | "light" {
   return "light";
 }
 
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({
+  children,
+  usuario,
+}: {
+  children: ReactNode;
+  usuario: UsuarioSesion;
+}) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const theme = useSyncExternalStore(
@@ -255,13 +275,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span>Cotizar servicio</span>
             </Link>
 
-            <Link
-              href="/login"
-              title="Iniciar sesión o cambiar de usuario (JWT)"
-              className="grid size-9 place-items-center rounded-full bg-[#dbe9ff] text-xs font-bold text-[#2165d5] transition hover:bg-[#c8ddff] dark:bg-[#1e3a66] dark:text-[#93c5fd]"
+            <div className="hidden max-w-[150px] flex-col items-end md:flex">
+              <span className="truncate text-xs font-semibold text-[#172b4d] dark:text-white">
+                {usuario.username}
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#91a0b5] dark:text-[#64748b]">
+                {usuario.rol}
+              </span>
+            </div>
+
+            <div
+              className="grid size-9 shrink-0 place-items-center rounded-full bg-[#dbe9ff] text-xs font-bold text-[#2165d5] dark:bg-[#1e3a66] dark:text-[#93c5fd]"
+              title={usuario.username}
             >
-              FG
-            </Link>
+              {iniciales(usuario.username)}
+            </div>
+
+            <BotonCerrarSesion />
           </div>
         </header>
 

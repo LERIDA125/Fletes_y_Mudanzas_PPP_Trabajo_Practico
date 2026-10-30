@@ -20,10 +20,12 @@ import {
   cambiarEstadoServicio as actualizarEstadoServicio,
   cotizarServicio,
   eliminarServicio as borrarServicio,
+  listarServiciosAsignados,
   listarClientesParaAlta,
   listarTiposParaAlta,
 } from "@/lib/api/servicios";
 import { ErrorApi } from "@/lib/api/http";
+import { exigirRol } from "@/lib/auth/guards";
 
 export type ResultadoAccion<T> = { ok: true; dato: T } | { ok: false; mensaje: string };
 
@@ -31,6 +33,19 @@ export type CatalogosServicio = {
   clientes: ClienteOpcion[];
   tiposVehiculo: TipoVehiculoOpcion[];
 };
+
+export async function obtenerServiciosChofer(): Promise<ResultadoAccion<Servicio[]>> {
+  await exigirRol("CHOFER");
+
+  try {
+    return { ok: true, dato: await listarServiciosAsignados() };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "listar-chofer") };
+    }
+    throw error;
+  }
+}
 
 /**
  * Catálogos que necesita el alta de servicio. Se piden recién cuando el modal
@@ -160,10 +175,11 @@ function mensajeDeError(
     | "catalogos"
     | "cambiar-estado"
     | "cancelar"
-    | "eliminar",
+    | "eliminar"
+    | "listar-chofer",
 ): string {
   if (error.clase === "sin-permisos" || error.clase === "sesion-expirada") {
-    return "La API rechazó la operación. Verificá que el modo de demo local esté habilitado.";
+    return "Tu sesión venció o no tenés permisos. Volvé a iniciar sesión.";
   }
   if (error.clase === "sin-respuesta") {
     return "No pudimos conectar con el sistema. Revisá que el servidor esté funcionando.";
@@ -192,6 +208,9 @@ function mensajeDeError(
   }
   if (operacion === "eliminar") {
     return "No pudimos eliminar el servicio. Intentá de nuevo.";
+  }
+  if (operacion === "listar-chofer") {
+    return "No pudimos actualizar tus viajes. Revisá la conexión e intentá de nuevo.";
   }
   return "No pudimos registrar el servicio. Revisá los datos e intentá de nuevo.";
 }

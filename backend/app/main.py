@@ -2,7 +2,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.autenticacion import router as autenticacion_router
+from app.api.autenticacion import (
+    router as autenticacion_router,
+)
+from app.api.autenticacion import (
+    usuarios_router,
+)
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
 from app.api.servicios import router as servicios_router
@@ -56,7 +61,7 @@ async def permiso_denegado(_request: Request, error: PermisoDenegado) -> JSONRes
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
         content={"detail": str(error)},
-    )
+        )
 
 
 @app.exception_handler(RecursoNoEncontrado)
@@ -92,6 +97,7 @@ async def regla_de_negocio(_request: Request, error: ReglaNegocioError) -> JSONR
 
 
 app.include_router(autenticacion_router)
+app.include_router(usuarios_router)
 app.include_router(clientes_router)
 app.include_router(servicios_router)
 app.include_router(choferes_router)

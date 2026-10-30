@@ -1,6 +1,6 @@
 import type { Cliente, ListadoClientes } from "@/features/clientes/types";
 import type { components } from "@/types/openapi";
-import { request } from "./http";
+import { requestAutenticado as request } from "./servidor";
 
 export type CriterioDeBusqueda = {
   q?: string;

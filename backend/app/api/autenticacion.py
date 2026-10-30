@@ -20,6 +20,7 @@ from app.core.dependencias import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["autenticacion"])
+usuarios_router = APIRouter(prefix="/api/usuarios", tags=["usuarios"])
 
 
 @router.post(
@@ -90,6 +91,12 @@ def obtener_perfil_actual(
     ),
     dependencies=[Depends(require_rol(ROL_ADMIN))],
 )
+@usuarios_router.get(
+    "",
+    response_model=list[UsuarioRead],
+    summary="Listar cuentas de usuarios (Administradores y Choferes)",
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
 def listar_usuarios(
     gestor: Annotated[GestorAutenticacion, Depends(get_gestor_autenticacion)],
 ) -> list[UsuarioRead]:
@@ -118,17 +125,43 @@ def listar_usuarios(
     },
     dependencies=[Depends(require_rol(ROL_ADMIN))],
 )
+@usuarios_router.post(
+    "",
+    response_model=UsuarioRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear una cuenta de usuario",
+    description=(
+        "Crea una cuenta ADMIN o CHOFER. Solo un ADMIN autenticado puede hacerlo; "
+        "una cuenta CHOFER exige un chofer activo y sin otra cuenta asociada."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Token ausente, inválido o cuenta no habilitada."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "El rol del usuario no es ADMIN."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El username ya existe o el chofer ya tiene una cuenta."
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": (
+                "Payload inválido, rol/chofer inconsistente, chofer inexistente o inactivo."
+            )
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
 def crear_usuario(
     datos: UsuarioCreate,
     gestor: Annotated[GestorAutenticacion, Depends(get_gestor_autenticacion)],
     usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> UsuarioRead:
-    if datos.rol == "admin" and datos.id_chofer is not None:
+    rol_normalizado = datos.rol.strip().lower()
+    if rol_normalizado == "admin" and datos.id_chofer is not None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Una cuenta con rol 'admin' no puede vincularse a un chofer",
         )
-    if datos.rol == "chofer" and datos.id_chofer is None:
+    if rol_normalizado == "chofer" and datos.id_chofer is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Para crear una cuenta de rol 'chofer' debés indicar id_chofer",
@@ -136,7 +169,7 @@ def crear_usuario(
     creado = gestor.crear_usuario(
         username=datos.username,
         password=datos.password,
-        rol=datos.rol,
+        rol=rol_normalizado,
         id_chofer=datos.id_chofer,
         creado_por_id=usuario_actual.id,
     )

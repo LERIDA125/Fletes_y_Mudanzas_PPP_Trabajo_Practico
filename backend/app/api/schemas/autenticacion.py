@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.usuario import Usuario
 
@@ -32,7 +32,7 @@ class UsuarioCreate(BaseModel):
         max_length=128,
         description="Contraseña inicial asignada por el administrador.",
     )
-    rol: Literal["admin", "chofer"] = Field(
+    rol: Literal["admin", "chofer", "ADMIN", "CHOFER"] = Field(
         ...,
         description="Rol de la cuenta: 'admin' (multi-admin) o 'chofer'.",
     )
@@ -41,6 +41,13 @@ class UsuarioCreate(BaseModel):
         gt=0,
         description="ID del chofer activo vinculado (obligatorio si rol='chofer').",
     )
+
+    @field_validator("rol", mode="before")
+    @classmethod
+    def _normalizar_rol(cls, valor: object) -> object:
+        if isinstance(valor, str):
+            return valor.strip().lower()
+        return valor
 
 
 class UsuarioRead(BaseModel):

@@ -3,13 +3,13 @@ import type {
   ConsultaDisponibilidad,
   Cotizacion,
   Disponibilidad,
-  ListadoServicios,
   EstadoServicio,
+  ListadoServicios,
   Servicio,
   SolicitudCotizacion,
 } from "@/features/servicios/types";
 import type { components } from "@/types/openapi";
-import { request } from "./http";
+import { requestAutenticado as request } from "./servidor";
 
 export const TAMANO_DE_PAGINA = 20;
 export const POLLING_SERVICIOS_CHOFER_MS = 5000;
@@ -30,36 +30,21 @@ export async function listarServicios(
   return request<ListadoServicios>(`/api/servicios?${parametros.toString()}`);
 }
 
-export function suscribirServiciosChofer(
-  alRecibir: (listado: ListadoServicios) => void,
-  alFallar?: (error: unknown) => void,
-  intervaloMs = POLLING_SERVICIOS_CHOFER_MS,
-  idChofer?: number,
-): () => void {
-  let activo = true;
+export async function listarServiciosAsignados(): Promise<Servicio[]> {
+  const primeraPagina = await listarServicios(1, 100);
+  const servicios = [...primeraPagina.items];
 
-  async function refrescar() {
-    try {
-      const datos = await listarServicios(1, 50, idChofer);
-      if (activo) {
-        alRecibir(datos);
-      }
-    } catch (error) {
-      if (activo && alFallar) {
-        alFallar(error);
-      }
-    }
+  const totalPaginas = Math.ceil(primeraPagina.total / primeraPagina.size);
+  for (
+    let pagina = 2;
+    pagina <= totalPaginas && servicios.length < primeraPagina.total;
+    pagina += 1
+  ) {
+    const siguientePagina = await listarServicios(pagina, primeraPagina.size);
+    servicios.push(...siguientePagina.items);
   }
 
-  void refrescar();
-  const timer = setInterval(() => {
-    void refrescar();
-  }, intervaloMs);
-
-  return () => {
-    activo = false;
-    clearInterval(timer);
-  };
+  return servicios;
 }
 
 export async function listarClientesParaAlta(): Promise<

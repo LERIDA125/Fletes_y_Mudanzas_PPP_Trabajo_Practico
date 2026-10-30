@@ -80,6 +80,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/usuarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar cuentas de usuarios (Administradores y Choferes) */
+        get: operations["listar_usuarios_api_usuarios_get"];
+        put?: never;
+        /**
+         * Crear una cuenta de usuario
+         * @description Crea una cuenta ADMIN o CHOFER. Solo un ADMIN autenticado puede hacerlo; una cuenta CHOFER exige un chofer activo y sin otra cuenta asociada.
+         */
+        post: operations["crear_usuario_api_usuarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clientes": {
         parameters: {
             query?: never;
@@ -1066,7 +1087,7 @@ export interface components {
              * @description Rol de la cuenta: 'admin' (multi-admin) o 'chofer'.
              * @enum {string}
              */
-            rol: "admin" | "chofer";
+            rol: "admin" | "chofer" | "ADMIN" | "CHOFER";
             /**
              * Id Chofer
              * @description ID del chofer activo vinculado (obligatorio si rol='chofer').
@@ -1486,6 +1507,97 @@ export interface operations {
                 content?: never;
             };
             /** @description Datos inválidos o chofer inexistente/inactivo. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listar_usuarios_api_usuarios_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_usuario_api_usuarios_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsuarioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioRead"];
+                };
+            };
+            /** @description Token ausente, inválido o cuenta no habilitada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El rol del usuario no es ADMIN. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El username ya existe o el chofer ya tiene una cuenta. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Payload inválido, rol/chofer inconsistente, chofer inexistente o inactivo. */
             422: {
                 headers: {
                     [name: string]: unknown;

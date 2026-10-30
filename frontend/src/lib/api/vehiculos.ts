@@ -1,6 +1,6 @@
 import type { Vehiculo, ListadoVehiculos } from "@/features/vehiculos/types";
 import type { components } from "@/types/openapi";
-import { request } from "./http";
+import { requestAutenticado as request } from "./servidor";
 
 export type CriterioDeBusqueda = {
   q?: string;
