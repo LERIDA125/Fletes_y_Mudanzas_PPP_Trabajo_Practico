@@ -1,0 +1,16 @@
+{
+  "feature_directory": "specs/006-frontend-listado-choferes",
+  "story_id": "006",
+  "title": "Listado de Choferes",
+  "branch": "006-frontend-listado-choferes",
+  "created": "2026-10-21",
+  "status": "planned",
+  "artifacts": {
+    "spec": "specs/006-frontend-listado-choferes/spec.md",
+    "plan": "specs/006-frontend-listado-choferes/plan.md"
+  },
+  "notes": {
+    "branch": "La rama sale de 005-frontend-scaffolding-clientes, no de main: depende del scaffolding, el cliente HTTP y el pipeline de tipos que 005 todavía no tiene mergeado. Es un stacked branch; el PR de 005 debe mergearse primero.",
+    "pendiente": "007-frontend-listado-vehiculos queda condicionada a resolver el schema de VehiculoRead, que entrega id_tipo_vehiculo e id_chofer_habitual sin resolución."
+  }
+}

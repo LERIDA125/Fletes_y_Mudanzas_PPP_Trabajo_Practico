@@ -1,0 +1,21 @@
+{
+  "feature_directory": "specs/001-gestion-clientes",
+  "story_id": "H1",
+  "title": "Gestión de Clientes",
+  "branch": "feature/H1-gestion-clientes",
+  "created": "2026-09-27",
+  "merged": "2026-09-30",
+  "status": "implemented",
+  "artifacts": {
+    "spec": "specs/001-gestion-clientes/spec.md",
+    "plan": "specs/001-gestion-clientes/plan.md",
+    "tasks": "specs/001-gestion-clientes/tasks.md",
+    "quickstart": "specs/001-gestion-clientes/quickstart.md",
+    "checklist": "specs/001-gestion-clientes/checklists/requirements.md"
+  },
+  "notes": {
+    "plan": "plan.md es retrospectivo: reconstruido el 2026-10-21 por ingeniería inversa sobre el código mergeado en 764a112 (PR #1).",
+    "branch": "La rama feature/H1-gestion-clientes no sigue la convención actual (el nombre debe ser igual al directorio del spec). Preexiste a la regla y no se renombra: la trazabilidad queda en el merge commit 764a112.",
+    "spec_status": "La spec sigue con Status: Draft: nunca pasó el gate review-spec del workflow de Spec Kit, que es posterior a esta historia. El código está implementado y mergeado; lo que no se hizo es la aprobación formal del documento."
+  }
+}

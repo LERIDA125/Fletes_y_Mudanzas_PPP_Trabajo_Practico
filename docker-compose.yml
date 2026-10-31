@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: fletes
       POSTGRES_DB: fletes
     ports:
-      - "${POSTGRES_PUERTO:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PUERTO:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,17 +18,53 @@ services:
   backend:
     build: ./backend
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_URL: postgresql+psycopg://fletes:fletes@postgres:5432/fletes
+      ENVIRONMENT: dev
+      DEV_ASSUME_ADMIN: "true"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    healthcheck:
+      # Espera a que terminen las migraciones y uvicorn responda /health.
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    environment:
+      # El Server Component corre dentro del contenedor: alcanza al backend por
+      # el nombre del servicio. El navegador (fuera del contenedor) usa el puerto
+      # publicado de la API.
+      API_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      # node_modules vive en el volumen para no pisar los del contenedor con el
+      # bind mount de arriba.
+      - frontend_node_modules:/app/node_modules
+    command: npm run dev
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  frontend_node_modules:

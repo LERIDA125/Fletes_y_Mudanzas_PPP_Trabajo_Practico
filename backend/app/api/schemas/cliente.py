@@ -1,10 +1,4 @@
-"""Schemas de entrada y salida de clientes en la capa de Presentación.
-
-Los límites y formatos se declaran acá para que un dato inválido se rechace con un `422` nombrando
-el campo responsable (FR-011, FR-013), pero la fuente de verdad sigue siendo
-`app/domain/cliente.py`: el dominio revalida siempre lo que llega desde acá. Los schemas no
-inventan reglas, reusan las funciones puras del dominio.
-"""
+"""Schemas de entrada y salida de clientes en la capa de Presentación."""
 
 from __future__ import annotations
 
@@ -20,6 +14,7 @@ from app.domain.cliente import (
     RAZON_SOCIAL_MIN,
     TELEFONO_DIGITOS_MAX,
     TELEFONO_DIGITOS_MIN,
+    TELEFONO_MAX,
     Cliente,
     contar_digitos,
     normalizar_razon_visual,
@@ -38,10 +33,12 @@ class ClienteCreate(BaseModel):
         examples=["Distribuidora del Sur S.A."],
     )
     telefono: str = Field(
+        max_length=TELEFONO_MAX,
         description=(
             "Teléfono de contacto. Se aceptan espacios, guiones y el prefijo internacional `+`; "
             f"solo se exige que tenga entre {TELEFONO_DIGITOS_MIN} y "
-            f"{TELEFONO_DIGITOS_MAX} dígitos."
+            f"{TELEFONO_DIGITOS_MAX} dígitos y que el texto no supere los "
+            f"{TELEFONO_MAX} caracteres que admite la columna."
         ),
         examples=["351 555 0100"],
     )
@@ -78,11 +75,7 @@ class ClienteCreate(BaseModel):
 
 
 class ClienteUpdate(ClienteCreate):
-    """La edición toma los mismos cuatro datos obligatorios que el alta (DD-5).
-
-    No es un `PATCH`: se manda el cliente completo. Así el dominio siempre valida un cliente
-    entero y nunca queda un registro a medio modificar por un campo que se olvidó enviar.
-    """
+    """La edición toma los mismos cuatro datos obligatorios que el alta (DD-5)."""
 
 
 class ClienteRead(BaseModel):
@@ -96,6 +89,12 @@ class ClienteRead(BaseModel):
     direccion_habitual: str
     tiene_cuenta_corriente: bool
     activo: bool = Field(description="False cuando el cliente fue dado de baja (FR-014).")
+    creado_por_id: int | None = Field(
+        default=None, description="ID del usuario que dio de alta el registro."
+    )
+    modificado_por_id: int | None = Field(
+        default=None, description="ID del último usuario que modificó el registro."
+    )
     creado_en: datetime = Field(description="Fecha de alta, asignada por el sistema.")
     actualizado_en: datetime = Field(description="Fecha de la última modificación (FR-020).")
 

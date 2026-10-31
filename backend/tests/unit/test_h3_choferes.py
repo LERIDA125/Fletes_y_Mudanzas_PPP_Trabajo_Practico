@@ -34,7 +34,12 @@ def test_h3_dominio() -> None:
         with pytest.raises(ReglaNegocioError):
             Chofer.crear(nombre_inv, "351 555 0100")
 
-    for tel_inv in ["", "123456", "1" * 21]:
+    for tel_inv in [
+        "",
+        "123456",
+        "1" * 21,
+        "1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0",
+    ]:
         with pytest.raises(ReglaNegocioError):
             Chofer.crear("Chofer Valido", tel_inv)
 

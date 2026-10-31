@@ -15,7 +15,13 @@ from app.api.schemas.tipo_vehiculo import (
     TipoVehiculoUpdate,
 )
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
-from app.core.dependencias import ROL_ADMIN, get_gestor_tipos_vehiculo, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    UsuarioAutenticado,
+    get_gestor_tipos_vehiculo,
+    get_usuario_actual,
+    require_rol,
+)
 
 router = APIRouter(prefix="/api/tipos-vehiculo", tags=["tipos-vehiculo"])
 
@@ -48,12 +54,14 @@ RESPUESTAS_ALTA = {
 def registrar_tipo_vehiculo(
     datos: TipoVehiculoCreate,
     gestor: Annotated[GestorTiposVehiculo, Depends(get_gestor_tipos_vehiculo)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> TipoVehiculoRead:
     tipo = gestor.registrar(
         descripcion=datos.descripcion,
         capacidad_carga_kg=datos.capacidad_carga_kg,
         tarifa_hora_base=datos.tarifa_hora_base,
         tarifa_km_excedente=datos.tarifa_km_excedente,
+        usuario_id=usuario_actual.id,
     )
     return TipoVehiculoRead.de_tipo(tipo)
 
@@ -142,6 +150,7 @@ def actualizar_tipo_vehiculo(
     tipo_id: Annotated[int, Path(description="Identificador del tipo de vehículo.", ge=1)],
     datos: TipoVehiculoUpdate,
     gestor: Annotated[GestorTiposVehiculo, Depends(get_gestor_tipos_vehiculo)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> TipoVehiculoRead:
     tipo = gestor.actualizar(
         tipo_id,
@@ -149,6 +158,7 @@ def actualizar_tipo_vehiculo(
         capacidad_carga_kg=datos.capacidad_carga_kg,
         tarifa_hora_base=datos.tarifa_hora_base,
         tarifa_km_excedente=datos.tarifa_km_excedente,
+        usuario_id=usuario_actual.id,
     )
     return TipoVehiculoRead.de_tipo(tipo)
 
@@ -175,6 +185,7 @@ def actualizar_tipo_vehiculo(
 def eliminar_tipo_vehiculo(
     tipo_id: Annotated[int, Path(description="Identificador del tipo de vehículo.", ge=1)],
     gestor: Annotated[GestorTiposVehiculo, Depends(get_gestor_tipos_vehiculo)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> Response:
-    gestor.eliminar(tipo_id)
+    gestor.eliminar(tipo_id, usuario_id=usuario_actual.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

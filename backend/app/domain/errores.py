@@ -17,6 +17,22 @@ class DatoInvalido(ReglaNegocioError):
     """Los datos provistos son inválidos o no cumplen las reglas requeridas (mapea a HTTP 422)."""
 
 
+class CredencialesInvalidas(ReglaNegocioError):
+    """Las credenciales o el token de autenticación no son válidos (mapea a HTTP 401)."""
+
+    def __init__(self, detalle: str = "Usuario o contraseña incorrectos") -> None:
+        super().__init__(detalle)
+
+
+class PermisoDenegado(ReglaNegocioError):
+    """El usuario autenticado no tiene permisos sobre el recurso (mapea a HTTP 403)."""
+
+    def __init__(
+        self, detalle: str = "No tenés permisos para realizar esta operación"
+    ) -> None:
+        super().__init__(detalle)
+
+
 # ── Clientes (H1) ─────────────────────────────────────────────────────────────
 
 
@@ -71,6 +87,12 @@ class VehiculoNoEncontrado(RecursoNoEncontrado):
         self.vehiculo_id = vehiculo_id
 
 
+class ClienteInvalido(DatoInvalido):
+    def __init__(self, cliente_id: int) -> None:
+        super().__init__(f"No existe un cliente activo con id {cliente_id}")
+        self.cliente_id = cliente_id
+
+
 class PatenteDuplicada(ConflictoOperacion):
     def __init__(self, patente: str) -> None:
         super().__init__(f"Ya existe un vehículo con la patente {patente!r}")
@@ -97,10 +119,85 @@ class VehiculoConServicios(ConflictoOperacion):
         self.vehiculo_id = vehiculo_id
 
 
+class VehiculoInvalido(DatoInvalido):
+    def __init__(self, vehiculo_id: int) -> None:
+        super().__init__(f"No existe un vehículo activo con id {vehiculo_id}")
+        self.vehiculo_id = vehiculo_id
+
+
+class VehiculoTipoIncompatible(DatoInvalido):
+    def __init__(self, vehiculo_id: int, tipo_vehiculo_id: int) -> None:
+        super().__init__(
+            f"El vehículo {vehiculo_id} no pertenece al tipo de vehículo {tipo_vehiculo_id}"
+        )
+        self.vehiculo_id = vehiculo_id
+        self.tipo_vehiculo_id = tipo_vehiculo_id
+
+
+class TransicionEstadoServicioInvalida(DatoInvalido):
+    def __init__(self, estado_actual: str, estado_solicitado: str) -> None:
+        super().__init__(f"No se puede pasar el servicio de {estado_actual} a {estado_solicitado}")
+        self.estado_actual = estado_actual
+        self.estado_solicitado = estado_solicitado
+
+
+class ServicioNoEncontrado(RecursoNoEncontrado):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(f"No existe un servicio con id {servicio_id}")
+        self.servicio_id = servicio_id
+
+
+class ServicioConDependencias(ConflictoOperacion):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(
+            f"El servicio {servicio_id} tiene registros dependientes y no se puede eliminar"
+        )
+        self.servicio_id = servicio_id
+
+
+class ServicioNoCancelable(ConflictoOperacion):
+    def __init__(self, estado_actual: str) -> None:
+        super().__init__(f"Un servicio en estado {estado_actual!r} no se puede cancelar")
+        self.estado_actual = estado_actual
+
+
+class MotivoCancelacionObligatorio(DatoInvalido):
+    def __init__(self) -> None:
+        super().__init__("El motivo de cancelación es obligatorio")
+
+
+class ReferenciasServicioInvalidas(DatoInvalido):
+    def __init__(self) -> None:
+        super().__init__(
+            "Una entidad relacionada dejó de estar disponible al registrar el servicio"
+        )
+
+
 # ── Choferes (H3) ──────────────────────────────────────────────────────────────
 
 
 class ChoferNoEncontrado(RecursoNoEncontrado):
     def __init__(self, chofer_id: int) -> None:
         super().__init__(f"No existe un chofer con id {chofer_id}")
+        self.chofer_id = chofer_id
+
+
+# ── Autenticación y Usuarios (H9) ──────────────────────────────────────────────
+
+
+class UsuarioNoEncontrado(RecursoNoEncontrado):
+    def __init__(self, usuario_id: int) -> None:
+        super().__init__(f"No existe un usuario con id {usuario_id}")
+        self.usuario_id = usuario_id
+
+
+class UsuarioDuplicado(ConflictoOperacion):
+    def __init__(self, username: str) -> None:
+        super().__init__(f"Ya existe un usuario con el nombre {username!r}")
+        self.username = username
+
+
+class ChoferConUsuarioExistente(ConflictoOperacion):
+    def __init__(self, chofer_id: int) -> None:
+        super().__init__(f"El chofer {chofer_id} ya tiene una cuenta de usuario asignada")
         self.chofer_id = chofer_id

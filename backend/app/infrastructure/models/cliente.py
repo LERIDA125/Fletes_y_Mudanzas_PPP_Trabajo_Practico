@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Identity, Index, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Identity, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -18,6 +18,12 @@ class ClienteORM(Base):
         Boolean, nullable=False, server_default="false"
     )
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    creado_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+    modificado_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

@@ -16,9 +16,13 @@ raw-data/
 # decidió y qué quedó pendiente, así que se versiona. Es regenerable con
 # `python -m scripts.migracion --solo-transformacion`.
 
-# Frontend (Next.js)
 
 # Frontend (Next.js)
 .next/
 **/node_modules/
 **/.next/
+
+# Registro de skills autogenerado por el tooling del agente (`gentle-ai skill-registry refresh`).
+# Contiene rutas absolutas de la máquina de cada desarrollador y se regenera solo: es caché local,
+# no fuente del proyecto.
+.atl/

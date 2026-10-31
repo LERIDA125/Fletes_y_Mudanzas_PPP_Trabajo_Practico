@@ -2,6 +2,7 @@ from app.application.vehiculos.puertos import (
     ConsultaChofer,
     ConsultaServiciosVehiculo,
     ConsultaTipoVehiculo,
+    VehiculoListadoItem,
     VehiculoRepository,
 )
 from app.domain.errores import (
@@ -40,6 +41,7 @@ class GestorVehiculos:
         patente: str,
         id_tipo_vehiculo: int,
         id_chofer_habitual: int | None = None,
+        usuario_id: int | None = None,
     ) -> Vehiculo:
         self._verificar_tipo_vehiculo(id_tipo_vehiculo)
         self._verificar_chofer_habitual(id_chofer_habitual)
@@ -47,6 +49,7 @@ class GestorVehiculos:
             patente=patente,
             id_tipo_vehiculo=id_tipo_vehiculo,
             id_chofer_habitual=id_chofer_habitual,
+            creado_por_id=usuario_id,
         )
         self._verificar_patente_disponible(vehiculo.patente)
         return self._repo.crear(vehiculo)
@@ -59,7 +62,7 @@ class GestorVehiculos:
 
     def listar(
         self, *, busqueda: str | None, offset: int, limit: int
-    ) -> tuple[list[Vehiculo], int]:
+    ) -> tuple[list[VehiculoListadoItem], int]:
         total = self._repo.contar(busqueda)
         return self._repo.listar(busqueda, offset, limit), total
 
@@ -70,6 +73,7 @@ class GestorVehiculos:
         patente: str,
         id_tipo_vehiculo: int,
         id_chofer_habitual: int | None = None,
+        usuario_id: int | None = None,
     ) -> Vehiculo:
         vehiculo = self.obtener(vehiculo_id)
         self._verificar_tipo_vehiculo(id_tipo_vehiculo)
@@ -87,10 +91,11 @@ class GestorVehiculos:
             patente=patente,
             id_tipo_vehiculo=id_tipo_vehiculo,
             id_chofer_habitual=id_chofer_habitual,
+            modificado_por_id=usuario_id,
         )
         return self._repo.actualizar(vehiculo)
 
-    def eliminar(self, vehiculo_id: int) -> None:
+    def eliminar(self, vehiculo_id: int, *, usuario_id: int | None = None) -> None:
         vehiculo = self._repo.obtener_por_id(vehiculo_id)
         if vehiculo is None:
             raise VehiculoNoEncontrado(vehiculo_id)
@@ -98,7 +103,9 @@ class GestorVehiculos:
             return
         if self._servicios.tiene_servicios(vehiculo.id):
             raise VehiculoConServicios(vehiculo.id)
-        vehiculo.desactivar()
+        vehiculo.desactivar(modificado_por_id=usuario_id)
+        if usuario_id is not None:
+            self._repo.actualizar(vehiculo)
         self._repo.desactivar(vehiculo.id)
 
     def _verificar_tipo_vehiculo(self, tipo_id: int) -> None:

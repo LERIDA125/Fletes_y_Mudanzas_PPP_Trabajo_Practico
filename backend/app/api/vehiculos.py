@@ -10,7 +10,13 @@ from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.schemas.vehiculo import VehiculoCreate, VehiculoListado, VehiculoRead, VehiculoUpdate
 from app.application.vehiculos.gestor_vehiculos import GestorVehiculos
-from app.core.dependencias import ROL_ADMIN, get_gestor_vehiculos, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    UsuarioAutenticado,
+    get_gestor_vehiculos,
+    get_usuario_actual,
+    require_rol,
+)
 
 router = APIRouter(prefix="/api/vehiculos", tags=["vehiculos"])
 
@@ -43,11 +49,13 @@ RESPUESTAS_ALTA = {
 def registrar_vehiculo(
     datos: VehiculoCreate,
     gestor: Annotated[GestorVehiculos, Depends(get_gestor_vehiculos)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> VehiculoRead:
     vehiculo = gestor.registrar(
         patente=datos.patente,
         id_tipo_vehiculo=datos.id_tipo_vehiculo,
         id_chofer_habitual=datos.id_chofer_habitual,
+        usuario_id=usuario_actual.id,
     )
     return VehiculoRead.de_vehiculo(vehiculo)
 
@@ -72,7 +80,7 @@ def listar_vehiculos(
 ) -> VehiculoListado:
     vehiculos, total = gestor.listar(busqueda=q, offset=(page - 1) * size, limit=size)
     return VehiculoListado(
-        items=[VehiculoRead.de_vehiculo(vehiculo) for vehiculo in vehiculos],
+        items=[VehiculoRead.de_listado(vehiculo) for vehiculo in vehiculos],
         total=total,
         page=page,
         size=size,
@@ -126,12 +134,14 @@ def actualizar_vehiculo(
     vehiculo_id: Annotated[int, Path(description="Identificador del vehículo.", ge=1)],
     datos: VehiculoUpdate,
     gestor: Annotated[GestorVehiculos, Depends(get_gestor_vehiculos)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> VehiculoRead:
     vehiculo = gestor.actualizar(
         vehiculo_id,
         patente=datos.patente,
         id_tipo_vehiculo=datos.id_tipo_vehiculo,
         id_chofer_habitual=datos.id_chofer_habitual,
+        usuario_id=usuario_actual.id,
     )
     return VehiculoRead.de_vehiculo(vehiculo)
 
@@ -156,6 +166,7 @@ def actualizar_vehiculo(
 def eliminar_vehiculo(
     vehiculo_id: Annotated[int, Path(description="Identificador del vehículo.", ge=1)],
     gestor: Annotated[GestorVehiculos, Depends(get_gestor_vehiculos)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> Response:
-    gestor.eliminar(vehiculo_id)
+    gestor.eliminar(vehiculo_id, usuario_id=usuario_actual.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

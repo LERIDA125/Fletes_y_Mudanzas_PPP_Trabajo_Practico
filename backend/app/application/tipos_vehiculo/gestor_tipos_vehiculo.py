@@ -33,6 +33,7 @@ class GestorTiposVehiculo:
         capacidad_carga_kg: float,
         tarifa_hora_base: float,
         tarifa_km_excedente: float,
+        usuario_id: int | None = None,
     ) -> TipoVehiculo:
         from decimal import Decimal
 
@@ -41,6 +42,7 @@ class GestorTiposVehiculo:
             capacidad_carga_kg=Decimal(str(capacidad_carga_kg)),
             tarifa_hora_base=Decimal(str(tarifa_hora_base)),
             tarifa_km_excedente=Decimal(str(tarifa_km_excedente)),
+            creado_por_id=usuario_id,
         )
         self._verificar_descripcion_disponible(tipo.descripcion_key)
         return self._repo.crear(tipo)
@@ -65,6 +67,7 @@ class GestorTiposVehiculo:
         capacidad_carga_kg: float,
         tarifa_hora_base: float,
         tarifa_km_excedente: float,
+        usuario_id: int | None = None,
     ) -> TipoVehiculo:
         from decimal import Decimal
 
@@ -84,10 +87,11 @@ class GestorTiposVehiculo:
             capacidad_carga_kg=Decimal(str(capacidad_carga_kg)),
             tarifa_hora_base=Decimal(str(tarifa_hora_base)),
             tarifa_km_excedente=Decimal(str(tarifa_km_excedente)),
+            modificado_por_id=usuario_id,
         )
         return self._repo.actualizar(tipo)
 
-    def eliminar(self, tipo_id: int) -> None:
+    def eliminar(self, tipo_id: int, *, usuario_id: int | None = None) -> None:
         tipo = self._repo.obtener_por_id(tipo_id)
         if tipo is None:
             raise TipoVehiculoNoEncontrado(tipo_id)
@@ -95,7 +99,9 @@ class GestorTiposVehiculo:
             return
         if self._vehiculos.tiene_vehiculos(tipo.id):
             raise TipoVehiculoConVehiculos(tipo.id)
-        tipo.desactivar()
+        tipo.desactivar(modificado_por_id=usuario_id)
+        if usuario_id is not None:
+            self._repo.actualizar(tipo)
         self._repo.desactivar(tipo.id)
 
     def _verificar_descripcion_disponible(

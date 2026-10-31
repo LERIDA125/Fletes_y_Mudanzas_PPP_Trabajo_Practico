@@ -30,6 +30,8 @@ class TipoVehiculo:
     activo: bool = True
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
 
     def __post_init__(self) -> None:
         self.descripcion = normalizar_descripcion(self.descripcion)
@@ -42,6 +44,8 @@ class TipoVehiculo:
         capacidad_carga_kg: Decimal,
         tarifa_hora_base: Decimal,
         tarifa_km_excedente: Decimal,
+        *,
+        creado_por_id: int | None = None,
     ) -> TipoVehiculo:
         return cls(
             id=None,
@@ -49,6 +53,8 @@ class TipoVehiculo:
             capacidad_carga_kg=capacidad_carga_kg,
             tarifa_hora_base=tarifa_hora_base,
             tarifa_km_excedente=tarifa_km_excedente,
+            creado_por_id=creado_por_id,
+            modificado_por_id=creado_por_id,
         )
 
     @property
@@ -62,6 +68,7 @@ class TipoVehiculo:
         capacidad_carga_kg: Decimal,
         tarifa_hora_base: Decimal,
         tarifa_km_excedente: Decimal,
+        modificado_por_id: int | None = None,
     ) -> TipoVehiculo:
         """Valida primero y recién después modifica, para no dejar el tipo a medias."""
         candidatos = {
@@ -75,6 +82,10 @@ class TipoVehiculo:
             activo=self.activo,
             creado_en=self.creado_en,
             actualizado_en=self.actualizado_en,
+            creado_por_id=self.creado_por_id,
+            modificado_por_id=modificado_por_id
+            if modificado_por_id is not None
+            else self.modificado_por_id,
             **candidatos,
         )
 
@@ -82,10 +93,14 @@ class TipoVehiculo:
         self.capacidad_carga_kg = candidatos["capacidad_carga_kg"]
         self.tarifa_hora_base = candidatos["tarifa_hora_base"]
         self.tarifa_km_excedente = candidatos["tarifa_km_excedente"]
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
-    def desactivar(self) -> TipoVehiculo:
+    def desactivar(self, *, modificado_por_id: int | None = None) -> TipoVehiculo:
         self.activo = False
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
     def _validar(self) -> None:

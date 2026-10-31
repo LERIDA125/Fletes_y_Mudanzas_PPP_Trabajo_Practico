@@ -17,6 +17,8 @@ def a_dominio(orm: TipoVehiculoORM) -> TipoVehiculo:
         activo=orm.activo,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
+        creado_por_id=orm.creado_por_id,
+        modificado_por_id=orm.modificado_por_id,
     )
 
 
@@ -31,6 +33,8 @@ def a_orm(tipo: TipoVehiculo) -> TipoVehiculoORM:
         activo=tipo.activo,
         creado_en=tipo.creado_en,
         actualizado_en=tipo.actualizado_en,
+        creado_por_id=tipo.creado_por_id,
+        modificado_por_id=tipo.modificado_por_id,
     )
 
 
@@ -79,6 +83,7 @@ class TipoVehiculoRepo:
         orm.capacidad_carga_kg = tipo.capacidad_carga_kg
         orm.tarifa_hora_base = tipo.tarifa_hora_base
         orm.tarifa_km_excedente = tipo.tarifa_km_excedente
+        orm.modificado_por_id = tipo.modificado_por_id
         orm.actualizado_en = func.now()
         try:
             self._db.commit()

@@ -10,7 +10,13 @@ from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.api.schemas.chofer import ChoferCreate, ChoferListado, ChoferRead, ChoferUpdate
 from app.application.choferes.gestor_choferes import GestorChoferes
-from app.core.dependencias import ROL_ADMIN, get_gestor_choferes, require_rol
+from app.core.dependencias import (
+    ROL_ADMIN,
+    UsuarioAutenticado,
+    get_gestor_choferes,
+    get_usuario_actual,
+    require_rol,
+)
 
 router = APIRouter(prefix="/api/choferes", tags=["choferes"])
 
@@ -40,10 +46,12 @@ TAMANO_DE_PAGINA_MAXIMO = 100
 def registrar_chofer(
     datos: ChoferCreate,
     gestor: Annotated[GestorChoferes, Depends(get_gestor_choferes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ChoferRead:
     chofer = gestor.registrar(
         nombre_completo=datos.nombre_completo,
         telefono=datos.telefono,
+        usuario_id=usuario_actual.id,
     )
     return ChoferRead.de_chofer(chofer)
 
@@ -121,11 +129,13 @@ def actualizar_chofer(
     chofer_id: Annotated[int, Path(description="Identificador del chofer.", ge=1)],
     datos: ChoferUpdate,
     gestor: Annotated[GestorChoferes, Depends(get_gestor_choferes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> ChoferRead:
     chofer = gestor.actualizar(
         chofer_id,
         nombre_completo=datos.nombre_completo,
         telefono=datos.telefono,
+        usuario_id=usuario_actual.id,
     )
     return ChoferRead.de_chofer(chofer)
 
@@ -149,6 +159,7 @@ def actualizar_chofer(
 def eliminar_chofer(
     chofer_id: Annotated[int, Path(description="Identificador del chofer.", ge=1)],
     gestor: Annotated[GestorChoferes, Depends(get_gestor_choferes)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
 ) -> Response:
-    gestor.eliminar(chofer_id)
+    gestor.eliminar(chofer_id, usuario_id=usuario_actual.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

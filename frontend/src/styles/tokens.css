@@ -1,0 +1,60 @@
+@theme {
+  --color-panel-fondo: #f8f9ff;
+  --color-panel-superficie: #ffffff;
+  --color-panel-suave: #eff4ff;
+  --color-panel-borde: #c6c6cd;
+  --color-panel-texto: #0b1c30;
+  --color-panel-secundario: #545f73;
+  --color-panel-primario: #131b2e;
+  --color-panel-azul: #1d4ed8;
+  --color-panel-verde: #15803d;
+  --color-panel-ambar: #b45309;
+
+  --color-papel: #f7f8fa;
+  --color-tinta: #15181d;
+  --color-tinta-media: #5c6575;
+  --color-linea: #e1e5ea;
+  --color-senal: #1e4aa8;
+  --color-alerta: #b42318;
+
+  --font-sans: var(--font-archivo), "Archivo", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-control: 4px;
+}
+
+:root {
+  --papel: #f7f8fa;
+  --tinta: #15181d;
+  --tinta-media: #5c6575;
+  --linea: #e1e5ea;
+  --senal: #1e4aa8;
+  --alerta: #b42318;
+
+  /* Contraste medido sobre WCAG 2.1:
+     tinta-media / papel = 5.53:1 · senal / papel = 7.60:1 · alerta / papel = 6.19:1
+     senal / tinta = 2.20:1, por eso la banda oscura redefine el foco. */
+  --foco: var(--senal);
+  --foco-alternativo: #7fb0ff; /* 8.10:1 sobre tinta */
+
+  --espacio-control: 0.25rem;
+}
+
+/*
+ * La banda de identidad invierte el fondo, así que redefinimos el único token que
+ * depende del fondo. El resto de la paleta se mantiene: la banda es un contexto de
+ * color, no una paleta aparte.
+ */
+.banda {
+  --foco: var(--foco-alternativo);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

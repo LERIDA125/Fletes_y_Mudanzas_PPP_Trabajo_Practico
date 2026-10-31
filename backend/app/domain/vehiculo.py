@@ -28,6 +28,8 @@ class Vehiculo:
     activo: bool = True
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
+    creado_por_id: int | None = None
+    modificado_por_id: int | None = None
 
     def __post_init__(self) -> None:
         self.patente = normalizar_patente(self.patente)
@@ -39,12 +41,16 @@ class Vehiculo:
         patente: str,
         id_tipo_vehiculo: int,
         id_chofer_habitual: int | None = None,
+        *,
+        creado_por_id: int | None = None,
     ) -> Vehiculo:
         return cls(
             id=None,
             patente=patente,
             id_tipo_vehiculo=id_tipo_vehiculo,
             id_chofer_habitual=id_chofer_habitual,
+            creado_por_id=creado_por_id,
+            modificado_por_id=creado_por_id,
         )
 
     def actualizar(
@@ -53,6 +59,7 @@ class Vehiculo:
         patente: str,
         id_tipo_vehiculo: int,
         id_chofer_habitual: int | None,
+        modificado_por_id: int | None = None,
     ) -> Vehiculo:
         """Valida primero y recién después modifica, para no dejar el vehículo a medias."""
         candidatos = {
@@ -65,16 +72,24 @@ class Vehiculo:
             activo=self.activo,
             creado_en=self.creado_en,
             actualizado_en=self.actualizado_en,
+            creado_por_id=self.creado_por_id,
+            modificado_por_id=modificado_por_id
+            if modificado_por_id is not None
+            else self.modificado_por_id,
             **candidatos,
         )
 
         self.patente = candidatos["patente"]
         self.id_tipo_vehiculo = candidatos["id_tipo_vehiculo"]
         self.id_chofer_habitual = candidatos["id_chofer_habitual"]
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
-    def desactivar(self) -> Vehiculo:
+    def desactivar(self, *, modificado_por_id: int | None = None) -> Vehiculo:
         self.activo = False
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
         return self
 
     def _validar(self) -> None:
