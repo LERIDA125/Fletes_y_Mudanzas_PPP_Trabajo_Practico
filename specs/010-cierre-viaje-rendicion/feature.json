@@ -1,0 +1,10 @@
+{
+  "id": "010",
+  "historia": "H10",
+  "slug": "cierre-viaje-rendicion",
+  "titulo": "Cierre de Viaje, Prueba de Entrega (POD) y Rendición",
+  "directorio": "specs/010-cierre-viaje-rendicion",
+  "rama": "010-cierre-viaje-rendicion",
+  "depende_de": ["009-autenticacion-roles"],
+  "estado": "draft"
+}
