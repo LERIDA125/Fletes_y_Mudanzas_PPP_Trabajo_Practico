@@ -65,7 +65,7 @@ de negocio, primero preguntate si no se está mezclando lógica entre capas.
 | Frontend | Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind CSS v4 |
 | Formularios y Validación | React Hook Form + Zod v4 + Server Actions |
 | Base de datos | PostgreSQL 16 |
-| Migraciones | Alembic (`0001` a `0005`) |
+| Migraciones | Alembic (`0001` a `0007`) |
 | Autenticación | Puerto `require_rol` (`admin` / `chofer`); JWT previsto en historia `009` |
 | Testing backend | Pytest (44 tests unitarios en `tests/unit` + suite de integración en `tests/integration`) |
 | Testing frontend | Vitest + React Testing Library (80 tests en 12 suites) |
@@ -101,10 +101,11 @@ fletes-mudanzas-express/
 ├── backend/
 │   ├── app/
 │   │   ├── api/                  # 1. Presentación — routers y schemas Pydantic de FastAPI
+│   │   │   ├── cotizaciones.py   # POST /api/cotizaciones/calcular
 │   │   │   ├── clientes.py
 │   │   │   ├── choferes.py
 │   │   │   ├── vehiculos.py      # incluye /api/vehiculos y /api/tipos-vehiculo
-│   │   │   ├── servicios.py      # incluye /cotizar, /disponibilidad, /{id}/estado, /{id}/cancelar
+│   │   │   ├── servicios.py      # incluye /disponibilidad, /{id}/estado, /{id}/cancelar
 │   │   │   └── schemas/          # contratos de entrada/salida (extra="forbid" en mutaciones)
 │   │   ├── application/          # 2. Aplicación — reglas de negocio y puertos (Protocols)
 │   │   │   ├── clientes/
@@ -112,29 +113,31 @@ fletes-mudanzas-express/
 │   │   │   ├── vehiculos/
 │   │   │   ├── cotizacion/
 │   │   │   │   ├── calculadora.py             # interfaz + selector de estrategia
+│   │   │   │   ├── cotizador_servicios.py     # vehículo → tipo → cálculo (H7)
 │   │   │   │   └── estrategias/
-│   │   │   │       └── por_hora_y_km.py       # tarifa_hora * horas + tarifa_km * max(0, km*2 - 10)
+│   │   │   │       └── por_hora_km_modificadores.py # horas + km estimados + recargos configurables
 │   │   │   └── servicios/
-│   │   │       ├── gestor_servicios.py        # cotizar, crear, listar, disponibilidad, estados, cancelar, eliminar
+│   │   │       ├── gestor_servicios.py        # alta con sugerido/acordado, listar, disponibilidad, estados, cancelar, eliminar
 │   │   │       └── puertos.py
 │   │   ├── domain/               # 3. Dominio — entidades e invariantes puras
 │   │   │   ├── cliente.py
 │   │   │   ├── chofer.py
+│   │   │   ├── configuracion_cotizacion.py
 │   │   │   ├── vehiculo.py
 │   │   │   ├── servicio.py       # incluye la máquina de estados y reglas de cancelación
 │   │   │   └── errores.py        # jerarquía de excepciones de dominio
 │   │   ├── infrastructure/       # 4. Infraestructura — modelos SQLAlchemy y repositorios
 │   │   │   ├── db/
 │   │   │   │   └── session.py
-│   │   │   ├── models/           # ClienteORM, ChoferORM, VehiculoORM, TipoVehiculoORM, ServicioORM
-│   │   │   └── repositories/     # cliente_repo, chofer_repo, vehiculo_repo, servicio_repo
+│   │   │   ├── models/           # ClienteORM, ChoferORM, VehiculoORM, TipoVehiculoORM, ServicioORM, ConfiguracionCotizacionORM
+│   │   │   └── repositories/     # cliente_repo, chofer_repo, vehiculo_repo, servicio_repo, configuracion_cotizacion_repo
 │   │   ├── core/                 # config, seguridad/roles, dependencias inyectadas
 │   │   └── main.py
 │   ├── scripts/
 │   │   ├── exportar_openapi.py   # exporta el contrato OpenAPI sin levantar servidor
 │   │   ├── seed.py               # carga inicial de clientes, choferes, tipos, flota y servicios
 │   │   └── migracion/            # importador de datos históricos (H13)
-│   ├── alembic/                  # migraciones versionadas (0001 a 0005)
+│   ├── alembic/                  # migraciones versionadas (0001 a 0007)
 │   ├── tests/
 │   │   ├── unit/                 # tests de aplicación, dominio e infraestructura con fakes
 │   │   └── integration/          # tests de API contra PostgreSQL real
@@ -187,12 +190,21 @@ fletes-mudanzas-express/
 Estos puntos dependen de confirmación final del cliente — donde se implementó comportamiento para
 el MVP, quedó documentado como `[Supuesto temporal]` en la spec respectiva:
 
-- **Fórmula de cotización (implementada en `PorHoraYKm` como supuesto aprobado para MVP)**:
-  `distancia_total_km = distancia_ida_km * 2`, franquicia fija de `10 km`,
-  `km_excedente = max(0, distancia_total_km - 10)` y
-  `precio_final = tarifa_hora_base * horas_estimadas + tarifa_km_excedente * km_excedente`
-  redondeado a 2 decimales (`ROUND_HALF_UP`).
-- **Rol de los ayudantes/peones en el servicio**: todavía fuera del cálculo automático de tarifa.
+- **Fórmula de cotización (aprobada para el MVP como `[Supuesto temporal]`, implementada en
+  `PorHoraKmModificadores`)**:
+  `base_horas = q(tarifa_hora_base * horas_estimadas)`,
+  `base_km = q(tarifa_km_excedente * km_estimados)`,
+  `subtotal_con_fijos = q(base_horas + base_km + recargo_ayudante + recargo_escalera)`;
+  los recargos porcentuales son **aditivos** sobre `subtotal_con_fijos`: zona concurrida `15 %`
+  e urgencia mismo día `20 %`; `precio_sugerido = q(subtotal_con_fijos + importe_zona +
+  importe_urgencia)`, con `q(x) = ROUND_HALF_UP` a 2 decimales por componente. No hay franquicia
+  de km ni duplicación de distancia. Los valores viven en `configuracion_cotizacion`, nunca como
+  constantes en Python.
+- **Precio acordado vs sugerido (H7)**: el backend calcula `precio_sugerido` como referencia y
+  persiste el `precio_acordado` que informa el administrador. No se valida razonabilidad ni se
+  ajusta automáticamente; ambos quedan en el snapshot histórico del servicio.
+- **Rol de los ayudantes/peones en el servicio**: el recargo fijo por ayudante ya integra el precio
+  sugerido; la asignación nominal de ayudantes sigue fuera del alcance del MVP.
 - **Disponibilidad y margen entre servicios (`[Supuesto temporal]` en H8)**: `GET /api/servicios/disponibilidad`
   compara ventanas `[hora_inicio, hora_inicio + horas_estimadas)` contra servicios no cancelados
   del mismo día (sin margen extra entre viajes; si un servicio del día no tiene `hora_inicio`,
@@ -244,7 +256,8 @@ La cobertura de tests no es pareja en todo el proyecto. Prioridad, de mayor a me
    de cotización) — tests unitarios en `backend/tests/unit/`, con los repositorios mockeados/fakes,
    sin levantar PostgreSQL. Un test por criterio de aceptación de la spec correspondiente.
 2. Integración de los endpoints (`/api/clientes`, `/api/choferes`, `/api/vehiculos`,
-   `/api/tipos-vehiculo`, `/api/servicios`) contra PostgreSQL real, en `backend/tests/integration/`.
+   `/api/tipos-vehiculo`, `/api/servicios`, `/api/cotizaciones`) contra PostgreSQL real, en
+   `backend/tests/integration/`.
 3. Componentes y flujos críticos de frontend en `frontend/tests/` (Vitest + RTL): cotización en dos
    pasos, alta con cliente existente y cliente nuevo, cambio de estado y cancelación con motivo,
    edición y baja con diálogo de confirmación en clientes, choferes y vehículos, buscadores con
@@ -317,12 +330,14 @@ abiertas (ver sección 6). Si una historia nueva las contradice, revisarlas acá
 - **DD-5 — Modificación de catálogos por `PUT` completo.** Los endpoints `PUT /api/clientes/{id}`,
   `PUT /api/choferes/{id}`, `PUT /api/vehiculos/{id}` y `PUT /api/tipos-vehiculo/{id}` reciben la
   entidad completa para que el dominio valide todas sus invariantes en bloque.
-- **DD-6 — Cotización no persistida y snapshot tarifario inmutable en `Servicio`.**
-  `POST /api/servicios/cotizar` realiza un cálculo puro sin persistir en base. Al confirmar el
-  alta (`POST /api/servicios`), el backend ignora cualquier precio del cliente (`extra="forbid"`),
-  recalcula con las tarifas vigentes de `tipos_vehiculo` y persiste un snapshot inmutable
-  (`tarifa_hora_aplicada`, `tarifa_km_aplicada`, `km_franquicia_aplicados`, `distancia_total_km`,
-  `km_excedente`, `precio_total`). Así, cambios futuros de tarifas en `/vehiculos` no alteran
+- **DD-6 — Cotización calculada, sugerido vs acordado y snapshot tarifario inmutable en
+  `Servicio`.** `POST /api/cotizaciones/calcular` realiza un cálculo puro sin persistir en base.
+  Al confirmar el alta (`POST /api/servicios`), el backend ignora cualquier precio calculado por
+  el cliente, recibe el `precio_acordado` informado por el administrador, recalcula el
+  `precio_sugerido` con las tarifas de `tipos_vehiculo` y la configuración vigente, y persiste un
+  snapshot inmutable (`tarifa_hora_aplicada`, `tarifa_km_aplicada`, `km_estimados`,
+  `precio_sugerido`, `precio_acordado`, flags y recargos aplicados). Las columnas heredadas
+  (`distancia_total_km`, `km_franquicia_aplicados`, `km_excedente`) se conservan para no alterar
   servicios históricos.
 - **DD-7 — Máquina de estados estricta + Cancelación como operación de negocio separada.**
   `PATCH /api/servicios/{id}/estado` solo permite avanzar al estado inmediato siguiente de la
@@ -340,11 +355,21 @@ abiertas (ver sección 6). Si una historia nueva las contradice, revisarlas acá
   conexión, usando `cache: "no-store"` y evitando reintentar `POST` tras timeout para no duplicar
   altas. El tema visual claro/oscuro se inicializa con un script inline en `<head>` y se sincroniza
   en React 19 mediante `useSyncExternalStore`.
+- **DD-10 — Precio acordado editable sin sobrescritura automática.** El panel de cotización
+  muestra el `precio_sugerido` calculado por el backend y un campo **Precio final acordado**
+  editable. Mientras el usuario no lo haya editado manualmente, el campo se autocompleta con el
+  sugerido; una vez editado (o vaciado), ningún recálculo posterior lo pisa. El recálculo es
+  event-driven con debounce (~350 ms) y se ejecuta mediante Server Action; los componentes no usan
+  `useEffect` para fetch ni llaman a `fetch` directamente. El `precio_acordado` enviado al alta es
+  obligatorio (`Decimal ≥ 0`, 2 decimales) y el backend no lo valida contra el sugerido.
 
 **Convenciones de modelo de datos**:
 
 - Las PK son `integer` generadas por identidad (`identity`), expuestas como `id` en la API. No se
   usan UUID.
+- `configuracion_cotizacion` es una tabla singleton (`id = 1` con `CHECK`): guarda tarifas fijas
+  del MVP (`recargo_ayudante`, `recargo_escalera`) y porcentajes de recargo. Se lee por repositorio;
+  nunca se replican esos valores como constantes Python.
 - Los importes monetarios y tarifas se almacenan en `Numeric(12, 2)` y se operan en Python
   exclusivamente con `Decimal` y redondeo `ROUND_HALF_UP`.
 - Las fechas de auditoría usan `TIMESTAMPTZ` con `server_default now()`; `actualizado_en` suma

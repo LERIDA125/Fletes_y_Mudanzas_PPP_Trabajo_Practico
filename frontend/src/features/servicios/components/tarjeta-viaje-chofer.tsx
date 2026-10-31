@@ -109,7 +109,7 @@ export function TarjetaViajeChofer({
                 Recorrido
               </p>
               <p className="mt-0.5 truncate text-[11px] font-semibold text-[#29443d]">
-                {servicio.distancia_ida_km} km de ida
+                {servicio.km_estimados} km estimados
                 <span className="px-1.5 text-[#b3c0bb]">·</span>
                 {servicio.horas_estimadas} h estimadas
               </p>
@@ -129,7 +129,7 @@ export function TarjetaViajeChofer({
             Valor del servicio
           </span>
           <span className="text-[13px] font-bold tabular-nums text-[#87550e]">
-            {formatearSaldo(Number(servicio.precio_total))}
+            {formatearSaldo(Number(servicio.precio_acordado))}
           </span>
         </div>
       </div>

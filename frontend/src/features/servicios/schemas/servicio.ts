@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  esquemaDatosCotizacion,
+  esquemaPrecioAcordado,
+} from "@/features/cotizaciones/schemas/cotizacion";
+
 const TELEFONO_DIGITOS_MIN = 7;
 const TELEFONO_DIGITOS_MAX = 20;
 
@@ -15,24 +20,14 @@ export const esquemaFormularioServicio = z
     telefono: z.string(),
     direccion_habitual: z.string(),
     tiene_cuenta_corriente: z.boolean().default(false),
-    id_tipo_vehiculo: z.string().min(1, "Elegí un tipo de vehículo."),
+    id_tipo_vehiculo: z.string().min(1, "Elegí un vehículo para cotizar."),
+    id_vehiculo: z.string(),
     fecha: z.string().min(1, "Ingresá la fecha del servicio."),
     hora_inicio: z.string(),
-    horas_estimadas: z
-      .string()
-      .min(1, "Ingresá las horas estimadas.")
-      .refine((valor) => Number.isFinite(Number(valor)) && Number(valor) >= 1, {
-        message: "Las horas deben ser 1 o más.",
-      }),
-    distancia_ida_km: z
-      .string()
-      .min(1, "Ingresá los kilómetros de ida.")
-      .refine((valor) => Number.isFinite(Number(valor)) && Number(valor) >= 0, {
-        message: "La distancia no puede ser negativa.",
-      }),
     id_chofer: z.string(),
-    id_vehiculo: z.string(),
+    precio_acordado: esquemaPrecioAcordado("Ingresá el precio final acordado."),
   })
+  .extend(esquemaDatosCotizacion.shape)
   .superRefine((valores, ctx) => {
     if (valores.modo_cliente === "existente") {
       if (!valores.id_cliente) {

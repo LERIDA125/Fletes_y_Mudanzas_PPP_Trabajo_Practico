@@ -197,9 +197,26 @@ app/
   **estrategia intercambiable** (patrón Strategy) con un selector, nunca como un `if/else` gigante.
 - **Debe**: el estado de un `Servicio` es una **máquina de estados explícita**:
   `pendiente → confirmado → en curso → finalizado → cobrado`.
-- **Debe**: las reglas de negocio **no confirmadas por el cliente** (fórmula de cotización, rol de
-  los ayudantes, margen entre servicios, política de cancelaciones, modo exacto de rendición)
-  se dejan registradas como supuesto en el spec y **no se automatizan**. Ver §6 de `AGENTS.md`.
+- **Debe**: las reglas de cotización aprobadas para el MVP se implementan como **supuesto temporal
+  explícito**, con sus parámetros en la tabla `configuracion_cotizacion` y tests que documenten el
+  valor supuesto. Un cambio de esos parámetros no requiere tocar código.
+- **Debe (H7)**: la cotización se calcula con `q(x) = x.quantize(Decimal("0.01"),
+  ROUND_HALF_UP)` y redondeo por componente:
+  `base_horas = q(tarifa_hora_base * horas_estimadas)`;
+  `base_km = q(tarifa_km_excedente * km_estimados)`;
+  `subtotal_base = q(base_horas + base_km)`;
+  `subtotal_con_fijos = q(subtotal_base + recargo_ayudante + recargo_escalera)`;
+  `importe_zona = q(subtotal_con_fijos * porcentaje_zona_concurrida / 100)` si
+  `zona_concurrida`; `importe_urgencia = q(subtotal_con_fijos *
+  porcentaje_urgencia_mismo_dia / 100)` si `urgencia_mismo_dia`;
+  `precio_sugerido = q(subtotal_con_fijos + importe_zona + importe_urgencia)`. Los recargos
+  porcentuales son **aditivos**, no compuestos. No hay franquicia de km ni duplicación de distancia.
+- **Debe (H7)**: el alta de un `Servicio` persiste el `precio_sugerido` calculado por el servidor
+  y el `precio_acordado` informado por el administrador, sin validación de razonabilidad ni
+  ajustes automáticos. Ambos integran el snapshot histórico del servicio.
+- **Debe**: las reglas de negocio **no confirmadas ni aprobadas para el MVP** (margen entre
+  servicios, política definitiva de cancelaciones, modo exacto de rendición) se dejan
+  registradas como supuesto en el spec y **no se automatizan**. Ver §6 de `AGENTS.md`.
 
 ### Dependencias y proyecto
 
@@ -371,8 +388,10 @@ el código, o se enmienda la constitución de forma explícita.
 
 ### Estado de las decisiones abiertas del cliente
 
-Las reglas de negocio **no confirmadas por el cliente** (ver `AGENTS.md` §6) no se codifican.
-Cuando el cliente confirme una de ellas, el flujo obligatorio es:
+Las reglas de negocio **no confirmadas por el cliente** (ver `AGENTS.md` §6) no se codifican,
+salvo aprobación explícita del Tech Lead para el MVP como `[Supuesto temporal]`. Esa aprobación
+exige spec, plan, valores configurables en base de datos y tests que documenten el supuesto. Cuando
+el cliente confirme o cambie una regla, el flujo obligatorio es:
 
 1. Actualizar el spec afectado (dejando registro de por qué cambió).
 2. Actualizar el `plan.md` de la historia.
@@ -383,7 +402,8 @@ Cuando el cliente confirme una de ellas, el flujo obligatorio es:
 
 | Versión | Fecha | Qué cambió | Por qué | Migración |
 |---|---|---|---|---|
+| **3.0.0** | 2026-10-30 | Se redefine el contrato de cotización (MAJOR): fórmula por hora + km estimados con recargos fijos y porcentuales aditivos, valores en `configuracion_cotizacion`, fin de la franquicia de 10 km y del ×2 de distancia; se separa `precio_sugerido` (calculado) de `precio_acordado` (informado y persistido); se retira `POST /api/servicios/cotizar` en favor de `POST /api/cotizaciones/calcular`. | El Tech Lead aprobó para el MVP una cotización con precio sugerido y precio final negociable, y recargos por ayudante, escalera, zona concurrida y urgencia, pendiente de confirmación final del cliente. La fórmula anterior no representaba esas reglas. La enmienda registra el supuesto y sus valores configurables. | Migración `0007`: crea la tabla singleton `configuracion_cotizacion` (30000/15000/15/20), renombra `distancia_ida_km` → `km_estimados` y `precio_total` → `precio_acordado`, agrega `precio_sugerido`, flags y snapshots, y hace backfill `precio_sugerido = precio_acordado` sin alterar los históricos 0004–0006. Actualizar spec/plan 011, AGENTS.md y frontend en el mismo PR. |
 | **2.0.0** | 2026-10-21 | Contrato Frontend → Stack: Next.js **15 → 16**; el gestor de paquetes pasa de "a definir" a **npm**; el caveat de "el frontend todavía no existe" deja de aplicar; la *Nota de versionado* pasa de pendiente a verificada. | La nota de versionado obligaba a verificar las versiones mayores antes de implementar. Verificado contra el registro de npm el 2026-10-21: `next` 16.4.2 es la rama estable (16.4 salió el 2026-10-06), mientras que 15 es una rama anterior. Elegir 15 para un frontend greenfield habría significado arrancar con los avisos de seguridad de React Server Components (CVE-2025-66478) y las actualizaciones out-of-band de octubre 2026 por delante, y con herramientería que ya apoya a 16. El gestor de paquetes se resolvió en FR-007 del spec 005, como la constitución mandaba. | N/A — no había frontend implementado. La regla de versionado califica como MAJOR "romper un contrato (stack…)"; el contrato roto aún no tenía código detrás, así que no corresponde plan de migración. El backend, la estructura de capas y el resto de la constitución quedan intactos. |
 | 1.0.0 | 2026-10-21 | Ratificación inicial. | Alineación SDD del repositorio (Fases 1–3). | — |
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-21
+**Version**: 3.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-30

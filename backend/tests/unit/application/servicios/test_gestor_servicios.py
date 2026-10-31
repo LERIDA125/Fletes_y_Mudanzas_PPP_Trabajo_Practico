@@ -9,6 +9,7 @@ from app.application.servicios.puertos import AsignacionDia, ServicioListadoItem
 from app.application.vehiculos.puertos import VehiculoListadoItem
 from app.domain.chofer import Chofer
 from app.domain.cliente import Cliente
+from app.domain.configuracion_cotizacion import ConfiguracionCotizacion
 from app.domain.errores import (
     ClienteInvalido,
     MotivoCancelacionObligatorio,
@@ -123,6 +124,19 @@ class FakeVehiculoRepository:
         ]
 
 
+class FakeConfiguracionRepository:
+    def __init__(self) -> None:
+        self.configuracion = ConfiguracionCotizacion(
+            recargo_ayudante=Decimal("500"),
+            recargo_escalera=Decimal("300"),
+            porcentaje_zona_concurrida=Decimal("15"),
+            porcentaje_urgencia_mismo_dia=Decimal("20"),
+        )
+
+    def obtener(self) -> ConfiguracionCotizacion | None:
+        return self.configuracion
+
+
 class FakeServicioRepository:
     def __init__(self) -> None:
         self.guardado: Servicio | None = None
@@ -189,7 +203,7 @@ def _crear_gestor(
     tipos = FakeTipoRepository()
     gestor = GestorServicios(
         repositorio=repo,
-        calculadora=CalculadoraCotizacion(tipos),
+        calculadora=CalculadoraCotizacion(tipos, FakeConfiguracionRepository()),
         consulta_clientes=clientes,
         consulta_choferes=FakeChoferRepository(),
         consulta_vehiculos=FakeVehiculoRepository(vehiculo_tipo_id),
@@ -210,16 +224,19 @@ def test_gestor_guarda_snapshot_calculado_por_la_estrategia() -> None:
         fecha=date(2026, 10, 25),
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
-        distancia_ida_km=Decimal("15"),
+        km_estimados=Decimal("15"),
+        precio_acordado=Decimal("8000"),
     )
 
     assert repo.guardado is item.servicio
-    assert item.servicio.distancia_total_km == Decimal("30")
-    assert item.servicio.km_franquicia == Decimal("10")
-    assert item.servicio.km_excedente == Decimal("20")
+    assert item.servicio.km_estimados == Decimal("15")
+    assert item.servicio.distancia_total_km == Decimal("15")
+    assert item.servicio.km_franquicia == Decimal("0")
+    assert item.servicio.km_excedente == Decimal("0")
     assert item.servicio.tarifa_hora_aplicada == Decimal("3000")
     assert item.servicio.tarifa_km_aplicada == Decimal("150")
-    assert item.servicio.precio_total == Decimal("9000.00")
+    assert item.servicio.precio_sugerido == Decimal("8250.00")
+    assert item.servicio.precio_acordado == Decimal("8000.00")
     assert item.servicio.estado == "pendiente"
     item.servicio.transicionar_a("confirmado")
     assert item.servicio.estado == "confirmado"
@@ -240,7 +257,8 @@ def test_gestor_rechaza_cliente_inactivo() -> None:
             fecha=date(2026, 10, 25),
             hora_inicio=None,
             horas_estimadas=Decimal("1"),
-            distancia_ida_km=Decimal("0"),
+            km_estimados=Decimal("0"),
+            precio_acordado=Decimal("10000"),
         )
 
     assert repo.guardado is None
@@ -258,7 +276,8 @@ def test_gestor_rechaza_vehiculo_de_otro_tipo() -> None:
             fecha=date(2026, 10, 25),
             hora_inicio=None,
             horas_estimadas=Decimal("1"),
-            distancia_ida_km=Decimal("0"),
+            km_estimados=Decimal("0"),
+            precio_acordado=Decimal("10000"),
         )
 
     assert repo.guardado is None
@@ -273,7 +292,8 @@ def _crear_servicio(gestor: GestorServicios) -> ServicioListadoItem:
         fecha=date(2026, 10, 25),
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
-        distancia_ida_km=Decimal("15"),
+        km_estimados=Decimal("15"),
+        precio_acordado=Decimal("10000"),
     )
 
 
@@ -375,7 +395,8 @@ def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:
         fecha=date(2026, 10, 25),
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
-        distancia_ida_km=Decimal("15"),
+        km_estimados=Decimal("15"),
+        precio_acordado=Decimal("10000"),
     )
 
     assert item.servicio.id_cliente == 20
@@ -395,7 +416,8 @@ def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:
         fecha=date(2026, 10, 26),
         hora_inicio=time(10, 0),
         horas_estimadas=Decimal("1"),
-        distancia_ida_km=Decimal("0"),
+        km_estimados=Decimal("0"),
+        precio_acordado=Decimal("10000"),
     )
 
     assert len(clientes.creados) == 1, "La segunda alta debe reutilizar el cliente existente"
@@ -450,3 +472,4 @@ def test_disponibilidad_bloquea_el_dia_si_falta_la_hora_de_inicio() -> None:
 
     assert [chofer.id for chofer in disponibilidad.choferes] == [1]
     assert [vehiculo.vehiculo.id for vehiculo in disponibilidad.vehiculos] == [21]
+

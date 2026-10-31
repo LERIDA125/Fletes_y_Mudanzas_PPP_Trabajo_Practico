@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Cotizador } from "@/features/cotizaciones/components/cotizador";
 import { Cargando } from "@/features/servicios/components/estados/cargando";
 import { EstadoError } from "@/features/servicios/components/estados/error";
-import { listarTiposParaAlta } from "@/lib/api/servicios";
+import { listarTiposVehiculo } from "@/lib/api/vehiculos";
 import { ErrorApi } from "@/lib/api/http";
 
 export const metadata = {
@@ -24,7 +24,7 @@ export default function PaginaCotizaciones() {
 async function Contenido() {
   let tiposVehiculo;
   try {
-    tiposVehiculo = await listarTiposParaAlta();
+    tiposVehiculo = await listarTiposVehiculo();
   } catch (error) {
     if (error instanceof ErrorApi) {
       return <EstadoError clase={error.clase} />;

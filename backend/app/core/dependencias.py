@@ -19,8 +19,12 @@ from app.application.choferes.puertos import ChoferRepository
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
+from app.application.cotizacion.cotizador_servicios import CotizadorServicios
+from app.application.cotizacion.puertos import ConsultaConfiguracionCotizacion
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.application.servicios.puertos import ServicioRepository
+from app.application.servicios.puertos import (
+    ServicioRepository,
+)
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
 from app.application.tipos_vehiculo.puertos import (
     ConsultaVehiculosPorTipo,
@@ -41,6 +45,9 @@ from app.domain.usuario import Usuario
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
+from app.infrastructure.repositories.configuracion_cotizacion_repo import (
+    ConfiguracionCotizacionRepo,
+)
 from app.infrastructure.repositories.servicio_repo import ServicioRepo
 from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
 from app.infrastructure.repositories.usuario_repo import UsuarioRepo
@@ -285,19 +292,41 @@ def get_repo_servicios(db: Annotated[Session, Depends(get_db)]) -> ServicioRepos
     return ServicioRepo(db)
 
 
+def get_repo_configuracion_cotizacion(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaConfiguracionCotizacion:
+    return ConfiguracionCotizacionRepo(db)
+
+
+def get_calculadora_cotizacion(
+    tipos: Annotated[TipoVehiculoRepository, Depends(get_repo_tipos_vehiculo)],
+    configuracion: Annotated[
+        ConsultaConfiguracionCotizacion, Depends(get_repo_configuracion_cotizacion)
+    ],
+) -> CalculadoraCotizacion:
+    return CalculadoraCotizacion(tipos, configuracion)
+
+
 def get_gestor_servicios(
     repositorio: Annotated[ServicioRepository, Depends(get_repo_servicios)],
     tipos: Annotated[TipoVehiculoRepository, Depends(get_repo_tipos_vehiculo)],
     clientes: Annotated[ClienteRepository, Depends(get_repo_clientes)],
     choferes: Annotated[ChoferRepository, Depends(get_repo_choferes)],
     vehiculos: Annotated[VehiculoRepository, Depends(get_repo_vehiculos)],
+    calculadora: Annotated[CalculadoraCotizacion, Depends(get_calculadora_cotizacion)],
 ) -> GestorServicios:
     return GestorServicios(
         repositorio=repositorio,
-        calculadora=CalculadoraCotizacion(tipos),
+        calculadora=calculadora,
         consulta_clientes=clientes,
         consulta_choferes=choferes,
         consulta_vehiculos=vehiculos,
         consulta_tipos=tipos,
         registro_clientes=clientes,
     )
+
+
+def get_cotizador_servicios(
+    calculadora: Annotated[CalculadoraCotizacion, Depends(get_calculadora_cotizacion)],
+) -> CotizadorServicios:
+    return CotizadorServicios(calculadora=calculadora)

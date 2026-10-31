@@ -1,4 +1,4 @@
-"""Endpoints de cotización y servicios; las reglas están en Aplicación."""
+"""Endpoints de servicios; las reglas están en Aplicación."""
 
 from datetime import date, time
 from decimal import Decimal
@@ -8,8 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, st
 
 from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.servicio import (
-    CotizacionRead,
-    CotizacionRequest,
     DisponibilidadRead,
     ServicioCancelar,
     ServicioCreate,
@@ -95,44 +93,14 @@ def consultar_disponibilidad(
 
 
 @router.post(
-    "/cotizar",
-    response_model=CotizacionRead,
-    summary="Cotizar un viaje",
-    description=(
-        "Calcula el precio en ARS con las tarifas activas del tipo de vehículo. La distancia "
-        "recibida es de ida; el servidor la duplica y aplica una franquicia de 10 km."
-    ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "description": "La autenticación no está habilitada para este entorno."
-        },
-        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {
-            "description": "Los datos son inválidos o el tipo no está activo."
-        },
-    },
-    dependencies=[Depends(require_rol(ROL_ADMIN))],
-)
-def cotizar_servicio(
-    datos: CotizacionRequest,
-    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
-) -> CotizacionRead:
-    cotizacion = gestor.cotizar(
-        id_tipo_vehiculo=datos.id_tipo_vehiculo,
-        horas_estimadas=datos.horas_estimadas,
-        distancia_ida_km=datos.distancia_ida_km,
-    )
-    return CotizacionRead.de_cotizacion(cotizacion)
-
-
-@router.post(
     "",
     response_model=ServicioRead,
     status_code=status.HTTP_201_CREATED,
     summary="Registrar un servicio",
     description=(
         "Registra un servicio en estado pendiente. El servidor obtiene las tarifas vigentes, "
-        "recalcula el precio y guarda el detalle tarifario; el cliente no puede enviar importes."
+        "calcula el precio sugerido como referencia y persiste el precio acordado informado "
+        "sin ajustarlo; el cliente no puede enviar importes derivados."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {
@@ -166,7 +134,12 @@ def crear_servicio(
         fecha=datos.fecha,
         hora_inicio=datos.hora_inicio,
         horas_estimadas=datos.horas_estimadas,
-        distancia_ida_km=datos.distancia_ida_km,
+        km_estimados=datos.km_estimados,
+        precio_acordado=datos.precio_acordado,
+        requiere_ayudante=datos.requiere_ayudante,
+        acceso_escalera=datos.acceso_escalera,
+        zona_concurrida=datos.zona_concurrida,
+        urgencia_mismo_dia=datos.urgencia_mismo_dia,
         nuevo_cliente=nuevo_cliente,
     )
     return ServicioRead.de_item(item)

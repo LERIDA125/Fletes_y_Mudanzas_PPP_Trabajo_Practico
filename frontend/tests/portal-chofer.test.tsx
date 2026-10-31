@@ -33,13 +33,24 @@ function servicio(parcial: Partial<Servicio> = {}): Servicio {
     hora_inicio: "08:30:00",
     hora_fin: null,
     horas_estimadas: "2.50",
-    distancia_ida_km: "15.00",
+    km_estimados: "15.00",
     distancia_total_km: "30.00",
     km_franquicia: "10.00",
     km_excedente: "20.00",
     tarifa_hora_aplicada: "25000.00",
     tarifa_km_aplicada: "850.00",
-    precio_total: "42000.00",
+    requiere_ayudante: false,
+    acceso_escalera: false,
+    zona_concurrida: false,
+    urgencia_mismo_dia: false,
+    recargo_ayudante_aplicado: "0.00",
+    recargo_escalera_aplicado: "0.00",
+    importe_recargo_zona_aplicado: "0.00",
+    importe_recargo_urgencia_aplicado: "0.00",
+    porcentaje_zona_aplicado: "15.00",
+    porcentaje_urgencia_aplicado: "20.00",
+    precio_sugerido: "42000.00",
+    precio_acordado: "42000.00",
     moneda: "ARS",
     estado: "pendiente",
     transiciones_validas: ["confirmado", "cancelado"],
@@ -100,6 +111,7 @@ describe("PortalChofer", () => {
 
   it("actualiza los servicios cada diez segundos", async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 30, 12));
     obtenerServiciosChofer.mockResolvedValue({
       ok: true,
       dato: [servicio({ razon_social_cliente: "Servicio actualizado" })],

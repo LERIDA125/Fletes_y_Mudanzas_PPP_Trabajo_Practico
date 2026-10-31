@@ -12,62 +12,11 @@ from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.cliente import ClienteCreate
 from app.api.schemas.comun import Pagina
 from app.api.schemas.vehiculo import VehiculoListadoRead
-from app.application.cotizacion.calculadora import Cotizacion
 from app.application.servicios.puertos import ServicioListadoItem
 from app.domain.servicio import MOTIVO_CANCELACION_MAX, transiciones_validas_desde
 
 
-class CotizacionRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id_tipo_vehiculo: int = Field(gt=0, description="Tipo de vehículo cuya tarifa se utilizará.")
-    horas_estimadas: Decimal = Field(
-        ge=1,
-        max_digits=10,
-        decimal_places=2,
-        allow_inf_nan=False,
-        description="Duración estimada ingresada por el operador; mínimo 1 hora.",
-    )
-    distancia_ida_km: Decimal = Field(
-        ge=0,
-        max_digits=10,
-        decimal_places=2,
-        allow_inf_nan=False,
-        description="Kilómetros de ida. El backend los duplica para obtener el recorrido total.",
-    )
-
-
-class CotizacionRead(BaseModel):
-    id_tipo_vehiculo: int
-    descripcion_tipo_vehiculo: str
-    horas_estimadas: Decimal
-    distancia_ida_km: Decimal
-    distancia_total_km: Decimal
-    km_franquicia: Decimal
-    km_excedente: Decimal
-    tarifa_hora_base: Decimal
-    tarifa_km_excedente: Decimal
-    precio_final: Decimal
-    moneda: Literal["ARS"] = "ARS"
-
-    @classmethod
-    def de_cotizacion(cls, cotizacion: Cotizacion) -> CotizacionRead:
-        resultado = cotizacion.resultado
-        return cls(
-            id_tipo_vehiculo=cotizacion.id_tipo_vehiculo,
-            descripcion_tipo_vehiculo=cotizacion.descripcion_tipo_vehiculo,
-            horas_estimadas=resultado.horas_estimadas,
-            distancia_ida_km=resultado.distancia_ida_km,
-            distancia_total_km=resultado.distancia_total_km,
-            km_franquicia=resultado.km_franquicia,
-            km_excedente=resultado.km_excedente,
-            tarifa_hora_base=resultado.tarifa_hora_base,
-            tarifa_km_excedente=resultado.tarifa_km_excedente,
-            precio_final=resultado.precio_final,
-        )
-
-
-class ServicioCreate(CotizacionRequest):
+class ServicioCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id_cliente: int | None = Field(
@@ -82,12 +31,53 @@ class ServicioCreate(CotizacionRequest):
             "existe uno activo con la misma razón social, reutiliza ese registro."
         ),
     )
+    id_tipo_vehiculo: int = Field(
+        gt=0,
+        description="Tipo de vehículo cuya tarifa se utilizará para calcular el precio sugerido.",
+    )
     id_chofer: int | None = Field(default=None, gt=0, description="Chofer asignado, si se conoce.")
     id_vehiculo: int | None = Field(
         default=None, gt=0, description="Vehículo asignado; debe pertenecer al tipo seleccionado."
     )
     fecha: date
     hora_inicio: time | None = None
+    horas_estimadas: Decimal = Field(
+        ge=1,
+        max_digits=10,
+        decimal_places=2,
+        allow_inf_nan=False,
+        description="Duración estimada ingresada por el operador; mínimo 1 hora.",
+    )
+    km_estimados: Decimal = Field(
+        ge=0,
+        max_digits=10,
+        decimal_places=2,
+        allow_inf_nan=False,
+        description="Kilómetros estimados del recorrido, sin duplicación ni franquicia.",
+    )
+    requiere_ayudante: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo por ayudante configurado por la empresa.",
+    )
+    acceso_escalera: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo por acceso con escalera configurado por la empresa.",
+    )
+    zona_concurrida: bool = Field(
+        default=False,
+        description="Aplica el porcentaje de recargo por zona concurrida.",
+    )
+    urgencia_mismo_dia: bool = Field(
+        default=False,
+        description="Aplica el porcentaje de recargo por urgencia para el mismo día.",
+    )
+    precio_acordado: Decimal = Field(
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+        allow_inf_nan=False,
+        description="Importe final acordado con el cliente; el backend lo persiste sin ajustarlo.",
+    )
 
     @model_validator(mode="after")
     def _cliente_excluyente(self) -> ServicioCreate:
@@ -140,13 +130,24 @@ class ServicioRead(BaseModel):
     hora_inicio: time | None
     hora_fin: time | None
     horas_estimadas: Decimal
-    distancia_ida_km: Decimal
+    km_estimados: Decimal
     distancia_total_km: Decimal
     km_franquicia: Decimal
     km_excedente: Decimal
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
-    precio_total: Decimal
+    requiere_ayudante: bool
+    acceso_escalera: bool
+    zona_concurrida: bool
+    urgencia_mismo_dia: bool
+    recargo_ayudante_aplicado: Decimal
+    recargo_escalera_aplicado: Decimal
+    importe_recargo_zona_aplicado: Decimal
+    importe_recargo_urgencia_aplicado: Decimal
+    porcentaje_zona_aplicado: Decimal
+    porcentaje_urgencia_aplicado: Decimal
+    precio_sugerido: Decimal
+    precio_acordado: Decimal
     moneda: Literal["ARS"] = "ARS"
     estado: str
     transiciones_validas: list[str]
@@ -174,13 +175,24 @@ class ServicioRead(BaseModel):
             hora_inicio=servicio.hora_inicio,
             hora_fin=servicio.hora_fin,
             horas_estimadas=servicio.horas_estimadas,
-            distancia_ida_km=servicio.distancia_ida_km,
+            km_estimados=servicio.km_estimados,
             distancia_total_km=servicio.distancia_total_km,
             km_franquicia=servicio.km_franquicia,
             km_excedente=servicio.km_excedente,
             tarifa_hora_aplicada=servicio.tarifa_hora_aplicada,
             tarifa_km_aplicada=servicio.tarifa_km_aplicada,
-            precio_total=servicio.precio_total,
+            requiere_ayudante=servicio.requiere_ayudante,
+            acceso_escalera=servicio.acceso_escalera,
+            zona_concurrida=servicio.zona_concurrida,
+            urgencia_mismo_dia=servicio.urgencia_mismo_dia,
+            recargo_ayudante_aplicado=servicio.recargo_ayudante_aplicado,
+            recargo_escalera_aplicado=servicio.recargo_escalera_aplicado,
+            importe_recargo_zona_aplicado=servicio.importe_recargo_zona_aplicado,
+            importe_recargo_urgencia_aplicado=servicio.importe_recargo_urgencia_aplicado,
+            porcentaje_zona_aplicado=servicio.porcentaje_zona_aplicado,
+            porcentaje_urgencia_aplicado=servicio.porcentaje_urgencia_aplicado,
+            precio_sugerido=servicio.precio_sugerido,
+            precio_acordado=servicio.precio_acordado,
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,

@@ -157,6 +157,14 @@ class ReferenciasServicioInvalidas(DatoInvalido):
         )
 
 
+# ── Cotización (H7) ───────────────────────────────────────────────────────────
+
+
+class ConfiguracionCotizacionInvalida(DatoInvalido):
+    def __init__(self, detalle: str = "La configuración de cotización es inválida") -> None:
+        super().__init__(detalle)
+
+
 # ── Choferes (H3) ──────────────────────────────────────────────────────────────
 
 

@@ -6,11 +6,9 @@ import type {
   AltaServicio,
   ClienteOpcion,
   ConsultaDisponibilidad,
-  Cotizacion,
   Disponibilidad,
   EstadoServicio,
   Servicio,
-  SolicitudCotizacion,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 import {
@@ -18,12 +16,11 @@ import {
   consultarDisponibilidad,
   crearServicio,
   cambiarEstadoServicio as actualizarEstadoServicio,
-  cotizarServicio,
   eliminarServicio as borrarServicio,
   listarServiciosAsignados,
   listarClientesParaAlta,
-  listarTiposParaAlta,
 } from "@/lib/api/servicios";
+import { listarTiposVehiculo } from "@/lib/api/vehiculos";
 import { ErrorApi } from "@/lib/api/http";
 import { exigirRol } from "@/lib/auth/guards";
 
@@ -58,25 +55,12 @@ export async function obtenerCatalogosServicio(): Promise<
   try {
     const [clientes, tiposVehiculo] = await Promise.all([
       listarClientesParaAlta(),
-      listarTiposParaAlta(),
+      listarTiposVehiculo(),
     ]);
     return { ok: true, dato: { clientes, tiposVehiculo } };
   } catch (error) {
     if (error instanceof ErrorApi) {
       return { ok: false, mensaje: mensajeDeError(error, "catalogos") };
-    }
-    throw error;
-  }
-}
-
-export async function solicitarCotizacion(
-  solicitud: SolicitudCotizacion,
-): Promise<ResultadoAccion<Cotizacion>> {
-  try {
-    return { ok: true, dato: await cotizarServicio(solicitud) };
-  } catch (error) {
-    if (error instanceof ErrorApi) {
-      return { ok: false, mensaje: mensajeDeError(error, "cotizar") };
     }
     throw error;
   }

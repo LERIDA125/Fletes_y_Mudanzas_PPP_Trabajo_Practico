@@ -197,7 +197,7 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
 
       <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
         <span className="block font-medium text-slate-800">
-          {Number(servicio.distancia_total_km).toLocaleString("es-AR")} km
+          {Number(servicio.km_estimados).toLocaleString("es-AR")} km estimados
         </span>
         <span className="mt-0.5 block text-xs text-slate-400">
           {Number(servicio.horas_estimadas).toLocaleString("es-AR")} h estimadas
@@ -213,7 +213,7 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
       </td>
 
       <td className="whitespace-nowrap px-4 py-3.5 text-right font-bold text-slate-900 tabular-nums">
-        {formatoMoneda.format(Number(servicio.precio_total))}
+        {formatoMoneda.format(Number(servicio.precio_acordado))}
       </td>
 
       <td className="whitespace-nowrap py-3.5 pr-5 text-right sm:pr-6">

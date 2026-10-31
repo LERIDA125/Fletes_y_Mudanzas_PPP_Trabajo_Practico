@@ -1,12 +1,10 @@
 import type {
   AltaServicio,
   ConsultaDisponibilidad,
-  Cotizacion,
   Disponibilidad,
   ListadoServicios,
   EstadoServicio,
   Servicio,
-  SolicitudCotizacion,
 } from "@/features/servicios/types";
 import type { components } from "@/types/openapi";
 import { requestAutenticado as request } from "./servidor";
@@ -55,19 +53,6 @@ export async function listarClientesParaAlta(): Promise<
   return respuesta.items;
 }
 
-export async function listarTiposParaAlta(): Promise<
-  components["schemas"]["TipoVehiculoRead"][]
-> {
-  const parametros = new URLSearchParams({
-    page: "1",
-    size: String(TAMANO_DE_CATALOGOS),
-  });
-  const respuesta = await request<components["schemas"]["TipoVehiculoListado"]>(
-    `/api/tipos-vehiculo?${parametros.toString()}`,
-  );
-  return respuesta.items;
-}
-
 export async function consultarDisponibilidad(
   consulta: ConsultaDisponibilidad,
 ): Promise<Disponibilidad> {
@@ -82,16 +67,6 @@ export async function consultarDisponibilidad(
   return request<Disponibilidad>(
     `/api/servicios/disponibilidad?${parametros.toString()}`,
   );
-}
-
-export async function cotizarServicio(
-  solicitud: SolicitudCotizacion,
-): Promise<Cotizacion> {
-  return request<Cotizacion>("/api/servicios/cotizar", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(solicitud),
-  });
 }
 
 export async function crearServicio(solicitud: AltaServicio): Promise<Servicio> {

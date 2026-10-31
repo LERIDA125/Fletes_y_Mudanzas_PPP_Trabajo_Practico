@@ -79,7 +79,8 @@ def test_chofer_solo_lista_servicios_asignados(
                 "fecha": "2026-10-30",
                 "hora_inicio": "09:00:00",
                 "horas_estimadas": 2,
-                "distancia_ida_km": 15,
+                "km_estimados": 15,
+                "precio_acordado": 8000,
             },
         )
         assert respuesta_servicio.status_code == 201
@@ -136,23 +137,33 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     assert respuesta_tipo.status_code == 201
     tipo_id = respuesta_tipo.json()["id"]
 
+    respuesta_vehiculo = cliente.post(
+        "/api/vehiculos",
+        headers=admin,
+        json={"patente": "AA 123 ABC", "id_tipo_vehiculo": tipo_id},
+    )
+    assert respuesta_vehiculo.status_code == 201
+
     entrada_cotizacion = {
         "id_tipo_vehiculo": tipo_id,
         "horas_estimadas": 2,
-        "distancia_ida_km": 15,
+        "km_estimados": 15,
     }
     respuesta_cotizacion = cliente.post(
-        "/api/servicios/cotizar",
+        "/api/cotizaciones/calcular",
         json=entrada_cotizacion,
         headers=admin,
     )
     assert respuesta_cotizacion.status_code == 200
-    assert Decimal(respuesta_cotizacion.json()["precio_final"]) == Decimal("9000.00")
+    assert Decimal(respuesta_cotizacion.json()["precio_sugerido"]) == Decimal("8250.00")
 
     respuesta_servicio = cliente.post(
         "/api/servicios",
         json={
-            **entrada_cotizacion,
+            "id_tipo_vehiculo": tipo_id,
+            "horas_estimadas": 2,
+            "km_estimados": 15,
+            "precio_acordado": 8000,
             "id_cliente": cliente_id,
             "fecha": "2026-10-25",
         },
@@ -162,7 +173,8 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     servicio = respuesta_servicio.json()
     assert servicio["estado"] == "pendiente"
     assert servicio["razon_social_cliente"] == datos_cliente["razon_social"]
-    assert Decimal(servicio["precio_total"]) == Decimal("9000.00")
+    assert Decimal(servicio["precio_sugerido"]) == Decimal("8250.00")
+    assert Decimal(servicio["precio_acordado"]) == Decimal("8000.00")
 
     respuesta_listado = cliente.get("/api/servicios?page=1&size=10", headers=admin)
     assert respuesta_listado.status_code == 200
@@ -172,10 +184,13 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     respuesta_manipulada = cliente.post(
         "/api/servicios",
         json={
-            **entrada_cotizacion,
+            "id_tipo_vehiculo": tipo_id,
+            "horas_estimadas": 2,
+            "km_estimados": 15,
+            "precio_acordado": 8000,
             "id_cliente": cliente_id,
             "fecha": "2026-10-25",
-            "precio_total": 1,
+            "precio_sugerido": 1,
         },
         headers=admin,
     )

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 
+from app.domain.cotizacion import CERO, CotizacionCalculada
 from app.domain.errores import (
     DatoInvalido,
     MotivoCancelacionObligatorio,
@@ -54,13 +55,24 @@ class Servicio:
     fecha: date
     hora_inicio: time | None
     horas_estimadas: Decimal
-    distancia_ida_km: Decimal
+    km_estimados: Decimal
     distancia_total_km: Decimal
     km_franquicia: Decimal
     km_excedente: Decimal
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
-    precio_total: Decimal
+    requiere_ayudante: bool
+    acceso_escalera: bool
+    zona_concurrida: bool
+    urgencia_mismo_dia: bool
+    recargo_ayudante_aplicado: Decimal
+    recargo_escalera_aplicado: Decimal
+    importe_recargo_zona_aplicado: Decimal
+    importe_recargo_urgencia_aplicado: Decimal
+    porcentaje_zona_aplicado: Decimal
+    porcentaje_urgencia_aplicado: Decimal
+    precio_sugerido: Decimal
+    precio_acordado: Decimal
     estado: str = "pendiente"
     hora_fin: time | None = None
     motivo_cancelacion: str | None = None
@@ -80,14 +92,8 @@ class Servicio:
         id_vehiculo: int | None,
         fecha: date,
         hora_inicio: time | None,
-        horas_estimadas: Decimal,
-        distancia_ida_km: Decimal,
-        distancia_total_km: Decimal,
-        km_franquicia: Decimal,
-        km_excedente: Decimal,
-        tarifa_hora_aplicada: Decimal,
-        tarifa_km_aplicada: Decimal,
-        precio_total: Decimal,
+        cotizacion: CotizacionCalculada,
+        precio_acordado: Decimal,
     ) -> Servicio:
         return cls(
             id=None,
@@ -97,14 +103,27 @@ class Servicio:
             id_vehiculo=id_vehiculo,
             fecha=fecha,
             hora_inicio=hora_inicio,
-            horas_estimadas=horas_estimadas,
-            distancia_ida_km=distancia_ida_km,
-            distancia_total_km=distancia_total_km,
-            km_franquicia=km_franquicia,
-            km_excedente=km_excedente,
-            tarifa_hora_aplicada=tarifa_hora_aplicada,
-            tarifa_km_aplicada=tarifa_km_aplicada,
-            precio_total=precio_total,
+            horas_estimadas=cotizacion.horas_estimadas,
+            km_estimados=cotizacion.km_estimados,
+            distancia_total_km=cotizacion.km_estimados,
+            km_franquicia=CERO,
+            km_excedente=CERO,
+            tarifa_hora_aplicada=cotizacion.tarifa_hora_base,
+            tarifa_km_aplicada=cotizacion.tarifa_km_excedente,
+            requiere_ayudante=cotizacion.requiere_ayudante,
+            acceso_escalera=cotizacion.acceso_escalera,
+            zona_concurrida=cotizacion.zona_concurrida,
+            urgencia_mismo_dia=cotizacion.urgencia_mismo_dia,
+            recargo_ayudante_aplicado=cotizacion.recargo_ayudante,
+            recargo_escalera_aplicado=cotizacion.recargo_escalera,
+            importe_recargo_zona_aplicado=cotizacion.importe_recargo_zona_concurrida,
+            importe_recargo_urgencia_aplicado=(
+                cotizacion.importe_recargo_urgencia_mismo_dia
+            ),
+            porcentaje_zona_aplicado=cotizacion.porcentaje_zona_concurrida,
+            porcentaje_urgencia_aplicado=cotizacion.porcentaje_urgencia_mismo_dia,
+            precio_sugerido=cotizacion.precio_sugerido,
+            precio_acordado=precio_acordado,
         )
 
     def transicionar_a(self, estado_nuevo: str) -> Servicio:
@@ -136,21 +155,58 @@ class Servicio:
     def _validar(self) -> None:
         for nombre, valor in (
             ("horas_estimadas", self.horas_estimadas),
-            ("distancia_ida_km", self.distancia_ida_km),
+            ("km_estimados", self.km_estimados),
             ("distancia_total_km", self.distancia_total_km),
             ("km_franquicia", self.km_franquicia),
             ("km_excedente", self.km_excedente),
             ("tarifa_hora_aplicada", self.tarifa_hora_aplicada),
             ("tarifa_km_aplicada", self.tarifa_km_aplicada),
-            ("precio_total", self.precio_total),
+            ("recargo_ayudante_aplicado", self.recargo_ayudante_aplicado),
+            ("recargo_escalera_aplicado", self.recargo_escalera_aplicado),
+            ("importe_recargo_zona_aplicado", self.importe_recargo_zona_aplicado),
+            ("importe_recargo_urgencia_aplicado", self.importe_recargo_urgencia_aplicado),
+            ("porcentaje_zona_aplicado", self.porcentaje_zona_aplicado),
+            ("porcentaje_urgencia_aplicado", self.porcentaje_urgencia_aplicado),
+            ("precio_sugerido", self.precio_sugerido),
+            ("precio_acordado", self.precio_acordado),
         ):
             if not isinstance(valor, Decimal) or not valor.is_finite():
                 raise DatoInvalido(f"{nombre} debe ser un valor numérico finito")
             if valor < 0:
                 raise DatoInvalido(f"{nombre} no puede ser negativo")
 
+        for nombre in (
+            "requiere_ayudante",
+            "acceso_escalera",
+            "zona_concurrida",
+            "urgencia_mismo_dia",
+        ):
+            if not isinstance(getattr(self, nombre), bool):
+                raise DatoInvalido(f"{nombre} debe ser un valor booleano")
+
         if self.horas_estimadas < Decimal("1"):
             raise DatoInvalido("Las horas estimadas deben ser como mínimo 1")
+        if not self.requiere_ayudante and self.recargo_ayudante_aplicado != CERO:
+            raise DatoInvalido("El recargo por ayudante requiere el modificador activo")
+        if not self.acceso_escalera and self.recargo_escalera_aplicado != CERO:
+            raise DatoInvalido("El recargo por escalera requiere el modificador activo")
+        if not self.zona_concurrida:
+            if (
+                self.porcentaje_zona_aplicado != CERO
+                or self.importe_recargo_zona_aplicado != CERO
+            ):
+                raise DatoInvalido("El recargo por zona requiere el modificador activo")
+        if not self.urgencia_mismo_dia:
+            if (
+                self.porcentaje_urgencia_aplicado != CERO
+                or self.importe_recargo_urgencia_aplicado != CERO
+            ):
+                raise DatoInvalido("El recargo por urgencia requiere el modificador activo")
+        if self.porcentaje_zona_aplicado > Decimal("100"):
+            raise DatoInvalido("El porcentaje de zona no puede superar 100")
+        if self.porcentaje_urgencia_aplicado > Decimal("100"):
+            raise DatoInvalido("El porcentaje de urgencia no puede superar 100")
+
         if min(self.id_cliente, self.id_tipo_vehiculo) < 1:
             raise DatoInvalido("Cliente y tipo de vehículo son obligatorios")
         if self.id_chofer is not None and self.id_chofer < 1:

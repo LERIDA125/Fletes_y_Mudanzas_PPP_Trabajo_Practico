@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.api.autenticacion import router as autenticacion_router
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
+from app.api.cotizaciones import router as cotizaciones_router
 from app.api.servicios import router as servicios_router
 from app.api.tipos_vehiculo import router as tipos_vehiculo_router
 from app.api.usuarios import router as usuarios_router
@@ -86,6 +87,7 @@ async def credenciales_invalidas(
 app.include_router(autenticacion_router)
 app.include_router(usuarios_router)
 app.include_router(clientes_router)
+app.include_router(cotizaciones_router)
 app.include_router(servicios_router)
 app.include_router(choferes_router)
 app.include_router(tipos_vehiculo_router)

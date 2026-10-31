@@ -1,0 +1,39 @@
+{
+  "feature_directory": "specs/011-cotizacion-precio-sugerido-vs-acordado",
+  "story_id": "H7",
+  "ticket_alias": "Ticket 010 de la directiva del Tech Lead",
+  "title": "Motor de Cotizaciones: Precio Sugerido vs Precio Acordado",
+  "branch": "011-cotizacion-precio-sugerido-vs-acordado",
+  "current_branch": "011-cotizacion-precio-sugerido-vs-acordado",
+  "created": "2026-10-30",
+  "status": "tasks",
+  "artifacts": {
+    "spec": "specs/011-cotizacion-precio-sugerido-vs-acordado/spec.md",
+    "plan": "specs/011-cotizacion-precio-sugerido-vs-acordado/plan.md",
+    "tasks": "specs/011-cotizacion-precio-sugerido-vs-acordado/tasks.md",
+    "checklist": "specs/011-cotizacion-precio-sugerido-vs-acordado/checklists/requirements.md"
+  },
+  "missing_artifacts": {
+    "quickstart": "Pendiente para el cierre de la implementación.",
+    "ssd": "Pendiente si el equipo decide incluir diagramas de secuencia para el flujo de cálculo y alta."
+  },
+  "depends_on": [
+    "specs/008-frontend-gestion-servicios",
+    "specs/003-gestion-vehiculos",
+    "specs/007-frontend-listado-vehiculos"
+  ],
+  "supersedes": [
+    "008-frontend-gestion-servicios: fórmula con franquicia de 10 km y duplicación de distancia",
+    "008-frontend-gestion-servicios: FR-016/FR-017 sobre cotización obligatoria y precio ignorado en el alta",
+    "AGENTS.md §6: ayudantes fuera del cálculo automático",
+    "AGENTS.md §11 DD-6: el alta ignora cualquier importe enviado por el cliente"
+  ],
+  "notes": {
+    "numbering": "La directiva llamó a este trabajo 'Ticket 010', pero Spec Kit ya tiene specs/010-cierre-viaje-rendicion (H10). Se usa 011 para preservar la correspondencia spec ↔ rama.",
+    "branch": "La rama se corrigió a 011-cotizacion-precio-sugerido-vs-acordado, nombre exacto del directorio de la spec (Constitución, Principio V).",
+    "governance": "Resuelto: constitución enmendada a v3.0.0 (MAJOR) y AGENTS.md §2/§3/§4/§6/§8/§11 actualizados antes de codear.",
+    "temporary_assumption": "El Tech Lead definió recargo_ayudante = 30000.00 y recargo_escalera = 15000.00. Quedan en configuracion_cotizacion y marcados como [Supuesto temporal] hasta confirmación final del cliente.",
+    "breaking_changes": "Se retira POST /api/servicios/cotizar; distancia_ida_km → km_estimados; precio_total → precio_acordado.",
+    "phase_1": "Completada: modelos, repositorio de configuración, shim transitorio de servicio_repo y migración 0007 validada con upgrade → downgrade → upgrade en una base scratch."
+  }
+}

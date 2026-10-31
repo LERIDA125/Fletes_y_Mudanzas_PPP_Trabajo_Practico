@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from decimal import ROUND_CEILING, Decimal
 
-from app.application.cotizacion.calculadora import CalculadoraCotizacion, Cotizacion
+from app.application.cotizacion.calculadora import CalculadoraCotizacion
 from app.application.servicios.puertos import (
     AsignacionDia,
     ConsultaChoferServicio,
@@ -92,19 +92,6 @@ class GestorServicios:
         self._tipos = consulta_tipos
         self._registro_clientes = registro_clientes
 
-    def cotizar(
-        self,
-        *,
-        id_tipo_vehiculo: int,
-        horas_estimadas: Decimal,
-        distancia_ida_km: Decimal,
-    ) -> Cotizacion:
-        return self._calculadora.cotizar(
-            id_tipo_vehiculo=id_tipo_vehiculo,
-            horas_estimadas=horas_estimadas,
-            distancia_ida_km=distancia_ida_km,
-        )
-
     def crear(
         self,
         *,
@@ -115,7 +102,12 @@ class GestorServicios:
         fecha: date,
         hora_inicio: time | None,
         horas_estimadas: Decimal,
-        distancia_ida_km: Decimal,
+        km_estimados: Decimal,
+        precio_acordado: Decimal,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
         nuevo_cliente: Cliente | None = None,
     ) -> ServicioListadoItem:
         cliente_id = self._resolver_cliente(id_cliente=id_cliente, nuevo_cliente=nuevo_cliente)
@@ -135,7 +127,11 @@ class GestorServicios:
         cotizacion = self._calculadora.cotizar(
             id_tipo_vehiculo=id_tipo_vehiculo,
             horas_estimadas=horas_estimadas,
-            distancia_ida_km=distancia_ida_km,
+            km_estimados=km_estimados,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
         )
         servicio = Servicio.crear(
             id_cliente=cliente_id,
@@ -144,14 +140,8 @@ class GestorServicios:
             id_vehiculo=id_vehiculo,
             fecha=fecha,
             hora_inicio=hora_inicio,
-            horas_estimadas=cotizacion.resultado.horas_estimadas,
-            distancia_ida_km=cotizacion.resultado.distancia_ida_km,
-            distancia_total_km=cotizacion.resultado.distancia_total_km,
-            km_franquicia=cotizacion.resultado.km_franquicia,
-            km_excedente=cotizacion.resultado.km_excedente,
-            tarifa_hora_aplicada=cotizacion.resultado.tarifa_hora_base,
-            tarifa_km_aplicada=cotizacion.resultado.tarifa_km_excedente,
-            precio_total=cotizacion.resultado.precio_final,
+            cotizacion=cotizacion.resultado,
+            precio_acordado=precio_acordado,
         )
         return self._repo.crear(servicio)
 

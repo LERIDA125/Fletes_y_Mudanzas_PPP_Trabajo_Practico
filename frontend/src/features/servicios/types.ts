@@ -1,9 +1,14 @@
 import type { components } from "@/types/openapi";
 
+import type {
+  Cotizacion,
+  SolicitudCotizacion,
+} from "@/features/cotizaciones/types";
+
+export type { Cotizacion, SolicitudCotizacion };
+
 export type Servicio = components["schemas"]["ServicioRead"];
 export type ListadoServicios = components["schemas"]["ServicioListado"];
-export type Cotizacion = components["schemas"]["CotizacionRead"];
-export type SolicitudCotizacion = components["schemas"]["CotizacionRequest"];
 export type AltaServicio = components["schemas"]["ServicioCreate"];
 export type NuevoClienteServicio = components["schemas"]["ClienteCreate"];
 export type ClienteOpcion = components["schemas"]["ClienteRead"];

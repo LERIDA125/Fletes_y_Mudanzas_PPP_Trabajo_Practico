@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 import app.infrastructure.models  # noqa: F401 - Registra todas las tablas en Base.metadata
 from app.core.dependencias import get_db
 from app.infrastructure.db.base import Base
+from app.infrastructure.models import ConfiguracionCotizacionORM
 from app.main import app
 
 
@@ -23,6 +24,17 @@ def cliente_api() -> Generator[TestClient, None, None]:
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine)
+    with Session(engine, expire_on_commit=False) as sesion:
+        sesion.add(
+            ConfiguracionCotizacionORM(
+                id=1,
+                recargo_ayudante=Decimal("500.00"),
+                recargo_escalera=Decimal("300.00"),
+                porcentaje_zona_concurrida=Decimal("15.00"),
+                porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+            )
+        )
+        sesion.commit()
 
     def obtener_sesion() -> Generator[Session, None, None]:
         with Session(engine, expire_on_commit=False) as sesion:
@@ -67,34 +79,58 @@ def _crear_cliente(cliente: TestClient) -> int:
     return respuesta.json()["id"]
 
 
-def test_cotiza_crea_y_lista_servicio_con_precio_server_side(cliente_api: TestClient) -> None:
+def _crear_vehiculo(cliente: TestClient, tipo_id: int) -> int:
+    respuesta = cliente.post(
+        "/api/vehiculos",
+        headers={"X-Rol": "admin"},
+        json={"patente": "CC 789 GHI", "id_tipo_vehiculo": tipo_id},
+    )
+    assert respuesta.status_code == 201
+    return respuesta.json()["id"]
+
+
+def test_cotiza_crea_y_lista_servicio_con_sugerido_y_acordado(
+    cliente_api: TestClient,
+) -> None:
     tipo_id = _crear_tipo(cliente_api)
     cliente_id = _crear_cliente(cliente_api)
     admin = {"X-Rol": "admin"}
     entrada = {
+        "id_cliente": cliente_id,
         "id_tipo_vehiculo": tipo_id,
+        "fecha": "2026-10-25",
+        "hora_inicio": "09:30:00",
         "horas_estimadas": 2,
-        "distancia_ida_km": 15,
+        "km_estimados": 15,
+        "precio_acordado": 9000,
+        "requiere_ayudante": True,
+        "acceso_escalera": True,
+        "zona_concurrida": True,
+        "urgencia_mismo_dia": True,
     }
 
-    cotizacion = cliente_api.post("/api/servicios/cotizar", headers=admin, json=entrada)
-    assert cotizacion.status_code == 200
-    datos_cotizacion = cotizacion.json()
-    assert Decimal(datos_cotizacion["distancia_total_km"]) == Decimal("30")
-    assert Decimal(datos_cotizacion["km_franquicia"]) == Decimal("10")
-    assert Decimal(datos_cotizacion["km_excedente"]) == Decimal("20")
-    assert Decimal(datos_cotizacion["precio_final"]) == Decimal("9000.00")
-
-    alta = cliente_api.post(
-        "/api/servicios",
+    cotizacion = cliente_api.post(
+        "/api/cotizaciones/calcular",
         headers=admin,
         json={
-            **entrada,
-            "id_cliente": cliente_id,
-            "fecha": "2026-10-25",
-            "hora_inicio": "09:30:00",
+            "id_tipo_vehiculo": tipo_id,
+            "horas_estimadas": 2,
+            "km_estimados": 15,
+            "requiere_ayudante": True,
+            "acceso_escalera": True,
+            "zona_concurrida": True,
+            "urgencia_mismo_dia": True,
         },
     )
+    assert cotizacion.status_code == 200
+    datos_cotizacion = cotizacion.json()
+    assert Decimal(datos_cotizacion["base_horas"]) == Decimal("6000.00")
+    assert Decimal(datos_cotizacion["base_km"]) == Decimal("2250.00")
+    assert Decimal(datos_cotizacion["subtotal_con_fijos"]) == Decimal("9050.00")
+    assert Decimal(datos_cotizacion["precio_sugerido"]) == Decimal("12217.50")
+    assert datos_cotizacion["id_tipo_vehiculo"] == tipo_id
+
+    alta = cliente_api.post("/api/servicios", headers=admin, json=entrada)
     assert alta.status_code == 201
     servicio = alta.json()
     assert servicio["razon_social_cliente"] == "Cliente de Prueba"
@@ -102,8 +138,13 @@ def test_cotiza_crea_y_lista_servicio_con_precio_server_side(cliente_api: TestCl
     assert servicio["estado"] == "pendiente"
     assert Decimal(servicio["tarifa_hora_aplicada"]) == Decimal("3000.00")
     assert Decimal(servicio["tarifa_km_aplicada"]) == Decimal("150.00")
-    assert Decimal(servicio["km_franquicia"]) == Decimal("10.00")
-    assert Decimal(servicio["precio_total"]) == Decimal("9000.00")
+    assert Decimal(servicio["km_estimados"]) == Decimal("15.00")
+    assert Decimal(servicio["precio_sugerido"]) == Decimal("12217.50")
+    assert Decimal(servicio["precio_acordado"]) == Decimal("9000.00")
+    assert servicio["requiere_ayudante"] is True
+    assert servicio["acceso_escalera"] is True
+    assert servicio["zona_concurrida"] is True
+    assert servicio["urgencia_mismo_dia"] is True
 
     listado = cliente_api.get("/api/servicios?page=1&size=10", headers=admin)
     assert listado.status_code == 200
@@ -113,7 +154,27 @@ def test_cotiza_crea_y_lista_servicio_con_precio_server_side(cliente_api: TestCl
     assert listado.json()["items"][0]["patente_vehiculo"] is None
 
 
-def test_no_acepta_precio_enviado_por_el_cliente(cliente_api: TestClient) -> None:
+def test_cotiza_por_tipo_sin_requerir_unidad_de_flota(cliente_api: TestClient) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+
+    cotizacion = cliente_api.post(
+        "/api/cotizaciones/calcular",
+        headers=admin,
+        json={
+            "id_tipo_vehiculo": tipo_id,
+            "horas_estimadas": 2,
+            "km_estimados": 10,
+        },
+    )
+
+    assert cotizacion.status_code == 200
+    assert cotizacion.json()["id_tipo_vehiculo"] == tipo_id
+    assert "id_vehiculo" not in cotizacion.json()
+    assert Decimal(cotizacion.json()["precio_sugerido"]) == Decimal("7500.00")
+
+
+def test_no_acepta_precio_sugerido_enviado_por_el_cliente(cliente_api: TestClient) -> None:
     tipo_id = _crear_tipo(cliente_api)
     cliente_id = _crear_cliente(cliente_api)
 
@@ -125,8 +186,9 @@ def test_no_acepta_precio_enviado_por_el_cliente(cliente_api: TestClient) -> Non
             "id_tipo_vehiculo": tipo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 0,
-            "precio_total": 1,
+            "km_estimados": 0,
+            "precio_acordado": 3000,
+            "precio_sugerido": 1,
         },
     )
 
@@ -165,7 +227,8 @@ def test_cancela_servicio_con_motivo_y_hora_del_servidor(cliente_api: TestClient
             "id_tipo_vehiculo": tipo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 0,
+            "km_estimados": 0,
+            "precio_acordado": 3000,
         },
     )
     assert alta.status_code == 201
@@ -205,7 +268,8 @@ def test_cambia_estado_siguiendo_la_maquina_y_requiere_admin(cliente_api: TestCl
             "id_tipo_vehiculo": tipo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 0,
+            "km_estimados": 0,
+            "precio_acordado": 3000,
         },
     )
     servicio_id = alta.json()["id_servicio"]
@@ -251,7 +315,8 @@ def test_elimina_servicio_con_respuesta_204_y_404_si_no_existe(cliente_api: Test
             "id_tipo_vehiculo": tipo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 0,
+            "km_estimados": 0,
+            "precio_acordado": 3000,
         },
     )
     servicio_id = alta.json()["id_servicio"]
@@ -304,7 +369,8 @@ def test_asociaciones_legibles_y_bajas_bloqueadas_por_historial(
             "id_vehiculo": vehiculo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 1,
+            "km_estimados": 1,
+            "precio_acordado": 3000,
         },
     )
     assert servicio.status_code == 201
@@ -321,7 +387,8 @@ def test_alta_con_cliente_nuevo_lo_crea_y_reutiliza(cliente_api: TestClient) -> 
     entrada = {
         "id_tipo_vehiculo": tipo_id,
         "horas_estimadas": 1,
-        "distancia_ida_km": 0,
+        "km_estimados": 0,
+        "precio_acordado": 3000,
         "fecha": "2026-10-25",
         "nuevo_cliente": {
             "razon_social": "Mudanzas Nueva",
@@ -374,7 +441,8 @@ def test_alta_rechaza_cliente_existente_y_nuevo_a_la_vez(cliente_api: TestClient
             "id_tipo_vehiculo": tipo_id,
             "fecha": "2026-10-25",
             "horas_estimadas": 1,
-            "distancia_ida_km": 0,
+            "km_estimados": 0,
+            "precio_acordado": 3000,
         },
     )
 
@@ -418,7 +486,8 @@ def test_disponibilidad_excluye_choferes_y_vehiculos_ocupados(cliente_api: TestC
             "fecha": "2026-10-25",
             "hora_inicio": "09:00:00",
             "horas_estimadas": 2,
-            "distancia_ida_km": 0,
+            "km_estimados": 0,
+            "precio_acordado": 6000,
         },
     )
     assert alta.status_code == 201

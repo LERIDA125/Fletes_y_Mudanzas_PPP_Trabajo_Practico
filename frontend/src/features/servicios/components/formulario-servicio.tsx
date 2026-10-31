@@ -2,28 +2,26 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import {
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   registrarServicio,
-  solicitarCotizacion,
 } from "@/features/servicios/actions";
 import type {
   ClienteOpcion,
-  Cotizacion,
   Disponibilidad,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
+import type { DatosCotizacion } from "@/features/cotizaciones/schemas/cotizacion";
+import { FormularioCotizacion } from "@/features/cotizaciones/components/formulario-cotizacion";
 import {
   esquemaFormularioServicio,
   type EntradaFormularioServicio,
   type ValoresFormularioServicio,
 } from "@/features/servicios/schemas/servicio";
-
-import { ResumenCotizacion } from "./resumen-cotizacion";
 
 const formatoMoneda = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -49,7 +47,12 @@ const VALORES_INICIALES: ValoresFormularioServicio = {
   fecha: "", // Se completa con la fecha local al abrir el modal (evita `new Date()` en el prerender).
   hora_inicio: "",
   horas_estimadas: "1",
-  distancia_ida_km: "0",
+  km_estimados: "0",
+  requiere_ayudante: false,
+  acceso_escalera: false,
+  zona_concurrida: false,
+  urgencia_mismo_dia: false,
+  precio_acordado: "",
   id_chofer: "",
   id_vehiculo: "",
 };
@@ -66,22 +69,11 @@ function fechaLocal(): string {
   return `${anio}-${mes}-${dia}`;
 }
 
-function cotizacionCoincide(
-  cotizacion: Cotizacion,
-  valores: Partial<ValoresFormularioServicio>,
-): boolean {
-  return (
-    cotizacion.id_tipo_vehiculo === Number(valores.id_tipo_vehiculo) &&
-    Number(cotizacion.horas_estimadas) === Number(valores.horas_estimadas) &&
-    Number(cotizacion.distancia_ida_km) === Number(valores.distancia_ida_km)
-  );
-}
-
 const TIEMPO_DE_ESPERA_MS = 350;
 
 export function FormularioServicio({
   clientes: clientesIniciales,
-  tiposVehiculo: tiposIniciales,
+  tiposVehiculo: tiposVehiculoIniciales,
   abrirInicial = false,
 }: Propiedades) {
   const router = useRouter();
@@ -90,19 +82,18 @@ export function FormularioServicio({
   const solicitudDisponibilidad = useRef(0);
   const cargaDeCatalogosEnCurso = useRef(false);
   const debeCargarAlAbrir =
-    clientesIniciales === undefined || tiposIniciales === undefined;
+    clientesIniciales === undefined || tiposVehiculoIniciales === undefined;
   const [clientes, setClientes] = useState<ClienteOpcion[]>(clientesIniciales ?? []);
   const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculoOpcion[]>(
-    tiposIniciales ?? [],
+    tiposVehiculoIniciales ?? [],
   );
   const [catalogosCargados, setCatalogosCargados] = useState(!debeCargarAlAbrir);
   const [cargandoCatalogos, setCargandoCatalogos] = useState(false);
   const [errorCatalogos, setErrorCatalogos] = useState("");
-  const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
   const [mensaje, setMensaje] = useState("");
   const [servicioCreado, setServicioCreado] = useState<string | null>(null);
-  const [estaCotizando, setEstaCotizando] = useState(false);
   const [estaRegistrando, setEstaRegistrando] = useState(false);
+  const [reinicioCotizador, setReinicioCotizador] = useState(0);
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad | null>(null);
   const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
   const [errorDisponibilidad, setErrorDisponibilidad] = useState("");
@@ -112,7 +103,7 @@ export function FormularioServicio({
     control,
     getValues,
     setValue,
-    trigger,
+    handleSubmit,
     reset,
     clearErrors,
     formState: { errors },
@@ -122,13 +113,18 @@ export function FormularioServicio({
   });
 
   const valores = useWatch({ control });
-  const cotizacionVigente =
-    cotizacion !== null && cotizacionCoincide(cotizacion, valores);
-  // Con "cliente nuevo" no hace falta que exista un cliente previo: solo se
-  // exige al menos un tipo de vehículo activo para poder cotizar.
   const clienteNuevo = valores.modo_cliente === "nuevo";
   const catalogosDisponibles =
     tiposVehiculo.length > 0 && (clienteNuevo || clientes.length > 0);
+  const datosCotizacion: DatosCotizacion = {
+    id_tipo_vehiculo: valores.id_tipo_vehiculo ?? "",
+    horas_estimadas: valores.horas_estimadas ?? "1",
+    km_estimados: valores.km_estimados ?? "0",
+    requiere_ayudante: valores.requiere_ayudante ?? false,
+    acceso_escalera: valores.acceso_escalera ?? false,
+    zona_concurrida: valores.zona_concurrida ?? false,
+    urgencia_mismo_dia: valores.urgencia_mismo_dia ?? false,
+  };
 
   // Los catálogos se piden recién al abrir el modal. Si fallan, el formulario
   // sigue visible y muestra el error; al reabrir se vuelve a intentar.
@@ -150,7 +146,7 @@ export function FormularioServicio({
       setCatalogosCargados(true);
     } catch {
       setErrorCatalogos(
-        "No pudimos cargar los catálogos. Cerrá y volvé a abrir el formulario.",
+        "No pudimos cargar clientes y tipos de vehículo. Cerrá y volvé a abrir el formulario.",
       );
     } finally {
       cargaDeCatalogosEnCurso.current = false;
@@ -232,6 +228,16 @@ export function FormularioServicio({
     valores.hora_inicio,
   ]);
 
+  const tipoSeleccionado = Number(valores.id_tipo_vehiculo);
+  const vehiculosDisponibles = useMemo(() => {
+    if (!disponibilidad || disponibilidad.id_tipo_vehiculo !== tipoSeleccionado) {
+      return [];
+    }
+    return disponibilidad.vehiculos.filter(
+      (vehiculo) => vehiculo.id_tipo_vehiculo === tipoSeleccionado,
+    );
+  }, [disponibilidad, tipoSeleccionado]);
+
   useEffect(() => {
     if (!disponibilidad) {
       return;
@@ -246,54 +252,14 @@ export function FormularioServicio({
     const vehiculoElegido = getValues("id_vehiculo");
     if (
       vehiculoElegido &&
-      !disponibilidad.vehiculos.some(
-        (vehiculo) => String(vehiculo.id) === vehiculoElegido,
-      )
+      !vehiculosDisponibles.some((vehiculo) => String(vehiculo.id) === vehiculoElegido)
     ) {
       setValue("id_vehiculo", "");
     }
-  }, [disponibilidad, getValues, setValue]);
+  }, [disponibilidad, getValues, setValue, vehiculosDisponibles]);
 
-  async function pedirCotizacion() {
+  async function confirmarYCrear(actual: ValoresFormularioServicio) {
     setMensaje("");
-    setServicioCreado(null);
-    setCotizacion(null);
-    if (!(await trigger())) {
-      return;
-    }
-
-    const actual = getValues();
-    setEstaCotizando(true);
-    try {
-      const respuesta = await solicitarCotizacion({
-        id_tipo_vehiculo: Number(actual.id_tipo_vehiculo),
-        horas_estimadas: Number(actual.horas_estimadas),
-        distancia_ida_km: Number(actual.distancia_ida_km),
-      });
-      if (respuesta.ok) {
-        setCotizacion(respuesta.dato);
-        return;
-      }
-      setMensaje(respuesta.mensaje);
-    } finally {
-      setEstaCotizando(false);
-    }
-  }
-
-  async function confirmarYCrear() {
-    setMensaje("");
-    if (
-      !(await trigger()) ||
-      !cotizacion ||
-      !cotizacionCoincide(cotizacion, getValues())
-    ) {
-      setMensaje(
-        "Revisá los datos y solicitá una cotización vigente antes de registrar.",
-      );
-      return;
-    }
-
-    const actual = getValues();
     setEstaRegistrando(true);
     try {
       const asignaciones = {
@@ -319,7 +285,12 @@ export function FormularioServicio({
         fecha: actual.fecha,
         hora_inicio: actual.hora_inicio || null,
         horas_estimadas: Number(actual.horas_estimadas),
-        distancia_ida_km: Number(actual.distancia_ida_km),
+        km_estimados: Number(actual.km_estimados),
+        requiere_ayudante: actual.requiere_ayudante,
+        acceso_escalera: actual.acceso_escalera,
+        zona_concurrida: actual.zona_concurrida,
+        urgencia_mismo_dia: actual.urgencia_mismo_dia,
+        precio_acordado: Number(actual.precio_acordado),
       });
       if (!respuesta.ok) {
         setMensaje(respuesta.mensaje);
@@ -327,13 +298,13 @@ export function FormularioServicio({
       }
 
       setServicioCreado(
-        `Servicio #${respuesta.dato.id_servicio} registrado. Precio final: ${formatoMoneda.format(
-          Number(respuesta.dato.precio_total),
+        `Servicio #${respuesta.dato.id_servicio} registrado. Precio acordado: ${formatoMoneda.format(
+          Number(respuesta.dato.precio_acordado),
         )}.`,
       );
-      setCotizacion(null);
       setDisponibilidad(null);
       reset({ ...valoresIniciales(), fecha: fechaLocal() });
+      setReinicioCotizador((actualReinicio) => actualReinicio + 1);
       router.refresh();
     } finally {
       setEstaRegistrando(false);
@@ -343,6 +314,48 @@ export function FormularioServicio({
   function cambiarModoCliente(modo: "existente" | "nuevo") {
     clearErrors(["id_cliente", "razon_social", "telefono", "direccion_habitual"]);
     setValue("modo_cliente", modo);
+  }
+
+  function cambiarDatosCotizacion(parcial: Partial<DatosCotizacion>) {
+    if (parcial.id_tipo_vehiculo !== undefined) {
+      const cambioTipo = parcial.id_tipo_vehiculo !== getValues("id_tipo_vehiculo");
+      setValue("id_tipo_vehiculo", parcial.id_tipo_vehiculo, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      if (cambioTipo && getValues("id_vehiculo")) {
+        setValue("id_vehiculo", "", { shouldDirty: true });
+      }
+    }
+    if (parcial.horas_estimadas !== undefined) {
+      setValue("horas_estimadas", parcial.horas_estimadas, { shouldDirty: true });
+    }
+    if (parcial.km_estimados !== undefined) {
+      setValue("km_estimados", parcial.km_estimados, { shouldDirty: true });
+    }
+    if (parcial.requiere_ayudante !== undefined) {
+      setValue("requiere_ayudante", parcial.requiere_ayudante, {
+        shouldDirty: true,
+      });
+    }
+    if (parcial.acceso_escalera !== undefined) {
+      setValue("acceso_escalera", parcial.acceso_escalera, { shouldDirty: true });
+    }
+    if (parcial.zona_concurrida !== undefined) {
+      setValue("zona_concurrida", parcial.zona_concurrida, { shouldDirty: true });
+    }
+    if (parcial.urgencia_mismo_dia !== undefined) {
+      setValue("urgencia_mismo_dia", parcial.urgencia_mismo_dia, {
+        shouldDirty: true,
+      });
+    }
+  }
+
+  function cambiarPrecioAcordado(valor: string, manual: boolean) {
+    setValue("precio_acordado", valor, {
+      shouldDirty: manual,
+      shouldValidate: true,
+    });
   }
 
   function abrirFormulario() {
@@ -423,7 +436,7 @@ export function FormularioServicio({
         <form
           className="grid gap-4 p-6 sm:grid-cols-2"
           noValidate
-          onSubmit={(evento) => evento.preventDefault()}
+          onSubmit={handleSubmit(confirmarYCrear)}
         >
           <div className="sm:col-span-2 rounded-lg bg-blue-50/80 border border-blue-100 p-3 text-xs text-blue-900 leading-relaxed dark:bg-[#12233d] dark:border-[#1e3a5f] dark:text-[#bfdbfe]">
             Completá los datos del viaje para obtener el importe tarifado oficial. Luego
@@ -558,28 +571,25 @@ export function FormularioServicio({
               </p>
             ) : null
           ) : (
-            <Campo
-              id="id_tipo_vehiculo"
-              etiqueta="Tipo de vehículo"
-              error={errors.id_tipo_vehiculo?.message}
-            >
-              <select
-                id="id_tipo_vehiculo"
-                aria-invalid={Boolean(errors.id_tipo_vehiculo)}
-                aria-describedby={
-                  errors.id_tipo_vehiculo ? "id_tipo_vehiculo-error" : undefined
-                }
-                {...register("id_tipo_vehiculo")}
-                className={claseControl}
-              >
-                <option value="">Elegí un tipo</option>
-                {tiposVehiculo.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>
-                    {tipo.descripcion}
-                  </option>
-                ))}
-              </select>
-            </Campo>
+            <>
+              <input type="hidden" {...register("id_tipo_vehiculo")} />
+              <div className="sm:col-span-2">
+                <FormularioCotizacion
+                  key={reinicioCotizador}
+                  tiposVehiculo={tiposVehiculo}
+                  datos={datosCotizacion}
+                  onDatosChange={cambiarDatosCotizacion}
+                  precioAcordado={valores.precio_acordado ?? ""}
+                  onPrecioAcordadoChange={cambiarPrecioAcordado}
+                  errores={{
+                    id_tipo_vehiculo: errors.id_tipo_vehiculo?.message,
+                    horas_estimadas: errors.horas_estimadas?.message,
+                    km_estimados: errors.km_estimados?.message,
+                    precio_acordado: errors.precio_acordado?.message,
+                  }}
+                />
+              </div>
+            </>
           )}
 
           <Campo id="fecha" etiqueta="Fecha" error={errors.fecha?.message}>
@@ -598,46 +608,6 @@ export function FormularioServicio({
               id="hora_inicio"
               type="time"
               {...register("hora_inicio")}
-              className={claseControl}
-            />
-          </Campo>
-
-          <Campo
-            id="horas_estimadas"
-            etiqueta="Horas estimadas"
-            error={errors.horas_estimadas?.message}
-          >
-            <input
-              id="horas_estimadas"
-              type="number"
-              min="1"
-              step="0.01"
-              inputMode="decimal"
-              aria-invalid={Boolean(errors.horas_estimadas)}
-              aria-describedby={
-                errors.horas_estimadas ? "horas_estimadas-error" : undefined
-              }
-              {...register("horas_estimadas")}
-              className={claseControl}
-            />
-          </Campo>
-
-          <Campo
-            id="distancia_ida_km"
-            etiqueta="Distancia de ida (km)"
-            error={errors.distancia_ida_km?.message}
-          >
-            <input
-              id="distancia_ida_km"
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              aria-invalid={Boolean(errors.distancia_ida_km)}
-              aria-describedby={
-                errors.distancia_ida_km ? "distancia_ida_km-error" : undefined
-              }
-              {...register("distancia_ida_km")}
               className={claseControl}
             />
           </Campo>
@@ -674,7 +644,7 @@ export function FormularioServicio({
                 </select>
               </Campo>
 
-              <Campo id="id_vehiculo" etiqueta="Vehículo">
+              <Campo id="id_vehiculo" etiqueta="Unidad asignada">
                 <select
                   id="id_vehiculo"
                   disabled={cargandoDisponibilidad || !disponibilidad}
@@ -682,7 +652,7 @@ export function FormularioServicio({
                   className={claseControl}
                 >
                   <option value="">Sin asignar</option>
-                  {disponibilidad?.vehiculos.map((vehiculo) => (
+                  {vehiculosDisponibles.map((vehiculo) => (
                     <option key={vehiculo.id} value={vehiculo.id}>
                       {vehiculo.patente}
                     </option>
@@ -695,7 +665,7 @@ export function FormularioServicio({
               {cargandoDisponibilidad
                 ? "Consultando disponibilidad…"
                 : disponibilidad
-                  ? `${disponibilidad.choferes.length} choferes y ${disponibilidad.vehiculos.length} vehículos disponibles.`
+                  ? `${disponibilidad.choferes.length} choferes y ${vehiculosDisponibles.length} unidades disponibles para el tipo seleccionado.`
                   : "Elegí fecha, tipo de vehículo y horas para ver la disponibilidad."}
             </p>
           </fieldset>
@@ -720,30 +690,13 @@ export function FormularioServicio({
 
           <div className="sm:col-span-2 pt-2">
             <button
-              type="button"
-              disabled={estaCotizando || estaRegistrando || !catalogosDisponibles}
-              onClick={pedirCotizacion}
-              className={claseBoton}
+              type="submit"
+              disabled={estaRegistrando || !catalogosDisponibles}
+              className={`${claseBotonPrincipal} w-full`}
             >
-              {estaCotizando ? "Procesando…" : "Cotizar viaje"}
+              {estaRegistrando ? "Registrando…" : "Registrar servicio"}
             </button>
           </div>
-
-          {cotizacion ? (
-            <div className="sm:col-span-2 mt-2">
-              <ResumenCotizacion cotizacion={cotizacion} vigente={cotizacionVigente} />
-              {cotizacionVigente ? (
-                <button
-                  type="button"
-                  disabled={estaRegistrando}
-                  onClick={confirmarYCrear}
-                  className={`${claseBotonPrincipal} mt-4 w-full`}
-                >
-                  {estaRegistrando ? "Registrando…" : "Confirmar y registrar servicio"}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </form>
       </dialog>
     </>
@@ -758,9 +711,6 @@ function botonModo(activo: boolean): string {
 
 const claseControl =
   "mt-1 block min-h-10 w-full rounded-lg border border-panel-borde/80 bg-white px-3 py-2 text-sm text-panel-texto shadow-xs transition-colors focus:border-panel-azul focus:ring-2 focus:ring-panel-azul/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#0d1626] dark:text-white";
-
-const claseBoton =
-  "inline-flex min-h-10 items-center justify-center rounded-lg border border-panel-borde bg-panel-suave/80 px-4 text-sm font-semibold text-panel-texto transition-all hover:bg-panel-suave hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul disabled:cursor-not-allowed disabled:opacity-50";
 
 const claseBotonPrincipal =
   "inline-flex min-h-11 items-center justify-center rounded-lg bg-panel-primario px-5 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-azul disabled:cursor-not-allowed disabled:opacity-50";

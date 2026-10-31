@@ -128,6 +128,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cotizaciones/calcular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calcular el precio sugerido de un servicio
+         * @description Calcula el desglose del precio sugerido con las tarifas del tipo de vehículo indicado y la configuración vigente de recargos. No requiere una unidad asignada, no persiste ningún dato ni valida el precio acordado que el operador informará al registrar el servicio.
+         */
+        post: operations["calcular_cotizacion_api_cotizaciones_calcular_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/servicios/disponibilidad": {
         parameters: {
             query?: never;
@@ -148,26 +168,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/servicios/cotizar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cotizar un viaje
-         * @description Calcula el precio en ARS con las tarifas activas del tipo de vehículo. La distancia recibida es de ida; el servidor la duplica y aplica una franquicia de 10 km.
-         */
-        post: operations["cotizar_servicio_api_servicios_cotizar_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/servicios": {
         parameters: {
             query?: never;
@@ -177,13 +177,13 @@ export interface paths {
         };
         /**
          * Listar servicios
-         * @description Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las asignaciones opcionales.
+         * @description Devuelve servicios paginados con cliente, tipo, estado y nombres legibles de las asignaciones opcionales. Los administradores ven todos los servicios; los choferes solo ven los que están asignados a su cuenta.
          */
         get: operations["listar_servicios_api_servicios_get"];
         put?: never;
         /**
          * Registrar un servicio
-         * @description Registra un servicio en estado pendiente. El servidor obtiene las tarifas vigentes, recalcula el precio y guarda el detalle tarifario; el cliente no puede enviar importes.
+         * @description Registra un servicio en estado pendiente. El servidor obtiene las tarifas vigentes, calcula el precio sugerido como referencia y persiste el precio acordado informado sin ajustarlo; el cliente no puede enviar importes derivados.
          */
         post: operations["crear_servicio_api_servicios_post"];
         delete?: never;
@@ -641,20 +641,44 @@ export interface components {
             descripcion_tipo_vehiculo: string;
             /** Horas Estimadas */
             horas_estimadas: string;
-            /** Distancia Ida Km */
-            distancia_ida_km: string;
-            /** Distancia Total Km */
-            distancia_total_km: string;
-            /** Km Franquicia */
-            km_franquicia: string;
-            /** Km Excedente */
-            km_excedente: string;
+            /** Km Estimados */
+            km_estimados: string;
             /** Tarifa Hora Base */
             tarifa_hora_base: string;
             /** Tarifa Km Excedente */
             tarifa_km_excedente: string;
-            /** Precio Final */
-            precio_final: string;
+            /** Base Horas */
+            base_horas: string;
+            /** Base Km */
+            base_km: string;
+            /** Subtotal Base */
+            subtotal_base: string;
+            /** Requiere Ayudante */
+            requiere_ayudante: boolean;
+            /** Recargo Ayudante */
+            recargo_ayudante: string;
+            /** Acceso Escalera */
+            acceso_escalera: boolean;
+            /** Recargo Escalera */
+            recargo_escalera: string;
+            /** Subtotal Con Fijos */
+            subtotal_con_fijos: string;
+            /** Zona Concurrida */
+            zona_concurrida: boolean;
+            /** Porcentaje Zona Concurrida */
+            porcentaje_zona_concurrida: string;
+            /** Importe Recargo Zona Concurrida */
+            importe_recargo_zona_concurrida: string;
+            /** Urgencia Mismo Dia */
+            urgencia_mismo_dia: boolean;
+            /** Porcentaje Urgencia Mismo Dia */
+            porcentaje_urgencia_mismo_dia: string;
+            /** Importe Recargo Urgencia Mismo Dia */
+            importe_recargo_urgencia_mismo_dia: string;
+            /** Total Recargos Porcentuales */
+            total_recargos_porcentuales: string;
+            /** Precio Sugerido */
+            precio_sugerido: string;
             /**
              * Moneda
              * @default ARS
@@ -666,7 +690,7 @@ export interface components {
         CotizacionRequest: {
             /**
              * Id Tipo Vehiculo
-             * @description Tipo de vehículo cuya tarifa se utilizará.
+             * @description Tipo de vehículo activo que define las tarifas.
              */
             id_tipo_vehiculo: number;
             /**
@@ -675,10 +699,34 @@ export interface components {
              */
             horas_estimadas: number | string;
             /**
-             * Distancia Ida Km
-             * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
+             * Km Estimados
+             * @description Kilómetros estimados del recorrido, sin duplicación ni franquicia.
              */
-            distancia_ida_km: number | string;
+            km_estimados: number | string;
+            /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo por ayudante configurado por la empresa.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo por acceso con escalera configurado por la empresa.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje de recargo por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje de recargo por urgencia para el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
         };
         /**
          * DisponibilidadRead
@@ -736,27 +784,17 @@ export interface components {
         /** ServicioCreate */
         ServicioCreate: {
             /**
-             * Id Tipo Vehiculo
-             * @description Tipo de vehículo cuya tarifa se utilizará.
-             */
-            id_tipo_vehiculo: number;
-            /**
-             * Horas Estimadas
-             * @description Duración estimada ingresada por el operador; mínimo 1 hora.
-             */
-            horas_estimadas: number | string;
-            /**
-             * Distancia Ida Km
-             * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
-             */
-            distancia_ida_km: number | string;
-            /**
              * Id Cliente
              * @description Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.
              */
             id_cliente?: number | null;
             /** @description Datos de un cliente nuevo. El backend lo crea y lo vincula al servicio; si ya existe uno activo con la misma razón social, reutiliza ese registro. */
             nuevo_cliente?: components["schemas"]["ClienteCreate"] | null;
+            /**
+             * Id Tipo Vehiculo
+             * @description Tipo de vehículo cuya tarifa se utilizará para calcular el precio sugerido.
+             */
+            id_tipo_vehiculo: number;
             /**
              * Id Chofer
              * @description Chofer asignado, si se conoce.
@@ -774,6 +812,45 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio?: string | null;
+            /**
+             * Horas Estimadas
+             * @description Duración estimada ingresada por el operador; mínimo 1 hora.
+             */
+            horas_estimadas: number | string;
+            /**
+             * Km Estimados
+             * @description Kilómetros estimados del recorrido, sin duplicación ni franquicia.
+             */
+            km_estimados: number | string;
+            /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo por ayudante configurado por la empresa.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo por acceso con escalera configurado por la empresa.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje de recargo por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje de recargo por urgencia para el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
+            /**
+             * Precio Acordado
+             * @description Importe final acordado con el cliente; el backend lo persiste sin ajustarlo.
+             */
+            precio_acordado: number | string;
         };
         /** ServicioEstadoUpdate */
         ServicioEstadoUpdate: {
@@ -838,8 +915,8 @@ export interface components {
             hora_fin: string | null;
             /** Horas Estimadas */
             horas_estimadas: string;
-            /** Distancia Ida Km */
-            distancia_ida_km: string;
+            /** Km Estimados */
+            km_estimados: string;
             /** Distancia Total Km */
             distancia_total_km: string;
             /** Km Franquicia */
@@ -850,8 +927,30 @@ export interface components {
             tarifa_hora_aplicada: string;
             /** Tarifa Km Aplicada */
             tarifa_km_aplicada: string;
-            /** Precio Total */
-            precio_total: string;
+            /** Requiere Ayudante */
+            requiere_ayudante: boolean;
+            /** Acceso Escalera */
+            acceso_escalera: boolean;
+            /** Zona Concurrida */
+            zona_concurrida: boolean;
+            /** Urgencia Mismo Dia */
+            urgencia_mismo_dia: boolean;
+            /** Recargo Ayudante Aplicado */
+            recargo_ayudante_aplicado: string;
+            /** Recargo Escalera Aplicado */
+            recargo_escalera_aplicado: string;
+            /** Importe Recargo Zona Aplicado */
+            importe_recargo_zona_aplicado: string;
+            /** Importe Recargo Urgencia Aplicado */
+            importe_recargo_urgencia_aplicado: string;
+            /** Porcentaje Zona Aplicado */
+            porcentaje_zona_aplicado: string;
+            /** Porcentaje Urgencia Aplicado */
+            porcentaje_urgencia_aplicado: string;
+            /** Precio Sugerido */
+            precio_sugerido: string;
+            /** Precio Acordado */
+            precio_acordado: string;
             /**
              * Moneda
              * @default ARS
@@ -1662,6 +1761,54 @@ export interface operations {
             };
         };
     };
+    calcular_cotizacion_api_cotizaciones_calcular_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CotizacionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CotizacionRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El tipo, las horas, los kms o la configuración son inválidos. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     consultar_disponibilidad_api_servicios_disponibilidad_get: {
         parameters: {
             query: {
@@ -1715,54 +1862,6 @@ export interface operations {
             };
         };
     };
-    cotizar_servicio_api_servicios_cotizar_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Rol de prueba en modo desarrollo local. */
-                "X-Rol"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CotizacionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CotizacionRead"];
-                };
-            };
-            /** @description La autenticación no está habilitada para este entorno. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description La operación requiere el rol admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Los datos son inválidos o el tipo no está activo. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     listar_servicios_api_servicios_get: {
         parameters: {
             query?: {
@@ -1789,8 +1888,15 @@ export interface operations {
                     "application/json": components["schemas"]["ServicioListado"];
                 };
             };
-            /** @description La autenticación no está habilitada para este entorno. */
+            /** @description Se requiere una sesión autenticada. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Se requiere el rol admin o chofer para listar servicios. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

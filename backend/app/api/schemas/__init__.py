@@ -2,6 +2,7 @@
 
 from app.api.schemas.chofer import ChoferCreate, ChoferRead, ChoferUpdate
 from app.api.schemas.cliente import ClienteCreate, ClienteListado, ClienteRead, ClienteUpdate
+from app.api.schemas.cotizacion import CotizacionRead, CotizacionRequest
 from app.api.schemas.entrega import EntregaCreate, EntregaRead, EntregaUpdate
 from app.api.schemas.equipamiento import (
     EquipamientoCreate,
@@ -21,8 +22,6 @@ from app.api.schemas.peon import (
 from app.api.schemas.remito import RemitoCreate, RemitoRead
 from app.api.schemas.rendicion import RendicionCreate, RendicionRead, RendicionUpdate
 from app.api.schemas.servicio import (
-    CotizacionRead,
-    CotizacionRequest,
     ServicioCreate,
     ServicioListado,
     ServicioRead,
