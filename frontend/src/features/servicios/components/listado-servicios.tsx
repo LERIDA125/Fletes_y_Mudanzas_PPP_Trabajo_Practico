@@ -4,8 +4,11 @@ import { FilaServicio } from "./fila-servicio";
 
 export function ListadoServicios({ servicios }: { servicios: Servicio[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left" aria-label="Servicios registrados">
+    <div className="scroll-servicios overflow-x-auto pb-2">
+      <table
+        className="w-full min-w-[920px] text-left"
+        aria-label="Servicios registrados"
+      >
         <caption className="sr-only">Servicios registrados</caption>
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-[#1e2c44] dark:bg-[#0d1626] dark:text-slate-400">

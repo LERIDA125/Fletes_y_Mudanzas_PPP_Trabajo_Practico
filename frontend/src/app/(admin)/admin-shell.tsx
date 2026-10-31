@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowRight,
   CalendarDays,
   CircleDollarSign,
   Clock3,
@@ -156,22 +155,6 @@ export function AdminShell({
             );
           })}
         </nav>
-
-        {/* Tarjeta de soporte */}
-        <div className="mx-4 mb-6 rounded-2xl bg-[#f4f8ff] p-4 dark:bg-[#16253d]">
-          <p className="text-[12px] font-semibold text-[#2165d5] dark:text-[#60a5fa]">
-            ¿Necesitás ayuda?
-          </p>
-          <p className="mt-1 text-[11px] leading-4 text-[#7e98bc] dark:text-[#94a3b8]">
-            Estamos para ayudarte a ordenar tu operación.
-          </p>
-          <a
-            href="mailto:soporte@movely.com"
-            className="mt-3 inline-flex items-center text-[11px] font-bold text-[#2165d5] hover:underline dark:text-[#60a5fa]"
-          >
-            Contactar soporte <ArrowRight className="ml-1 inline" size={12} />
-          </a>
-        </div>
       </aside>
 
       {/* Drawer móvil */}
