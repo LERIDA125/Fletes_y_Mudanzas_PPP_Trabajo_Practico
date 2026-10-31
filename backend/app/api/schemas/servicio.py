@@ -14,7 +14,11 @@ from app.api.schemas.comun import Pagina
 from app.api.schemas.vehiculo import VehiculoListadoRead
 from app.application.cotizacion.calculadora import Cotizacion
 from app.application.servicios.puertos import ServicioListadoItem
-from app.domain.servicio import MOTIVO_CANCELACION_MAX, transiciones_validas_desde
+from app.domain.servicio import (
+    MOTIVO_CANCELACION_MAX,
+    OBSERVACION_RENDICION_MAX,
+    transiciones_validas_desde,
+)
 
 
 class CotizacionRequest(BaseModel):
@@ -151,6 +155,12 @@ class ServicioRead(BaseModel):
     estado: str
     transiciones_validas: list[str]
     motivo_cancelacion: str | None
+    foto_remito_url: str | None = None
+    monto_cobrado_real: Decimal | None = None
+    estado_rendicion: str | None = None
+    observacion_rendicion: str | None = None
+    rendido_en: datetime | None = None
+    rendido_por_id: int | None = None
     creado_por_id: int | None = None
     modificado_por_id: int | None = None
     creado_en: datetime
@@ -186,6 +196,12 @@ class ServicioRead(BaseModel):
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,
+            foto_remito_url=servicio.foto_remito_url,
+            monto_cobrado_real=servicio.monto_cobrado_real,
+            estado_rendicion=servicio.estado_rendicion,
+            observacion_rendicion=servicio.observacion_rendicion,
+            rendido_en=servicio.rendido_en,
+            rendido_por_id=servicio.rendido_por_id,
             creado_por_id=servicio.creado_por_id,
             modificado_por_id=servicio.modificado_por_id,
             creado_en=servicio.creado_en,
@@ -208,3 +224,41 @@ class ServicioEstadoUpdate(BaseModel):
         "cobrado",
         "cancelado",
     ] = Field(description="Nuevo estado solicitado para el servicio.")
+
+
+class ServicioFinalizarRequest(BaseModel):
+    """Datos requeridos para el cierre operativo con Prueba de Entrega (POD) (H10)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    monto_cobrado_real: Decimal = Field(
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+        allow_inf_nan=False,
+        description="Monto real cobrado al finalizar el viaje.",
+    )
+    foto_remito_url: str | None = Field(
+        default=None,
+        description="Data URL Base64 o URL pública de la foto del remito firmado.",
+    )
+
+
+class RendicionObservarRequest(BaseModel):
+    """Observación administrativa sobre la rendición de un viaje (H10)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    observacion: str = Field(
+        min_length=1,
+        max_length=OBSERVACION_RENDICION_MAX,
+        description="Motivo o nota de observación sobre la diferencia o el comprobante.",
+    )
+
+    @field_validator("observacion")
+    @classmethod
+    def _observacion_no_vacia(cls, valor: str) -> str:
+        limpio = valor.strip()
+        if not limpio:
+            raise ValueError("La observación de rendición es obligatoria")
+        return limpio

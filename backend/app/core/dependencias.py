@@ -20,7 +20,7 @@ from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.application.servicios.puertos import ServicioRepository
+from app.application.servicios.puertos import AlmacenamientoRemitosPort, ServicioRepository
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
 from app.application.tipos_vehiculo.puertos import (
     ConsultaVehiculosPorTipo,
@@ -44,6 +44,7 @@ from app.infrastructure.repositories.usuario_repo import UsuarioRepo
 from app.infrastructure.repositories.vehiculo_repo import VehiculoRepo
 from app.infrastructure.security.jwt_service import JWTService
 from app.infrastructure.security.password_hasher import PasswordHasher
+from app.infrastructure.storage.almacenamiento_remitos import AlmacenamientoRemitosHibrido
 
 HEADER_ROL = "X-Rol"
 ROL_ADMIN = "admin"
@@ -320,11 +321,15 @@ def get_gestor_choferes(
     return GestorChoferes(repositorio_choferes=repositorio_choferes)
 
 
-# ── Servicios y Cotizaciones (H8) ─────────────────────────────────────────────
+# ── Servicios y Cotizaciones (H8 / H10) ───────────────────────────────────────
 
 
 def get_repo_servicios(db: Annotated[Session, Depends(get_db)]) -> ServicioRepository:
     return ServicioRepo(db)
+
+
+def get_almacenamiento_remitos() -> AlmacenamientoRemitosPort:
+    return AlmacenamientoRemitosHibrido()
 
 
 def get_gestor_servicios(
@@ -333,6 +338,9 @@ def get_gestor_servicios(
     clientes: Annotated[ClienteRepository, Depends(get_repo_clientes)],
     choferes: Annotated[ChoferRepository, Depends(get_repo_choferes)],
     vehiculos: Annotated[VehiculoRepository, Depends(get_repo_vehiculos)],
+    almacenamiento_remitos: Annotated[
+        AlmacenamientoRemitosPort, Depends(get_almacenamiento_remitos)
+    ],
 ) -> GestorServicios:
     return GestorServicios(
         repositorio=repositorio,
@@ -342,4 +350,5 @@ def get_gestor_servicios(
         consulta_vehiculos=vehiculos,
         consulta_tipos=tipos,
         registro_clientes=clientes,
+        almacenamiento_remitos=almacenamiento_remitos,
     )

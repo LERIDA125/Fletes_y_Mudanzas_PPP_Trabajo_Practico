@@ -201,3 +201,38 @@ class ChoferConUsuarioExistente(ConflictoOperacion):
     def __init__(self, chofer_id: int) -> None:
         super().__init__(f"El chofer {chofer_id} ya tiene una cuenta de usuario asignada")
         self.chofer_id = chofer_id
+
+
+# ── Cierre de Viaje, POD y Rendición (H10) ────────────────────────────────────
+
+
+class RemitoObligatorio(DatoInvalido):
+    def __init__(
+        self,
+        detalle: str = (
+            "La foto del remito firmado y el monto cobrado son obligatorios para finalizar el viaje"
+        ),
+    ) -> None:
+        super().__init__(detalle)
+
+
+class MontoCobradoInvalido(DatoInvalido):
+    def __init__(
+        self,
+        detalle: str = "El monto real cobrado debe ser un importe numérico mayor o igual a 0",
+    ) -> None:
+        super().__init__(detalle)
+
+
+class ServicioNoFinalizable(ConflictoOperacion):
+    def __init__(self, estado_actual: str) -> None:
+        super().__init__(
+            f"Un servicio en estado {estado_actual!r} no puede finalizarse con remito "
+            "(debe estar 'confirmado' o 'en curso')"
+        )
+        self.estado_actual = estado_actual
+
+
+class RendicionNoDisponible(ConflictoOperacion):
+    def __init__(self, detalle: str = "El servicio no tiene una rendición pendiente") -> None:
+        super().__init__(detalle)

@@ -40,6 +40,12 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         precio_total=orm.precio_total,
         estado=orm.estado,
         motivo_cancelacion=orm.motivo_cancelacion,
+        foto_remito_url=orm.foto_remito_url,
+        monto_cobrado_real=orm.monto_cobrado_real,
+        estado_rendicion=orm.estado_rendicion,
+        observacion_rendicion=orm.observacion_rendicion,
+        rendido_en=orm.rendido_en,
+        rendido_por_id=orm.rendido_por_id,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
         creado_por_id=orm.creado_por_id,
@@ -67,6 +73,12 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         precio_total=servicio.precio_total,
         estado=servicio.estado,
         motivo_cancelacion=servicio.motivo_cancelacion,
+        foto_remito_url=servicio.foto_remito_url,
+        monto_cobrado_real=servicio.monto_cobrado_real,
+        estado_rendicion=servicio.estado_rendicion,
+        observacion_rendicion=servicio.observacion_rendicion,
+        rendido_en=servicio.rendido_en,
+        rendido_por_id=servicio.rendido_por_id,
         creado_en=servicio.creado_en,
         actualizado_en=servicio.actualizado_en,
         creado_por_id=servicio.creado_por_id,
@@ -120,6 +132,12 @@ class ServicioRepo:
         orm.precio_total = servicio.precio_total
         orm.estado = servicio.estado
         orm.motivo_cancelacion = servicio.motivo_cancelacion
+        orm.foto_remito_url = servicio.foto_remito_url
+        orm.monto_cobrado_real = servicio.monto_cobrado_real
+        orm.estado_rendicion = servicio.estado_rendicion
+        orm.observacion_rendicion = servicio.observacion_rendicion
+        orm.rendido_en = servicio.rendido_en
+        orm.rendido_por_id = servicio.rendido_por_id
         orm.modificado_por_id = servicio.modificado_por_id
         orm.actualizado_en = func.now()
 
@@ -156,12 +174,7 @@ class ServicioRepo:
         return self._db.scalar(consulta.limit(1)) is not None
 
     def listar_asignaciones_del_dia(self, fecha: date) -> list[AsignacionDia]:
-        """Servicios no cancelados de una fecha, para detectar recursos ocupados.
-
-        No se filtra por estado finalizado/cobrado porque un servicio de ese día
-        puede seguir consumiendo la franja estimada; la regla se documenta en la
-        spec 008. Los cancelados no bloquean recursos.
-        """
+        """Servicios no cancelados de una fecha, para detectar recursos ocupados."""
         consulta = select(
             ServicioORM.id_chofer,
             ServicioORM.id_vehiculo,

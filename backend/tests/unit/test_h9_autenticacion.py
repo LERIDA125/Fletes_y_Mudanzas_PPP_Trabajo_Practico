@@ -201,7 +201,6 @@ def test_h9_api_login_multi_admin_y_usuario_chofer(
     )
 
 
-
 def test_h9_trazabilidad_y_auditoria_multi_admin(
     cliente_auth: tuple[TestClient, Session],
 ) -> None:
@@ -444,8 +443,7 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
         == 403
     )
 
-    # 4. Chofer 1 SÍ puede avanzar su propio viaje a 'en curso' y luego a 'finalizado',
-    # registrando su usuario_id en modificado_por_id
+    # 4. Chofer 1 SÍ puede avanzar su propio viaje a 'en curso', registrando su usuario_id
     en_curso = cliente.patch(
         f"/api/servicios/{serv_1['id_servicio']}/estado",
         headers=headers_chofer_1,
@@ -455,13 +453,13 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
     assert en_curso.json()["estado"] == "en curso"
     assert en_curso.json()["modificado_por_id"] == 2  # id del usuario chofer1
 
-    finalizado = cliente.patch(
+    # En H10, un chofer NO puede cerrar por atajo PATCH /estado sin adjuntar remito (422)
+    atajo_bloqueado = cliente.patch(
         f"/api/servicios/{serv_1['id_servicio']}/estado",
         headers=headers_chofer_1,
         json={"estado": "finalizado"},
     )
-    assert finalizado.status_code == 200
-    assert finalizado.json()["estado"] == "finalizado"
+    assert atajo_bloqueado.status_code == 422
 
     # 5. Chofer 1 NO puede marcar el servicio como 'cobrado' (403 Forbidden)
     assert (
@@ -472,4 +470,3 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
         ).status_code
         == 403
     )
-

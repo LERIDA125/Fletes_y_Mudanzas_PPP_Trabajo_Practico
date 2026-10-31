@@ -1,4 +1,4 @@
-"""Puertos de aplicación para Servicios."""
+"""Puertos de aplicación para Servicios y Rendiciones."""
 
 from __future__ import annotations
 
@@ -41,6 +41,20 @@ class Disponibilidad:
     hora_fin: time | None
     choferes: list[Chofer]
     vehiculos: list[VehiculoListadoItem]
+
+
+@runtime_checkable
+class AlmacenamientoRemitosPort(Protocol):
+    """Puerto para almacenar la foto del remito firmado (Base64 en BD o Vercel Blob en la nube)."""
+
+    def guardar(
+        self,
+        *,
+        id_servicio: int,
+        contenido: bytes,
+        content_type: str,
+        nombre_archivo: str | None = None,
+    ) -> str: ...
 
 
 @runtime_checkable

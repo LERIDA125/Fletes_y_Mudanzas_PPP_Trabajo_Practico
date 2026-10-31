@@ -262,6 +262,43 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                         )
                     conn.execute(
                         text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS foto_remito_url TEXT"
+                        )
+                    )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS monto_cobrado_real NUMERIC(12, 2)"
+                        )
+                    )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS estado_rendicion VARCHAR(20)"
+                        )
+                    )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS observacion_rendicion VARCHAR(255)"
+                        )
+                    )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS rendido_en TIMESTAMPTZ"
+                        )
+                    )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS rendido_por_id INTEGER "
+                            "REFERENCES usuarios(id) ON DELETE SET NULL"
+                        )
+                    )
+                    conn.execute(
+                        text(
                             """
                             DO $$
                             BEGIN
