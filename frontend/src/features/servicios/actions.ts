@@ -11,18 +11,22 @@ import type {
   EstadoServicio,
   Servicio,
   SolicitudCotizacion,
+  SolicitudFinalizarViaje,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 import {
+  aprobarRendicionServicio as aprobarRendicionEnApi,
   cancelarServicio as anularServicio,
   consultarDisponibilidad,
   crearServicio,
   cambiarEstadoServicio as actualizarEstadoServicio,
   cotizarServicio,
   eliminarServicio as borrarServicio,
+  finalizarViajeServicio as finalizarViajeEnApi,
   listarServiciosAsignados,
   listarClientesParaAlta,
   listarTiposParaAlta,
+  observarRendicionServicio as observarRendicionEnApi,
 } from "@/lib/api/servicios";
 import { ErrorApi } from "@/lib/api/http";
 import { exigirRol } from "@/lib/auth/guards";
@@ -42,6 +46,87 @@ export async function obtenerServiciosChofer(): Promise<ResultadoAccion<Servicio
   } catch (error) {
     if (error instanceof ErrorApi) {
       return { ok: false, mensaje: mensajeDeError(error, "listar-chofer") };
+    }
+    throw error;
+  }
+}
+
+export async function iniciarViajeChofer(
+  idServicio: number,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("CHOFER");
+
+  try {
+    const servicio = await actualizarEstadoServicio(idServicio, "en curso");
+    revalidatePath("/chofer");
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "cambiar-estado") };
+    }
+    throw error;
+  }
+}
+
+export async function finalizarViajeChofer(
+  idServicio: number,
+  solicitud: SolicitudFinalizarViaje,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("CHOFER");
+
+  try {
+    const servicio = await finalizarViajeEnApi(idServicio, solicitud);
+    revalidatePath("/chofer");
+    revalidatePath("/rendiciones");
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "finalizar") };
+    }
+    throw error;
+  }
+}
+
+export async function aprobarRendicionServicio(
+  idServicio: number,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("ADMIN");
+
+  try {
+    const servicio = await aprobarRendicionEnApi(idServicio);
+    revalidatePath("/rendiciones");
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "rendicion") };
+    }
+    throw error;
+  }
+}
+
+export async function observarRendicionServicio(
+  idServicio: number,
+  observacion: string,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("ADMIN");
+
+  try {
+    const servicio = await observarRendicionEnApi(idServicio, observacion);
+    revalidatePath("/rendiciones");
+    revalidatePath("/servicios");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "rendicion") };
     }
     throw error;
   }
@@ -174,6 +259,8 @@ function mensajeDeError(
     | "disponibilidad"
     | "catalogos"
     | "cambiar-estado"
+    | "finalizar"
+    | "rendicion"
     | "cancelar"
     | "eliminar"
     | "listar-chofer",
@@ -202,6 +289,12 @@ function mensajeDeError(
   }
   if (operacion === "cambiar-estado") {
     return "No pudimos cambiar el estado del servicio. Revisá el estado actual e intentá de nuevo.";
+  }
+  if (operacion === "finalizar") {
+    return "No pudimos finalizar el viaje. Verificá la foto del remito y el monto cobrado.";
+  }
+  if (operacion === "rendicion") {
+    return "No pudimos actualizar la rendición del servicio. Intentá de nuevo.";
   }
   if (operacion === "cancelar") {
     return "No pudimos cancelar el servicio. Revisá el estado actual e intentá de nuevo.";

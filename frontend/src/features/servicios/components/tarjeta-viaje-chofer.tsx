@@ -1,5 +1,23 @@
-import { Clock3, MapPin, Truck, UserRound } from "lucide-react";
+"use client";
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  FileCheck2,
+  Image as ImageIcon,
+  Loader2,
+  MapPin,
+  Play,
+  Truck,
+  UserRound,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+
+import { iniciarViajeChofer } from "@/features/servicios/actions";
+import { ModalFinalizarViaje } from "@/features/servicios/components/modal-finalizar-viaje";
 import type { Servicio } from "@/features/servicios/types";
 import { formatearSaldo } from "@/lib/utils/formato";
 
@@ -30,6 +48,27 @@ const ESTADOS: Record<string, { etiqueta: string; clase: string }> = {
   },
 };
 
+const ESTADOS_RENDICION_BADGE: Record<
+  string,
+  { etiqueta: string; clase: string; icono: typeof Clock3 }
+> = {
+  PENDIENTE: {
+    etiqueta: "Pendiente de rendición",
+    clase: "bg-[#fff3cd] text-[#856404] border-[#ffeeba]",
+    icono: Clock3,
+  },
+  RENDIDO: {
+    etiqueta: "Rendido y Aprobado",
+    clase: "bg-[#d4edda] text-[#155724] border-[#c3e6cb]",
+    icono: CheckCircle2,
+  },
+  OBSERVADO: {
+    etiqueta: "Observado",
+    clase: "bg-[#f8d7da] text-[#721c24] border-[#f5c6cb]",
+    icono: AlertTriangle,
+  },
+};
+
 function horaConPeriodo(hora: string | null): { hora: string; periodo: string } {
   if (!hora) {
     return { hora: "Horario", periodo: "a confirmar" };
@@ -46,14 +85,48 @@ function horaConPeriodo(hora: string | null): { hora: string; periodo: string } 
 }
 
 export function TarjetaViajeChofer({
-  servicio,
+  servicio: servicioInicial,
   numero,
+  onActualizado,
 }: {
   servicio: Servicio;
   numero: number;
+  onActualizado?: (actualizado: Servicio) => void;
 }) {
+  const [servicio, setServicio] = useState<Servicio>(servicioInicial);
+  const [modalFinalizarAbierto, setModalFinalizarAbierto] = useState(false);
+  const [modalFotoRemitoAbierto, setModalFotoRemitoAbierto] = useState(false);
+  const [iniciandoViaje, setIniciandoViaje] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+
+  // Mantener actualizado el estado local si el padre le pasa uno nuevo
+  if (servicio.id_servicio !== servicioInicial.id_servicio) {
+    setServicio(servicioInicial);
+  }
+
   const horario = horaConPeriodo(servicio.hora_inicio);
   const estado = ESTADOS[servicio.estado] ?? ESTADOS.pendiente;
+  const rendicionBadge = servicio.estado_rendicion
+    ? ESTADOS_RENDICION_BADGE[servicio.estado_rendicion]
+    : null;
+
+  async function handleIniciarViaje() {
+    setErrorAccion(null);
+    setIniciandoViaje(true);
+    try {
+      const resultado = await iniciarViajeChofer(servicio.id_servicio);
+      if (resultado.ok) {
+        setServicio(resultado.dato);
+        onActualizado?.(resultado.dato);
+      } else {
+        setErrorAccion(resultado.mensaje);
+      }
+    } catch {
+      setErrorAccion("No se pudo iniciar el viaje. Verificá tu conexión.");
+    } finally {
+      setIniciandoViaje(false);
+    }
+  }
 
   return (
     <article
@@ -125,15 +198,137 @@ export function TarjetaViajeChofer({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[#efc277] bg-[#fff9ed] px-3 py-2.5">
-          <span className="text-[10px] font-semibold text-[#94611c]">
-            Valor del servicio
-          </span>
-          <span className="text-[13px] font-bold tabular-nums text-[#87550e]">
-            {formatearSaldo(Number(servicio.precio_total))}
-          </span>
+        {/* Sección económica: Cotizado vs. Monto Cobrado Real */}
+        <div className="space-y-1.5 rounded-xl border border-dashed border-[#efc277] bg-[#fff9ed] p-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-semibold text-[#94611c]">
+              Tarifa cotizada
+            </span>
+            <span className="text-[12px] font-bold tabular-nums text-[#87550e]">
+              {formatearSaldo(Number(servicio.precio_total))}
+            </span>
+          </div>
+
+          {servicio.monto_cobrado_real !== null &&
+            servicio.monto_cobrado_real !== undefined && (
+              <div className="flex items-center justify-between gap-3 border-t border-[#f4dfb8] pt-1.5">
+                <span className="text-[10px] font-bold text-[#1f6c58]">
+                  Cobrado en mano
+                </span>
+                <span className="text-[13px] font-black tabular-nums text-[#1f6c58]">
+                  {formatearSaldo(Number(servicio.monto_cobrado_real))}
+                </span>
+              </div>
+            )}
+        </div>
+
+        {/* Estado de Rendición (si el viaje ya fue cerrado) */}
+        {rendicionBadge && (
+          <div
+            className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-xs ${rendicionBadge.clase}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 font-bold text-[11px]">
+                <rendicionBadge.icono size={13} />
+                <span>{rendicionBadge.etiqueta}</span>
+              </span>
+              {servicio.foto_remito_url && (
+                <button
+                  type="button"
+                  onClick={() => setModalFotoRemitoAbierto(true)}
+                  className="flex items-center gap-1 text-[10px] font-semibold underline hover:opacity-80"
+                >
+                  <ImageIcon size={12} />
+                  <span>Ver remito</span>
+                </button>
+              )}
+            </div>
+            {servicio.observacion_rendicion && (
+              <p className="text-[10px] font-medium leading-4 opacity-90">
+                Nota: {servicio.observacion_rendicion}
+              </p>
+            )}
+          </div>
+        )}
+
+        {errorAccion && (
+          <p className="rounded-lg bg-red-50 p-2 text-center text-xs font-semibold text-red-600">
+            {errorAccion}
+          </p>
+        )}
+
+        {/* Botonera de acciones operativas para el Chofer */}
+        <div className="flex flex-col gap-2 pt-1">
+          {servicio.estado === "confirmado" && (
+            <button
+              type="button"
+              onClick={handleIniciarViaje}
+              disabled={iniciandoViaje}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#28745f] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f5c4b] disabled:opacity-50"
+            >
+              {iniciandoViaje ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Iniciando viaje...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={14} fill="currentColor" />
+                  <span>Iniciar viaje</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {(servicio.estado === "en curso" || servicio.estado === "confirmado") && (
+            <button
+              type="button"
+              onClick={() => setModalFinalizarAbierto(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#a76312] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#884e0b]"
+            >
+              <FileCheck2 size={15} />
+              <span>Finalizar Viaje y Rendir</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Modal de Finalización y POD */}
+      <ModalFinalizarViaje
+        servicio={servicio}
+        abierto={modalFinalizarAbierto}
+        onCerrar={() => setModalFinalizarAbierto(false)}
+        onExito={(actualizado) => {
+          setServicio(actualizado);
+          onActualizado?.(actualizado);
+        }}
+      />
+
+      {/* Modal visor de foto de remito en tamaño completo */}
+      {modalFotoRemitoAbierto && servicio.foto_remito_url && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+        >
+          <div className="relative max-h-[90vh] max-w-xl overflow-hidden rounded-2xl bg-black">
+            <button
+              type="button"
+              onClick={() => setModalFotoRemitoAbierto(false)}
+              className="absolute top-3 right-3 z-10 rounded-full bg-black/60 p-2 text-white hover:bg-black/90"
+              aria-label="Cerrar visor"
+            >
+              <X size={18} />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={servicio.foto_remito_url}
+              alt={`Remito firmado del servicio #${servicio.id_servicio}`}
+              className="max-h-[85vh] w-auto object-contain"
+            />
+          </div>
+        </div>
+      )}
     </article>
   );
 }

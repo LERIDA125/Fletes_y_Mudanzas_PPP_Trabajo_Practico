@@ -7,6 +7,7 @@ import type {
   ListadoServicios,
   Servicio,
   SolicitudCotizacion,
+  SolicitudFinalizarViaje,
 } from "@/features/servicios/types";
 import type { components } from "@/types/openapi";
 import { requestAutenticado as request } from "./servidor";
@@ -115,6 +116,34 @@ export async function cambiarEstadoServicio(
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ estado }),
+  });
+}
+
+export async function finalizarViajeServicio(
+  idServicio: number,
+  solicitud: SolicitudFinalizarViaje,
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/finalizar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(solicitud),
+  });
+}
+
+export async function aprobarRendicionServicio(idServicio: number): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/rendicion/aprobar`, {
+    method: "POST",
+  });
+}
+
+export async function observarRendicionServicio(
+  idServicio: number,
+  observacion: string,
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/rendicion/observar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ observacion }),
   });
 }
 

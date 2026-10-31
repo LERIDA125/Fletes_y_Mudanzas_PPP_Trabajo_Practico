@@ -156,6 +156,13 @@ export function PortalChofer({
                     key={servicio.id_servicio}
                     servicio={servicio}
                     numero={indice + 1}
+                    onActualizado={(actualizado) => {
+                      setServicios((prev) =>
+                        prev.map((s) =>
+                          s.id_servicio === actualizado.id_servicio ? actualizado : s,
+                        ),
+                      );
+                    }}
                   />
                 ))}
               </div>

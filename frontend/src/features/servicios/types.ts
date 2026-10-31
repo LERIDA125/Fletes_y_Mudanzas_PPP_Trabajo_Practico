@@ -15,6 +15,13 @@ export type VehiculoDisponible = components["schemas"]["VehiculoListadoRead"];
 export type EstadoServicio =
   "pendiente" | "confirmado" | "en curso" | "finalizado" | "cobrado" | "cancelado";
 
+export type EstadoRendicion = "PENDIENTE" | "RENDIDO" | "OBSERVADO";
+
+export type SolicitudFinalizarViaje = {
+  monto_cobrado_real: number | string;
+  foto_remito_url: string;
+};
+
 export type ConsultaDisponibilidad = {
   fecha: string;
   id_tipo_vehiculo: number;

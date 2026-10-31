@@ -252,9 +252,69 @@ export interface paths {
         head?: never;
         /**
          * Cambiar el estado de un servicio
-         * @description Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación debe realizarse mediante la ruta específica que exige motivo. Si el token es de rol chofer, solo permite actualizar viajes asignados a su propio id_chofer hacia 'en curso' o 'finalizado'.
+         * @description Transiciona al siguiente estado permitido por la máquina del dominio. La cancelación debe realizarse mediante la ruta específica que exige motivo. Si el token es de rol chofer, solo permite avanzar viajes asignados a su propio id_chofer hacia 'en curso'; el cierre a 'finalizado' exige usar POST /{id_servicio}/finalizar con remito y monto.
          */
         patch: operations["cambiar_estado_servicio_api_servicios__id_servicio__estado_patch"];
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/finalizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finalizar un viaje con Prueba de Entrega (POD) y monto cobrado (H10)
+         * @description Marca el servicio como finalizado adjuntando la foto del remito firmado y declarando el monto real cobrado. Acepta tanto multipart/form-data como application/json y deja el estado económico en PENDIENTE de rendición.
+         */
+        post: operations["finalizar_viaje_servicio_api_servicios__id_servicio__finalizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/rendicion/aprobar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aprobar la rendición de un viaje finalizado (H10)
+         * @description Aprueba la rendición del viaje, marca su estado económico como RENDIDO y su estado operativo como cobrado, dejando en cero la deuda pendiente del chofer por ese viaje.
+         */
+        post: operations["aprobar_rendicion_servicio_api_servicios__id_servicio__rendicion_aprobar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/rendicion/observar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Observar la rendición de un viaje finalizado (H10)
+         * @description Registra una observación administrativa sobre el remito o monto declarado y cambia el estado económico a OBSERVADO manteniendo el saldo pendiente de conciliación.
+         */
+        post: operations["observar_rendicion_servicio_api_servicios__id_servicio__rendicion_observar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/servicios/{id_servicio}": {
@@ -758,6 +818,17 @@ export interface components {
              */
             password: string;
         };
+        /**
+         * RendicionObservarRequest
+         * @description Observación administrativa sobre la rendición de un viaje (H10).
+         */
+        RendicionObservarRequest: {
+            /**
+             * Observacion
+             * @description Motivo o nota de observación sobre la diferencia o el comprobante.
+             */
+            observacion: string;
+        };
         /** ServicioCancelar */
         ServicioCancelar: {
             /**
@@ -898,6 +969,18 @@ export interface components {
             transiciones_validas: string[];
             /** Motivo Cancelacion */
             motivo_cancelacion: string | null;
+            /** Foto Remito Url */
+            foto_remito_url?: string | null;
+            /** Monto Cobrado Real */
+            monto_cobrado_real?: string | null;
+            /** Estado Rendicion */
+            estado_rendicion?: string | null;
+            /** Observacion Rendicion */
+            observacion_rendicion?: string | null;
+            /** Rendido En */
+            rendido_en?: string | null;
+            /** Rendido Por Id */
+            rendido_por_id?: number | null;
             /** Creado Por Id */
             creado_por_id?: number | null;
             /** Modificado Por Id */
@@ -2169,6 +2252,221 @@ export interface operations {
                 content?: never;
             };
             /** @description El estado o la transición solicitada no es válida. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finalizar_viaje_servicio_api_servicios__id_servicio__finalizar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Monto real cobrado al finalizar el viaje. */
+                    monto_cobrado_real: number | string;
+                    /** @description Data URL Base64 o URL pública del remito firmado. */
+                    foto_remito_url?: string | null;
+                };
+                "multipart/form-data": {
+                    /** @description Monto real cobrado al finalizar el viaje. */
+                    monto_cobrado_real: string;
+                    /**
+                     * Format: binary
+                     * @description Imagen del remito firmado (JPEG, PNG o WebP).
+                     */
+                    foto?: string;
+                    /** @description Alternativa Base64 / Data URL del remito. */
+                    foto_remito_url?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El viaje no pertenece al chofer autenticado o el rol no tiene permiso. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio no está en estado confirmado o en curso. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Falta la foto del remito o el monto cobrado es inválido. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    aprobar_rendicion_servicio_api_servicios__id_servicio__rendicion_aprobar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio no está finalizado o ya fue rendido. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    observar_rendicion_servicio_api_servicios__id_servicio__rendicion_observar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path: {
+                /** @description Identificador del servicio. */
+                id_servicio: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RendicionObservarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe un servicio con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio no está finalizado o ya fue rendido. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La observación es obligatoria. */
             422: {
                 headers: {
                     [name: string]: unknown;
