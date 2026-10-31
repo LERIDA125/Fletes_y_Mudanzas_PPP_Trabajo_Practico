@@ -17,7 +17,8 @@ raw-data/
 # `python -m scripts.migracion --solo-transformacion`.
 
 # Frontend (Next.js)
-.next/
+
 frontend/.next/
 node_modules/
+frontend/.next/
 frontend/node_modules/
