@@ -100,6 +100,9 @@ describe("PortalChofer", () => {
 
   it("actualiza los servicios cada diez segundos", async () => {
     vi.useFakeTimers();
+    // El portal recalcula la fecha al refrescar y filtra por el día actual.
+    // Fijamos el reloj para que coincida con la fecha del servicio mockeado.
+    vi.setSystemTime(new Date("2026-10-30T15:00:00Z"));
     obtenerServiciosChofer.mockResolvedValue({
       ok: true,
       dato: [servicio({ razon_social_cliente: "Servicio actualizado" })],
