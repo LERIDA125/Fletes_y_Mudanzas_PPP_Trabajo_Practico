@@ -1,19 +1,32 @@
 "use client";
 
-import { CircleDollarSign, Loader2, ReceiptText } from "lucide-react";
-import { useState } from "react";
+import { Loader2, ReceiptText } from "lucide-react";
+import { useRef, useState } from "react";
 
-import { solicitarCotizacion } from "@/features/servicios/actions";
-import type { Cotizacion, TipoVehiculoOpcion } from "@/features/servicios/types";
+import { calcularRutaMapa, solicitarCotizacion } from "@/features/servicios/actions";
+import { CampoDireccionMapa } from "@/features/servicios/components/campo-direccion-mapa";
+import { ResumenCotizacion } from "@/features/servicios/components/resumen-cotizacion";
+import type {
+  Cotizacion,
+  DireccionOpcion,
+  ResultadoRuta,
+  SolicitudCotizacion,
+  TipoVehiculoOpcion,
+} from "@/features/servicios/types";
 
-const formatoMoneda = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-});
+const condicionesIniciales = {
+  requiere_ayudante: false,
+  acceso_escalera: false,
+  zona_concurrida: false,
+  urgencia_mismo_dia: false,
+};
 
-const formatoCantidad = new Intl.NumberFormat("es-AR", {
-  maximumFractionDigits: 2,
-});
+const controlesCondiciones = [
+  ["requiere_ayudante", "Requiere ayudante"],
+  ["acceso_escalera", "Acceso por escalera"],
+  ["zona_concurrida", "Zona concurrida"],
+  ["urgencia_mismo_dia", "Urgencia para el mismo día"],
+] as const;
 
 type Propiedades = {
   tiposVehiculo: TipoVehiculoOpcion[];
@@ -22,25 +35,106 @@ type Propiedades = {
 export function Cotizador({ tiposVehiculo }: Propiedades) {
   const [idTipo, setIdTipo] = useState(String(tiposVehiculo[0]?.id ?? ""));
   const [horas, setHoras] = useState("2");
-  const [distancia, setDistancia] = useState("18");
+  const [condiciones, setCondiciones] = useState(condicionesIniciales);
+  const [origen, setOrigen] = useState<DireccionOpcion | null>(null);
+  const [destino, setDestino] = useState<DireccionOpcion | null>(null);
+  const [ruta, setRuta] = useState<ResultadoRuta | null>(null);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
+  const [errorRuta, setErrorRuta] = useState("");
   const [resultado, setResultado] = useState<Cotizacion | null>(null);
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(false);
+  const solicitudRuta = useRef(0);
+  const solicitudCotizacion = useRef(0);
 
   const sinTipos = tiposVehiculo.length === 0;
+  const tiempoRuta = ruta ? formatearDuracion(Number(ruta.duracion_segundos)) : null;
 
-  function cambiarDatos() {
+  function invalidarCotizacion() {
+    solicitudCotizacion.current += 1;
     setResultado(null);
+    setMensaje("");
+    setCargando(false);
+  }
+
+  function invalidarRuta() {
+    solicitudRuta.current += 1;
+    setRuta(null);
+    setErrorRuta("");
+    setCalculandoRuta(false);
+    invalidarCotizacion();
+  }
+
+  async function calcularRuta(
+    puntoOrigen: DireccionOpcion,
+    puntoDestino: DireccionOpcion,
+  ) {
+    const idSolicitud = solicitudRuta.current + 1;
+    solicitudRuta.current = idSolicitud;
+    setRuta(null);
+    setErrorRuta("");
+    setCalculandoRuta(true);
+    invalidarCotizacion();
+
+    try {
+      const respuesta = await calcularRutaMapa(
+        {
+          longitud: puntoOrigen.longitud,
+          latitud: puntoOrigen.latitud,
+        },
+        {
+          longitud: puntoDestino.longitud,
+          latitud: puntoDestino.latitud,
+        },
+      );
+      if (solicitudRuta.current !== idSolicitud) {
+        return;
+      }
+      if (!respuesta.ok) {
+        setErrorRuta(respuesta.mensaje);
+        return;
+      }
+      setRuta(respuesta.dato);
+    } catch {
+      if (solicitudRuta.current === idSolicitud) {
+        setErrorRuta(
+          "No pudimos calcular la ruta. Revisá las direcciones e intentá de nuevo.",
+        );
+      }
+    } finally {
+      if (solicitudRuta.current === idSolicitud) {
+        setCalculandoRuta(false);
+      }
+    }
+  }
+
+  function cambiarPunto(
+    extremo: "origen" | "destino",
+    seleccion: DireccionOpcion | null,
+  ) {
+    invalidarRuta();
+    const nuevoOrigen = extremo === "origen" ? seleccion : origen;
+    const nuevoDestino = extremo === "destino" ? seleccion : destino;
+    setOrigen(nuevoOrigen);
+    setDestino(nuevoDestino);
+
+    if (nuevoOrigen && nuevoDestino) {
+      void calcularRuta(nuevoOrigen, nuevoDestino);
+    }
+  }
+
+  function cambiarCondicion(nombre: keyof typeof condicionesIniciales, valor: boolean) {
+    setCondiciones((actuales) => ({ ...actuales, [nombre]: valor }));
+    invalidarCotizacion();
   }
 
   async function cotizar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    setMensaje("");
-    setResultado(null);
+    invalidarCotizacion();
 
     const idTipoNumero = Number(idTipo);
     const horasNumero = Number(horas);
-    const distanciaNumero = Number(distancia);
+    const distanciaNumero = Number(ruta?.distancia_ida_km);
 
     if (!idTipoNumero) {
       setMensaje("Elegí un tipo de vehículo.");
@@ -50,25 +144,39 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
       setMensaje("Las horas deben ser 1 o más.");
       return;
     }
-    if (!Number.isFinite(distanciaNumero) || distanciaNumero < 0) {
-      setMensaje("La distancia no puede ser negativa.");
+    if (!ruta || !Number.isFinite(distanciaNumero) || distanciaNumero < 0) {
+      setMensaje("Elegí un origen y un destino para calcular la ruta antes de cotizar.");
       return;
     }
 
+    const idSolicitud = solicitudCotizacion.current;
+    const solicitud: SolicitudCotizacion = {
+      id_tipo_vehiculo: idTipoNumero,
+      horas_estimadas: horasNumero,
+      distancia_ida_km: distanciaNumero,
+      ...condiciones,
+    };
+
     setCargando(true);
+    setMensaje("");
     try {
-      const respuesta = await solicitarCotizacion({
-        id_tipo_vehiculo: idTipoNumero,
-        horas_estimadas: horasNumero,
-        distancia_ida_km: distanciaNumero,
-      });
+      const respuesta = await solicitarCotizacion(solicitud);
+      if (solicitudCotizacion.current !== idSolicitud) {
+        return;
+      }
       if (!respuesta.ok) {
         setMensaje(respuesta.mensaje);
         return;
       }
       setResultado(respuesta.dato);
+    } catch {
+      if (solicitudCotizacion.current === idSolicitud) {
+        setMensaje("No pudimos cotizar el viaje. Revisá los datos e intentá de nuevo.");
+      }
     } finally {
-      setCargando(false);
+      if (solicitudCotizacion.current === idSolicitud) {
+        setCargando(false);
+      }
     }
   }
 
@@ -103,7 +211,7 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
                   value={idTipo}
                   onChange={(evento) => {
                     setIdTipo(evento.target.value);
-                    cambiarDatos();
+                    invalidarCotizacion();
                   }}
                   className={claseControl}
                 >
@@ -125,32 +233,123 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
                   value={horas}
                   onChange={(evento) => {
                     setHoras(evento.target.value);
-                    cambiarDatos();
-                  }}
-                  className={claseControl}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#62738a] sm:col-span-2 dark:text-[#94a3b8]">
-                Distancia de ida (km)
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputMode="decimal"
-                  value={distancia}
-                  onChange={(evento) => {
-                    setDistancia(evento.target.value);
-                    cambiarDatos();
+                    invalidarCotizacion();
                   }}
                   className={claseControl}
                 />
               </label>
             </div>
 
+            <fieldset className="rounded-xl border border-[#dfe6ef] bg-[#f8fafc] p-4 dark:border-[#1e2c44] dark:bg-[#0d1626]">
+              <legend className="px-1 text-sm font-semibold text-[#172b4d] dark:text-white">
+                Recorrido del servicio
+              </legend>
+              <p className="mb-3 text-xs text-[#62738a] dark:text-[#94a3b8]">
+                Buscá cada dirección y elegí un resultado para calcular la distancia de
+                ida.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <CampoDireccionMapa
+                  id="origen-cotizacion"
+                  etiqueta="Origen"
+                  seleccion={origen}
+                  onSeleccionar={(opcion) => cambiarPunto("origen", opcion)}
+                />
+                <CampoDireccionMapa
+                  id="destino-cotizacion"
+                  etiqueta="Destino"
+                  seleccion={destino}
+                  onSeleccionar={(opcion) => cambiarPunto("destino", opcion)}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-[#62738a] dark:text-[#94a3b8]">
+                Geocodificación y rutas:{" "}
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2 hover:text-[#172b4d] dark:hover:text-white"
+                >
+                  © OpenStreetMap contributors
+                </a>
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label
+                  htmlFor="distancia_ida_km_cotizacion"
+                  className="flex flex-col gap-1.5 text-xs font-semibold text-[#62738a] dark:text-[#94a3b8]"
+                >
+                  Distancia de ida (km)
+                  <input
+                    id="distancia_ida_km_cotizacion"
+                    type="number"
+                    readOnly
+                    aria-readonly="true"
+                    value={ruta?.distancia_ida_km ?? ""}
+                    placeholder="Se calcula al elegir las direcciones"
+                    className={claseControl}
+                  />
+                </label>
+                <div className="min-h-10 self-end pb-2 text-sm text-[#62738a] dark:text-[#94a3b8]">
+                  {calculandoRuta ? (
+                    <span role="status" className="inline-flex items-center gap-2">
+                      <Loader2
+                        aria-hidden="true"
+                        size={16}
+                        className="animate-spin motion-reduce:animate-none"
+                      />
+                      Calculando distancia y tiempo…
+                    </span>
+                  ) : ruta && tiempoRuta ? (
+                    <p role="status" aria-live="polite">
+                      Tiempo estimado: <strong>{tiempoRuta}</strong>
+                    </p>
+                  ) : (
+                    <p aria-live="polite">La distancia y el tiempo aparecerán acá.</p>
+                  )}
+                </div>
+              </div>
+              {errorRuta ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+                    {errorRuta}
+                  </p>
+                  {origen && destino ? (
+                    <button
+                      type="button"
+                      disabled={calculandoRuta}
+                      onClick={() => void calcularRuta(origen, destino)}
+                      className={claseBotonSecundario}
+                    >
+                      Reintentar cálculo
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </fieldset>
+
+            <fieldset className="grid gap-2 rounded-xl border border-[#dfe6ef] bg-[#f8fafc] p-4 sm:grid-cols-2 dark:border-[#1e2c44] dark:bg-[#0d1626]">
+              <legend className="px-1 text-sm font-semibold text-[#172b4d] dark:text-white">
+                Condiciones del viaje
+              </legend>
+              {controlesCondiciones.map(([nombre, etiqueta]) => (
+                <label
+                  key={nombre}
+                  className="flex min-h-9 items-center gap-2 text-sm text-[#172b4d] dark:text-[#e2e8f0]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={condiciones[nombre]}
+                    onChange={(evento) => cambiarCondicion(nombre, evento.target.checked)}
+                    className="size-4 accent-[#2165d5]"
+                  />
+                  <span>{etiqueta}</span>
+                </label>
+              ))}
+            </fieldset>
+
             <p className="rounded-lg border border-[#dbe7fb] bg-[#f4f8ff] px-3 py-2 text-[11px] leading-relaxed text-[#35527a] dark:border-[#1e3a5f] dark:bg-[#12233d] dark:text-[#bfdbfe]">
-              El servidor duplica la distancia de ida y aplica la franquicia de kilómetros
-              configurada. El resultado es el precio oficial del servicio.
+              El servidor calcula el precio sugerido con las tarifas y condiciones
+              vigentes.
             </p>
 
             {mensaje ? (
@@ -165,7 +364,7 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
             <div>
               <button
                 type="submit"
-                disabled={cargando}
+                disabled={cargando || calculandoRuta || !ruta}
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#2165d5] px-4 text-xs font-bold text-white shadow-[0_5px_12px_rgba(33,101,213,0.18)] transition hover:bg-[#1857bd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2165d5] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#2563eb] dark:hover:bg-[#1d4ed8]"
               >
                 {cargando ? (
@@ -186,69 +385,43 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
       </section>
 
       <aside className="flex flex-col gap-4">
-        <section className="rounded-2xl bg-[#172b4d] p-5 text-white shadow-[0_8px_24px_rgba(23,43,77,0.12)] dark:border dark:border-[#1e2c44] dark:bg-[#0a182e]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[#aebed4]">Total cotizado</p>
-              <p className="mt-2 text-3xl font-bold tracking-tight">
-                {resultado ? formatoMoneda.format(Number(resultado.precio_final)) : "—"}
-              </p>
-            </div>
-            <div className="grid size-10 place-items-center rounded-xl bg-white/10">
-              <CircleDollarSign size={20} />
-            </div>
-          </div>
-
-          {resultado ? (
-            <div className="mt-5 flex flex-col gap-2 border-t border-white/10 pt-4 text-xs text-[#c5d1e1]">
-              <div className="flex justify-between gap-4">
-                <span>Tipo de vehículo</span>
-                <span className="text-right font-semibold text-white">
-                  {resultado.descripcion_tipo_vehiculo}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Horas estimadas</span>
-                <span className="font-semibold text-white">
-                  {formatoCantidad.format(Number(resultado.horas_estimadas))}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Distancia total</span>
-                <span className="font-semibold text-white">
-                  {formatoCantidad.format(Number(resultado.distancia_total_km))} km
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Km excedente</span>
-                <span className="font-semibold text-white">
-                  {formatoCantidad.format(Number(resultado.km_excedente))} km
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Tarifa por hora</span>
-                <span className="font-semibold text-white">
-                  {formatoMoneda.format(Number(resultado.tarifa_hora_base))}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Tarifa por km excedente</span>
-                <span className="font-semibold text-white">
-                  {formatoMoneda.format(Number(resultado.tarifa_km_excedente))}
-                </span>
-              </div>
-            </div>
-          ) : (
+        {resultado ? (
+          <ResumenCotizacion cotizacion={resultado} vigente />
+        ) : (
+          <section className="rounded-2xl bg-[#172b4d] p-5 text-white shadow-[0_8px_24px_rgba(23,43,77,0.12)] dark:border dark:border-[#1e2c44] dark:bg-[#0a182e]">
+            <p className="text-xs text-[#aebed4]">Precio sugerido</p>
+            <p className="mt-2 text-3xl font-bold tracking-tight">—</p>
             <p className="mt-5 border-t border-white/10 pt-4 text-xs leading-relaxed text-[#aebed4]">
-              Completá los datos y cotizá para ver el desglose oficial que devuelve el
-              sistema.
+              Completá el recorrido y las condiciones para ver el desglose de la
+              cotización.
             </p>
-          )}
-        </section>
+          </section>
+        )}
       </aside>
     </div>
   );
 }
 
+function formatearDuracion(segundos: number): string {
+  if (!Number.isFinite(segundos)) {
+    return "No disponible";
+  }
+
+  const minutosTotales = Math.max(0, Math.round(segundos / 60));
+  if (minutosTotales === 0) {
+    return "menos de 1 min";
+  }
+
+  const horas = Math.floor(minutosTotales / 60);
+  const minutos = minutosTotales % 60;
+  if (horas === 0) {
+    return `${minutos} min`;
+  }
+  return minutos === 0 ? `${horas} h` : `${horas} h ${minutos} min`;
+}
+
 const claseControl =
   "rounded-lg border border-[#dfe6ef] bg-white px-3 py-2 text-xs font-normal outline-none focus:border-[#2165d5] dark:border-[#1e2c44] dark:bg-[#0d1626] dark:text-white";
+
+const claseBotonSecundario =
+  "inline-flex min-h-9 items-center justify-center rounded-lg border border-[#dfe6ef] bg-white px-3 text-xs font-semibold text-[#172b4d] transition-colors hover:bg-[#f4f8ff] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1e2c44] dark:bg-[#0d1626] dark:text-white dark:hover:bg-[#16253d]";

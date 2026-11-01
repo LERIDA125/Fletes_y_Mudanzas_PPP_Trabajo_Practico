@@ -24,12 +24,36 @@ export const esquemaFormularioServicio = z
       .refine((valor) => Number.isFinite(Number(valor)) && Number(valor) >= 1, {
         message: "Las horas deben ser 1 o más.",
       }),
+    requiere_ayudante: z.boolean().default(false),
+    acceso_escalera: z.boolean().default(false),
+    zona_concurrida: z.boolean().default(false),
+    urgencia_mismo_dia: z.boolean().default(false),
+    origen_direccion: z
+      .string()
+      .trim()
+      .min(1, "Seleccioná una dirección de origen.")
+      .max(500, "La dirección de origen no puede superar los 500 caracteres."),
+    destino_direccion: z
+      .string()
+      .trim()
+      .min(1, "Seleccioná una dirección de destino.")
+      .max(500, "La dirección de destino no puede superar los 500 caracteres."),
     distancia_ida_km: z
       .string()
       .min(1, "Ingresá los kilómetros de ida.")
       .refine((valor) => Number.isFinite(Number(valor)) && Number(valor) >= 0, {
         message: "La distancia no puede ser negativa.",
       }),
+    precio_acordado: z
+      .string()
+      .min(1, "Ingresá el precio final acordado.")
+      .refine(
+        (valor) =>
+          /^\d+([.,]\d{1,2})?$/.test(valor.trim()) &&
+          Number.isFinite(Number(valor.replace(",", "."))) &&
+          Number(valor.replace(",", ".")) >= 0,
+        { message: "Ingresá un importe válido con hasta 2 decimales." },
+      ),
     id_chofer: z.string(),
     id_vehiculo: z.string(),
   })

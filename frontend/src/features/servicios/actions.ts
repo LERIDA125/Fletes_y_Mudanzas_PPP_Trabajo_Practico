@@ -8,7 +8,10 @@ import type {
   ConsultaDisponibilidad,
   Cotizacion,
   Disponibilidad,
+  DireccionOpcion,
+  CoordenadaMapa,
   EstadoServicio,
+  ResultadoRuta,
   Servicio,
   SolicitudCotizacion,
   TipoVehiculoOpcion,
@@ -24,6 +27,10 @@ import {
   listarClientesParaAlta,
   listarTiposParaAlta,
 } from "@/lib/api/servicios";
+import {
+  buscarDirecciones as buscarDireccionesMapaApi,
+  calcularRuta as calcularRutaMapaApi,
+} from "@/lib/api/mapas";
 import { ErrorApi } from "@/lib/api/http";
 import { exigirRol } from "@/lib/auth/guards";
 
@@ -33,6 +40,34 @@ export type CatalogosServicio = {
   clientes: ClienteOpcion[];
   tiposVehiculo: TipoVehiculoOpcion[];
 };
+
+export async function buscarDireccionesMapa(
+  consulta: string,
+): Promise<ResultadoAccion<DireccionOpcion[]>> {
+  try {
+    const respuesta = await buscarDireccionesMapaApi({ consulta });
+    return { ok: true, dato: respuesta.opciones };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "mapas") };
+    }
+    throw error;
+  }
+}
+
+export async function calcularRutaMapa(
+  origen: CoordenadaMapa,
+  destino: CoordenadaMapa,
+): Promise<ResultadoAccion<ResultadoRuta>> {
+  try {
+    return { ok: true, dato: await calcularRutaMapaApi({ origen, destino }) };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "mapas") };
+    }
+    throw error;
+  }
+}
 
 export async function obtenerServiciosChofer(): Promise<ResultadoAccion<Servicio[]>> {
   await exigirRol("CHOFER");
@@ -176,7 +211,8 @@ function mensajeDeError(
     | "cambiar-estado"
     | "cancelar"
     | "eliminar"
-    | "listar-chofer",
+    | "listar-chofer"
+    | "mapas",
 ): string {
   if (error.clase === "sin-permisos" || error.clase === "sesion-expirada") {
     return "Tu sesión venció o no tenés permisos. Volvé a iniciar sesión.";
@@ -211,6 +247,9 @@ function mensajeDeError(
   }
   if (operacion === "listar-chofer") {
     return "No pudimos actualizar tus viajes. Revisá la conexión e intentá de nuevo.";
+  }
+  if (operacion === "mapas") {
+    return "No pudimos consultar el servicio de mapas. Revisá las direcciones e intentá de nuevo.";
   }
   return "No pudimos registrar el servicio. Revisá los datos e intentá de nuevo.";
 }
