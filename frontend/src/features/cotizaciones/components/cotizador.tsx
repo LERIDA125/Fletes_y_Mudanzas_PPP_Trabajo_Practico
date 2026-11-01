@@ -61,6 +61,10 @@ export function Cotizador({ tiposVehiculo }: Propiedades) {
         id_tipo_vehiculo: idTipoNumero,
         horas_estimadas: horasNumero,
         distancia_ida_km: distanciaNumero,
+        requiere_ayudante: false,
+        acceso_escalera: false,
+        zona_concurrida: false,
+        urgencia_mismo_dia: false,
       });
       if (!respuesta.ok) {
         setMensaje(respuesta.mensaje);

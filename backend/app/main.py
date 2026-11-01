@@ -10,9 +10,15 @@ from app.api.autenticacion import (
 )
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
+from app.api.mapas import router as mapas_router
 from app.api.servicios import router as servicios_router
 from app.api.tipos_vehiculo import router as tipos_vehiculo_router
 from app.api.vehiculos import router as vehiculos_router
+from app.application.mapas.errores import (
+    MapasNoDisponible,
+    RespuestaMapasInvalida,
+    RutaMapasNoEncontrada,
+)
 from app.core.config import get_settings
 from app.domain.errores import (
     ConflictoOperacion,
@@ -104,10 +110,39 @@ async def error_interno_no_controlado(_request: Request, error: Exception) -> JS
     )
 
 
+@app.exception_handler(MapasNoDisponible)
+async def mapas_no_disponible(_request: Request, _error: MapasNoDisponible) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "El servicio de mapas no está disponible temporalmente."},
+    )
+
+
+@app.exception_handler(RespuestaMapasInvalida)
+async def respuesta_mapas_invalida(
+    _request: Request, _error: RespuestaMapasInvalida
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        content={"detail": "El servicio de mapas devolvió una respuesta inválida."},
+    )
+
+
+@app.exception_handler(RutaMapasNoEncontrada)
+async def ruta_mapas_no_encontrada(
+    _request: Request, _error: RutaMapasNoEncontrada
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": "No se encontró una ruta entre las ubicaciones seleccionadas."},
+    )
+
+
 app.include_router(autenticacion_router)
 app.include_router(usuarios_router)
 app.include_router(clientes_router)
 app.include_router(servicios_router)
+app.include_router(mapas_router)
 app.include_router(choferes_router)
 app.include_router(tipos_vehiculo_router)
 app.include_router(vehiculos_router)

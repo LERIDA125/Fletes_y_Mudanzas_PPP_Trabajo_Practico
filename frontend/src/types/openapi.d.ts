@@ -277,6 +277,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mapas/direcciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Buscar direcciones para seleccionar origen o destino */
+        post: operations["buscar_direcciones_api_mapas_direcciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mapas/ruta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Calcular distancia y duración entre dos coordenadas */
+        post: operations["calcular_ruta_api_mapas_ruta_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/choferes": {
         parameters: {
             query?: never;
@@ -672,6 +706,19 @@ export interface components {
              */
             tiene_cuenta_corriente: boolean;
         };
+        /** CoordenadaMapa */
+        CoordenadaMapa: {
+            /**
+             * Longitud
+             * @description Longitud geográfica en grados decimales.
+             */
+            longitud: number | string;
+            /**
+             * Latitud
+             * @description Latitud geográfica en grados decimales.
+             */
+            latitud: number | string;
+        };
         /** CotizacionRead */
         CotizacionRead: {
             /** Id Tipo Vehiculo */
@@ -692,6 +739,38 @@ export interface components {
             tarifa_hora_base: string;
             /** Tarifa Km Excedente */
             tarifa_km_excedente: string;
+            /** Base Horas */
+            base_horas: string;
+            /** Base Km */
+            base_km: string;
+            /** Subtotal Base */
+            subtotal_base: string;
+            /** Requiere Ayudante */
+            requiere_ayudante: boolean;
+            /** Recargo Ayudante */
+            recargo_ayudante: string;
+            /** Acceso Escalera */
+            acceso_escalera: boolean;
+            /** Recargo Escalera */
+            recargo_escalera: string;
+            /** Subtotal Con Fijos */
+            subtotal_con_fijos: string;
+            /** Zona Concurrida */
+            zona_concurrida: boolean;
+            /** Porcentaje Zona Concurrida */
+            porcentaje_zona_concurrida: string;
+            /** Importe Recargo Zona Concurrida */
+            importe_recargo_zona_concurrida: string;
+            /** Urgencia Mismo Dia */
+            urgencia_mismo_dia: boolean;
+            /** Porcentaje Urgencia Mismo Dia */
+            porcentaje_urgencia_mismo_dia: string;
+            /** Importe Recargo Urgencia Mismo Dia */
+            importe_recargo_urgencia_mismo_dia: string;
+            /** Total Recargos Porcentuales */
+            total_recargos_porcentuales: string;
+            /** Precio Sugerido */
+            precio_sugerido: string;
             /** Precio Final */
             precio_final: string;
             /**
@@ -718,6 +797,55 @@ export interface components {
              * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
              */
             distancia_ida_km: number | string;
+            /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo vigente por ayudante.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo vigente por acceso con escalera.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje vigente por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje vigente por urgencia en el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
+        };
+        /** DireccionBuscarRequest */
+        DireccionBuscarRequest: {
+            /** Consulta */
+            consulta: string;
+        };
+        /** DireccionOpcionRead */
+        DireccionOpcionRead: {
+            /**
+             * Longitud
+             * @description Longitud geográfica en grados decimales.
+             */
+            longitud: string;
+            /**
+             * Latitud
+             * @description Latitud geográfica en grados decimales.
+             */
+            latitud: string;
+            /** Etiqueta */
+            etiqueta: string;
+        };
+        /** DireccionesRead */
+        DireccionesRead: {
+            /** Opciones */
+            opciones: components["schemas"]["DireccionOpcionRead"][];
         };
         /**
          * DisponibilidadRead
@@ -758,6 +886,24 @@ export interface components {
              */
             password: string;
         };
+        /** RutaRead */
+        RutaRead: {
+            /**
+             * Distancia Ida Km
+             * @description Distancia de ida en kilómetros, redondeada a dos decimales.
+             */
+            distancia_ida_km: string;
+            /**
+             * Duracion Segundos
+             * @description Duración estimada de ida en segundos.
+             */
+            duracion_segundos: string;
+        };
+        /** RutaRequest */
+        RutaRequest: {
+            origen: components["schemas"]["CoordenadaMapa"];
+            destino: components["schemas"]["CoordenadaMapa"];
+        };
         /** ServicioCancelar */
         ServicioCancelar: {
             /**
@@ -785,6 +931,30 @@ export interface components {
              */
             distancia_ida_km: number | string;
             /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo vigente por ayudante.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo vigente por acceso con escalera.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje vigente por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje vigente por urgencia en el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
+            /**
              * Id Cliente
              * @description Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.
              */
@@ -808,6 +978,21 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio?: string | null;
+            /**
+             * Origen Direccion
+             * @description Etiqueta seleccionada para el origen del recorrido.
+             */
+            origen_direccion: string;
+            /**
+             * Destino Direccion
+             * @description Etiqueta seleccionada para el destino del recorrido.
+             */
+            destino_direccion: string;
+            /**
+             * Precio Acordado
+             * @description Importe acordado con el cliente. Si se omite, se usa el precio sugerido vigente.
+             */
+            precio_acordado?: number | string | null;
         };
         /** ServicioEstadoUpdate */
         ServicioEstadoUpdate: {
@@ -874,6 +1059,10 @@ export interface components {
             horas_estimadas: string;
             /** Distancia Ida Km */
             distancia_ida_km: string;
+            /** Origen Direccion */
+            origen_direccion: string | null;
+            /** Destino Direccion */
+            destino_direccion: string | null;
             /** Distancia Total Km */
             distancia_total_km: string;
             /** Km Franquicia */
@@ -884,6 +1073,30 @@ export interface components {
             tarifa_hora_aplicada: string;
             /** Tarifa Km Aplicada */
             tarifa_km_aplicada: string;
+            /** Requiere Ayudante */
+            requiere_ayudante: boolean;
+            /** Acceso Escalera */
+            acceso_escalera: boolean;
+            /** Zona Concurrida */
+            zona_concurrida: boolean;
+            /** Urgencia Mismo Dia */
+            urgencia_mismo_dia: boolean;
+            /** Recargo Ayudante Aplicado */
+            recargo_ayudante_aplicado: string;
+            /** Recargo Escalera Aplicado */
+            recargo_escalera_aplicado: string;
+            /** Importe Recargo Zona Aplicado */
+            importe_recargo_zona_aplicado: string;
+            /** Importe Recargo Urgencia Aplicado */
+            importe_recargo_urgencia_aplicado: string;
+            /** Porcentaje Zona Aplicado */
+            porcentaje_zona_aplicado: string;
+            /** Porcentaje Urgencia Aplicado */
+            porcentaje_urgencia_aplicado: string;
+            /** Precio Sugerido */
+            precio_sugerido: string;
+            /** Precio Acordado */
+            precio_acordado: string;
             /** Precio Total */
             precio_total: string;
             /**
@@ -1123,10 +1336,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /**
          * VehiculoCreate
@@ -2237,6 +2446,134 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    buscar_direcciones_api_mapas_direcciones_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DireccionBuscarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DireccionesRead"];
+                };
+            };
+            /** @description Autenticación requerida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La consulta no es válida. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Respuesta inválida del servicio de mapas. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio de mapas no está disponible. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    calcular_ruta_api_mapas_ruta_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RutaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RutaRead"];
+                };
+            };
+            /** @description Autenticación requerida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Las coordenadas no son válidas o no existe una ruta. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Respuesta inválida del servicio de mapas. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio de mapas no está disponible. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

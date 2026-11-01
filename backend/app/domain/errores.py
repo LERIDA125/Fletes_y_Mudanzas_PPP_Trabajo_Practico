@@ -17,6 +17,10 @@ class DatoInvalido(ReglaNegocioError):
     """Los datos provistos son inválidos o no cumplen las reglas requeridas (mapea a HTTP 422)."""
 
 
+class ConfiguracionCotizacionInvalida(DatoInvalido):
+    """La configuración persistida de recargos no permite calcular una cotización."""
+
+
 class CredencialesInvalidas(ReglaNegocioError):
     """Las credenciales o el token de autenticación no son válidos (mapea a HTTP 401)."""
 

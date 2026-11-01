@@ -5,6 +5,7 @@ from decimal import Decimal
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.configuracion_cotizacion import ConfiguracionCotizacionORM
 from app.infrastructure.models.servicio import ServicioORM
 from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
 from app.infrastructure.models.usuario import UsuarioORM
@@ -48,6 +49,19 @@ def run_seed():
         )
         db.add_all([admin_1, admin_2])
         db.commit()
+
+        configuracion = db.get(ConfiguracionCotizacionORM, 1)
+        if configuracion is None:
+            db.add(
+                ConfiguracionCotizacionORM(
+                    id=1,
+                    recargo_ayudante=Decimal("30000.00"),
+                    recargo_escalera=Decimal("15000.00"),
+                    porcentaje_zona_concurrida=Decimal("15.00"),
+                    porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+                )
+            )
+            db.commit()
         db.refresh(admin_1)
         db.refresh(admin_2)
 
@@ -214,11 +228,14 @@ def run_seed():
                 id_vehiculo=vehiculo_id,
                 horas_estimadas=Decimal("2.50"),
                 distancia_ida_km=Decimal("15.00"),
+                origen_direccion="Terminal de Ómnibus, Córdoba",
+                destino_direccion="Plaza San Martín, Córdoba",
                 distancia_total_km=Decimal("30.00"),
                 km_franquicia=Decimal("10.00"),
                 km_excedente=Decimal("20.00"),
                 tarifa_hora_aplicada=Decimal("12500.00"),
                 tarifa_km_aplicada=Decimal("450.00"),
+                precio_sugerido=Decimal("40250.00"),
                 precio_total=Decimal("40250.00"),
                 creado_por_id=autor_id,
                 modificado_por_id=autor_id,

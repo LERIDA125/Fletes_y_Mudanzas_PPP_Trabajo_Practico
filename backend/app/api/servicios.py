@@ -121,6 +121,10 @@ def cotizar_servicio(
         id_tipo_vehiculo=datos.id_tipo_vehiculo,
         horas_estimadas=datos.horas_estimadas,
         distancia_ida_km=datos.distancia_ida_km,
+        requiere_ayudante=datos.requiere_ayudante,
+        acceso_escalera=datos.acceso_escalera,
+        zona_concurrida=datos.zona_concurrida,
+        urgencia_mismo_dia=datos.urgencia_mismo_dia,
     )
     return CotizacionRead.de_cotizacion(cotizacion)
 
@@ -169,6 +173,13 @@ def crear_servicio(
         hora_inicio=datos.hora_inicio,
         horas_estimadas=datos.horas_estimadas,
         distancia_ida_km=datos.distancia_ida_km,
+        origen_direccion=datos.origen_direccion,
+        destino_direccion=datos.destino_direccion,
+        requiere_ayudante=datos.requiere_ayudante,
+        acceso_escalera=datos.acceso_escalera,
+        zona_concurrida=datos.zona_concurrida,
+        urgencia_mismo_dia=datos.urgencia_mismo_dia,
+        precio_acordado=datos.precio_acordado,
         nuevo_cliente=nuevo_cliente,
         usuario_id=usuario_actual.id,
     )

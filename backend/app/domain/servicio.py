@@ -61,6 +61,19 @@ class Servicio:
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
     precio_total: Decimal
+    origen_direccion: str | None = None
+    destino_direccion: str | None = None
+    requiere_ayudante: bool = False
+    acceso_escalera: bool = False
+    zona_concurrida: bool = False
+    urgencia_mismo_dia: bool = False
+    recargo_ayudante_aplicado: Decimal = Decimal("0")
+    recargo_escalera_aplicado: Decimal = Decimal("0")
+    importe_recargo_zona_aplicado: Decimal = Decimal("0")
+    importe_recargo_urgencia_aplicado: Decimal = Decimal("0")
+    porcentaje_zona_aplicado: Decimal = Decimal("0")
+    porcentaje_urgencia_aplicado: Decimal = Decimal("0")
+    precio_sugerido: Decimal | None = None
     estado: str = "pendiente"
     hora_fin: time | None = None
     motivo_cancelacion: str | None = None
@@ -90,6 +103,19 @@ class Servicio:
         tarifa_hora_aplicada: Decimal,
         tarifa_km_aplicada: Decimal,
         precio_total: Decimal,
+        origen_direccion: str,
+        destino_direccion: str,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
+        recargo_ayudante_aplicado: Decimal = Decimal("0"),
+        recargo_escalera_aplicado: Decimal = Decimal("0"),
+        importe_recargo_zona_aplicado: Decimal = Decimal("0"),
+        importe_recargo_urgencia_aplicado: Decimal = Decimal("0"),
+        porcentaje_zona_aplicado: Decimal = Decimal("0"),
+        porcentaje_urgencia_aplicado: Decimal = Decimal("0"),
+        precio_sugerido: Decimal | None = None,
         creado_por_id: int | None = None,
     ) -> Servicio:
         return cls(
@@ -108,6 +134,19 @@ class Servicio:
             tarifa_hora_aplicada=tarifa_hora_aplicada,
             tarifa_km_aplicada=tarifa_km_aplicada,
             precio_total=precio_total,
+            origen_direccion=origen_direccion,
+            destino_direccion=destino_direccion,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
+            recargo_ayudante_aplicado=recargo_ayudante_aplicado,
+            recargo_escalera_aplicado=recargo_escalera_aplicado,
+            importe_recargo_zona_aplicado=importe_recargo_zona_aplicado,
+            importe_recargo_urgencia_aplicado=importe_recargo_urgencia_aplicado,
+            porcentaje_zona_aplicado=porcentaje_zona_aplicado,
+            porcentaje_urgencia_aplicado=porcentaje_urgencia_aplicado,
+            precio_sugerido=precio_sugerido,
             creado_por_id=creado_por_id,
             modificado_por_id=creado_por_id,
         )
@@ -154,6 +193,8 @@ class Servicio:
         return self
 
     def _validar(self) -> None:
+        if self.precio_sugerido is None:
+            self.precio_sugerido = self.precio_total
         for nombre, valor in (
             ("horas_estimadas", self.horas_estimadas),
             ("distancia_ida_km", self.distancia_ida_km),
@@ -163,6 +204,13 @@ class Servicio:
             ("tarifa_hora_aplicada", self.tarifa_hora_aplicada),
             ("tarifa_km_aplicada", self.tarifa_km_aplicada),
             ("precio_total", self.precio_total),
+            ("precio_sugerido", self.precio_sugerido),
+            ("recargo_ayudante_aplicado", self.recargo_ayudante_aplicado),
+            ("recargo_escalera_aplicado", self.recargo_escalera_aplicado),
+            ("importe_recargo_zona_aplicado", self.importe_recargo_zona_aplicado),
+            ("importe_recargo_urgencia_aplicado", self.importe_recargo_urgencia_aplicado),
+            ("porcentaje_zona_aplicado", self.porcentaje_zona_aplicado),
+            ("porcentaje_urgencia_aplicado", self.porcentaje_urgencia_aplicado),
         ):
             if not isinstance(valor, Decimal) or not valor.is_finite():
                 raise DatoInvalido(f"{nombre} debe ser un valor numérico finito")
@@ -171,6 +219,16 @@ class Servicio:
 
         if self.horas_estimadas < Decimal("1"):
             raise DatoInvalido("Las horas estimadas deben ser como mínimo 1")
+        for nombre in (
+            "requiere_ayudante",
+            "acceso_escalera",
+            "zona_concurrida",
+            "urgencia_mismo_dia",
+        ):
+            if not isinstance(getattr(self, nombre), bool):
+                raise DatoInvalido(f"{nombre} debe ser un valor booleano")
+        if self.porcentaje_zona_aplicado > 100 or self.porcentaje_urgencia_aplicado > 100:
+            raise DatoInvalido("Los porcentajes de recargo no pueden superar 100")
         if min(self.id_cliente, self.id_tipo_vehiculo) < 1:
             raise DatoInvalido("Cliente y tipo de vehículo son obligatorios")
         if self.id_chofer is not None and self.id_chofer < 1:
@@ -179,6 +237,15 @@ class Servicio:
             raise DatoInvalido("El identificador del vehículo debe ser positivo")
         if self.estado not in ESTADOS_SERVICIO:
             raise DatoInvalido(f"Estado de servicio inválido: {self.estado}")
+        if self.id is None:
+            for nombre, direccion in (
+                ("origen_direccion", self.origen_direccion),
+                ("destino_direccion", self.destino_direccion),
+            ):
+                if not isinstance(direccion, str) or not direccion.strip():
+                    raise DatoInvalido(f"{nombre} es obligatoria para un servicio nuevo")
+                if len(direccion) > 500:
+                    raise DatoInvalido(f"{nombre} no puede superar los 500 caracteres")
         if self.estado != "pendiente" and self.id is None:
             raise DatoInvalido("Un servicio nuevo debe iniciar en estado pendiente")
         if self.hora_fin is not None and not isinstance(self.hora_fin, time):

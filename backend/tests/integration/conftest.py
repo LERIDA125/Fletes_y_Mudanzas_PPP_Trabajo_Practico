@@ -5,6 +5,7 @@ nunca tocan los datos reales.
 """
 
 from collections.abc import Generator, Iterator
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +18,7 @@ from app.core.config import get_settings
 from app.core.dependencias import get_historial_clientes
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.session import get_db
+from app.infrastructure.models.configuracion_cotizacion import ConfiguracionCotizacionORM
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 from app.main import app
 
@@ -89,6 +91,16 @@ def _limpiar_tablas(sesion_test: Session) -> Iterator[None]:
     # Antes y después: así una corrida anterior que quedó a medias no deja basura que haga fallar
     # un test por un motivo que no es el suyo.
     _vaciar_todas_las_tablas(sesion_test)
+    sesion_test.add(
+        ConfiguracionCotizacionORM(
+            id=1,
+            recargo_ayudante=Decimal("30000.00"),
+            recargo_escalera=Decimal("15000.00"),
+            porcentaje_zona_concurrida=Decimal("15.00"),
+            porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+        )
+    )
+    sesion_test.commit()
     yield
     _vaciar_todas_las_tablas(sesion_test)
 

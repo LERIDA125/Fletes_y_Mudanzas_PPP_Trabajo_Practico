@@ -11,6 +11,9 @@ export type TipoVehiculoOpcion = components["schemas"]["TipoVehiculoRead"];
 export type Disponibilidad = components["schemas"]["DisponibilidadRead"];
 export type ChoferDisponible = components["schemas"]["ChoferRead"];
 export type VehiculoDisponible = components["schemas"]["VehiculoListadoRead"];
+export type DireccionOpcion = components["schemas"]["DireccionOpcionRead"];
+export type CoordenadaMapa = components["schemas"]["CoordenadaMapa"];
+export type ResultadoRuta = components["schemas"]["RutaRead"];
 
 export type EstadoServicio =
   "pendiente" | "confirmado" | "en curso" | "finalizado" | "cobrado" | "cancelado";

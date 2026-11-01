@@ -17,6 +17,7 @@ from app.infrastructure.db.base import Base
 from app.infrastructure.models import (  # noqa: F401
     chofer,
     cliente,
+    configuracion_cotizacion,
     servicio,
     tipo_vehiculo,
     usuario,
@@ -24,6 +25,7 @@ from app.infrastructure.models import (  # noqa: F401
 )
 from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.configuracion_cotizacion import ConfiguracionCotizacionORM
 from app.infrastructure.models.servicio import ServicioORM
 from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
 from app.infrastructure.models.usuario import UsuarioORM
@@ -185,11 +187,14 @@ def _poblar_catalogo_inicial_si_vacio(db: Session, admin_id: int | None) -> None
                 id_vehiculo=veh.id,
                 horas_estimadas=Decimal("2.50"),
                 distancia_ida_km=Decimal("15.00"),
+                origen_direccion="Terminal de Ómnibus, Córdoba",
+                destino_direccion="Plaza San Martín, Córdoba",
                 distancia_total_km=Decimal("30.00"),
                 km_franquicia=Decimal("10.00"),
                 km_excedente=Decimal("20.00"),
                 tarifa_hora_aplicada=Decimal("18000.00"),
                 tarifa_km_aplicada=Decimal("650.00"),
+                precio_sugerido=Decimal("58000.00"),
                 precio_total=Decimal("58000.00"),
                 creado_por_id=admin_id,
                 modificado_por_id=admin_id,
@@ -299,6 +304,18 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                     db.add(admin)
                     db.commit()
                     db.refresh(admin)
+
+                if db.get(ConfiguracionCotizacionORM, 1) is None:
+                    db.add(
+                        ConfiguracionCotizacionORM(
+                            id=1,
+                            recargo_ayudante=Decimal("30000.00"),
+                            recargo_escalera=Decimal("15000.00"),
+                            porcentaje_zona_concurrida=Decimal("15.00"),
+                            porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+                        )
+                    )
+                    db.commit()
 
                 admin2 = (
                     db.query(UsuarioORM)

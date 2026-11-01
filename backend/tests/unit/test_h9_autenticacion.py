@@ -1,6 +1,7 @@
 """Tests unitarios y de API para Autenticación JWT, Multi-Admin y Creación de Usuarios (H9)."""
 
 from collections.abc import Generator
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +15,7 @@ from app.core.dependencias import get_db
 from app.domain.errores import CredencialesInvalidas, DatoInvalido
 from app.domain.usuario import Usuario
 from app.infrastructure.db.base import Base
+from app.infrastructure.models.configuracion_cotizacion import ConfiguracionCotizacionORM
 from app.infrastructure.repositories.usuario_repo import UsuarioRepo
 from app.infrastructure.security.jwt_service import JWTService
 from app.infrastructure.security.password_hasher import PasswordHasher
@@ -69,6 +71,16 @@ def cliente_auth() -> Generator[tuple[TestClient, Session], None, None]:
     )
     Base.metadata.create_all(engine)
     sesion = Session(engine, expire_on_commit=False)
+    sesion.add(
+        ConfiguracionCotizacionORM(
+            id=1,
+            recargo_ayudante=Decimal("30000.00"),
+            recargo_escalera=Decimal("15000.00"),
+            porcentaje_zona_concurrida=Decimal("15.00"),
+            porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+        )
+    )
+    sesion.commit()
 
     def obtener_sesion() -> Generator[Session, None, None]:
         yield sesion
@@ -201,7 +213,6 @@ def test_h9_api_login_multi_admin_y_usuario_chofer(
     )
 
 
-
 def test_h9_trazabilidad_y_auditoria_multi_admin(
     cliente_auth: tuple[TestClient, Session],
 ) -> None:
@@ -282,6 +293,8 @@ def test_h9_trazabilidad_y_auditoria_multi_admin(
             "fecha": "2026-11-10",
             "horas_estimadas": 3,
             "distancia_ida_km": 12,
+            "origen_direccion": "Terminal de Ómnibus, Córdoba",
+            "destino_direccion": "Plaza San Martín, Córdoba",
         },
     ).json()
     assert s_resp["creado_por_id"] == 1
@@ -385,6 +398,8 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
             "fecha": "2026-11-12",
             "horas_estimadas": 2,
             "distancia_ida_km": 8,
+            "origen_direccion": "Terminal de Ómnibus, Córdoba",
+            "destino_direccion": "Plaza San Martín, Córdoba",
         },
     ).json()
     serv_2 = cliente.post(
@@ -397,6 +412,8 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
             "fecha": "2026-11-12",
             "horas_estimadas": 2,
             "distancia_ida_km": 8,
+            "origen_direccion": "Terminal de Ómnibus, Córdoba",
+            "destino_direccion": "Plaza San Martín, Córdoba",
         },
     ).json()
 
@@ -472,4 +489,3 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
         ).status_code
         == 403
     )
-

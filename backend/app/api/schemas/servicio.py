@@ -35,6 +35,22 @@ class CotizacionRequest(BaseModel):
         allow_inf_nan=False,
         description="Kilómetros de ida. El backend los duplica para obtener el recorrido total.",
     )
+    requiere_ayudante: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo vigente por ayudante.",
+    )
+    acceso_escalera: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo vigente por acceso con escalera.",
+    )
+    zona_concurrida: bool = Field(
+        default=False,
+        description="Aplica el porcentaje vigente por zona concurrida.",
+    )
+    urgencia_mismo_dia: bool = Field(
+        default=False,
+        description="Aplica el porcentaje vigente por urgencia en el mismo día.",
+    )
 
 
 class CotizacionRead(BaseModel):
@@ -47,6 +63,22 @@ class CotizacionRead(BaseModel):
     km_excedente: Decimal
     tarifa_hora_base: Decimal
     tarifa_km_excedente: Decimal
+    base_horas: Decimal
+    base_km: Decimal
+    subtotal_base: Decimal
+    requiere_ayudante: bool
+    recargo_ayudante: Decimal
+    acceso_escalera: bool
+    recargo_escalera: Decimal
+    subtotal_con_fijos: Decimal
+    zona_concurrida: bool
+    porcentaje_zona_concurrida: Decimal
+    importe_recargo_zona_concurrida: Decimal
+    urgencia_mismo_dia: bool
+    porcentaje_urgencia_mismo_dia: Decimal
+    importe_recargo_urgencia_mismo_dia: Decimal
+    total_recargos_porcentuales: Decimal
+    precio_sugerido: Decimal
     precio_final: Decimal
     moneda: Literal["ARS"] = "ARS"
 
@@ -63,6 +95,26 @@ class CotizacionRead(BaseModel):
             km_excedente=resultado.km_excedente,
             tarifa_hora_base=resultado.tarifa_hora_base,
             tarifa_km_excedente=resultado.tarifa_km_excedente,
+            base_horas=resultado.base_horas,
+            base_km=resultado.base_km,
+            subtotal_base=resultado.subtotal_base,
+            requiere_ayudante=resultado.requiere_ayudante,
+            recargo_ayudante=resultado.recargo_ayudante,
+            acceso_escalera=resultado.acceso_escalera,
+            recargo_escalera=resultado.recargo_escalera,
+            subtotal_con_fijos=resultado.subtotal_con_fijos,
+            zona_concurrida=resultado.zona_concurrida,
+            porcentaje_zona_concurrida=resultado.porcentaje_zona_concurrida,
+            importe_recargo_zona_concurrida=(
+                resultado.importe_recargo_zona_concurrida
+            ),
+            urgencia_mismo_dia=resultado.urgencia_mismo_dia,
+            porcentaje_urgencia_mismo_dia=resultado.porcentaje_urgencia_mismo_dia,
+            importe_recargo_urgencia_mismo_dia=(
+                resultado.importe_recargo_urgencia_mismo_dia
+            ),
+            total_recargos_porcentuales=resultado.total_recargos_porcentuales,
+            precio_sugerido=resultado.precio_sugerido,
             precio_final=resultado.precio_final,
         )
 
@@ -88,6 +140,34 @@ class ServicioCreate(CotizacionRequest):
     )
     fecha: date
     hora_inicio: time | None = None
+    origen_direccion: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Etiqueta seleccionada para el origen del recorrido.",
+    )
+    destino_direccion: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Etiqueta seleccionada para el destino del recorrido.",
+    )
+    precio_acordado: Decimal | None = Field(
+        default=None,
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+        allow_inf_nan=False,
+        description=(
+            "Importe acordado con el cliente. Si se omite, se usa el precio sugerido vigente."
+        ),
+    )
+
+    @field_validator("origen_direccion", "destino_direccion")
+    @classmethod
+    def _direccion_no_vacia(cls, valor: str) -> str:
+        limpio = valor.strip()
+        if not limpio:
+            raise ValueError("La dirección seleccionada no puede estar vacía")
+        return limpio
 
     @model_validator(mode="after")
     def _cliente_excluyente(self) -> ServicioCreate:
@@ -141,11 +221,25 @@ class ServicioRead(BaseModel):
     hora_fin: time | None
     horas_estimadas: Decimal
     distancia_ida_km: Decimal
+    origen_direccion: str | None
+    destino_direccion: str | None
     distancia_total_km: Decimal
     km_franquicia: Decimal
     km_excedente: Decimal
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
+    requiere_ayudante: bool
+    acceso_escalera: bool
+    zona_concurrida: bool
+    urgencia_mismo_dia: bool
+    recargo_ayudante_aplicado: Decimal
+    recargo_escalera_aplicado: Decimal
+    importe_recargo_zona_aplicado: Decimal
+    importe_recargo_urgencia_aplicado: Decimal
+    porcentaje_zona_aplicado: Decimal
+    porcentaje_urgencia_aplicado: Decimal
+    precio_sugerido: Decimal
+    precio_acordado: Decimal
     precio_total: Decimal
     moneda: Literal["ARS"] = "ARS"
     estado: str
@@ -177,11 +271,31 @@ class ServicioRead(BaseModel):
             hora_fin=servicio.hora_fin,
             horas_estimadas=servicio.horas_estimadas,
             distancia_ida_km=servicio.distancia_ida_km,
+            origen_direccion=servicio.origen_direccion,
+            destino_direccion=servicio.destino_direccion,
             distancia_total_km=servicio.distancia_total_km,
             km_franquicia=servicio.km_franquicia,
             km_excedente=servicio.km_excedente,
             tarifa_hora_aplicada=servicio.tarifa_hora_aplicada,
             tarifa_km_aplicada=servicio.tarifa_km_aplicada,
+            requiere_ayudante=servicio.requiere_ayudante,
+            acceso_escalera=servicio.acceso_escalera,
+            zona_concurrida=servicio.zona_concurrida,
+            urgencia_mismo_dia=servicio.urgencia_mismo_dia,
+            recargo_ayudante_aplicado=servicio.recargo_ayudante_aplicado,
+            recargo_escalera_aplicado=servicio.recargo_escalera_aplicado,
+            importe_recargo_zona_aplicado=servicio.importe_recargo_zona_aplicado,
+            importe_recargo_urgencia_aplicado=(
+                servicio.importe_recargo_urgencia_aplicado
+            ),
+            porcentaje_zona_aplicado=servicio.porcentaje_zona_aplicado,
+            porcentaje_urgencia_aplicado=servicio.porcentaje_urgencia_aplicado,
+            precio_sugerido=(
+                servicio.precio_sugerido
+                if servicio.precio_sugerido is not None
+                else servicio.precio_total
+            ),
+            precio_acordado=servicio.precio_total,
             precio_total=servicio.precio_total,
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),

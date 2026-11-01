@@ -7,6 +7,8 @@ import { ListadoServicios } from "@/features/servicios/components/listado-servic
 import type {
   ClienteOpcion,
   Cotizacion,
+  DireccionOpcion,
+  ResultadoRuta,
   Servicio,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
@@ -14,6 +16,8 @@ import type {
 const {
   registrarServicio,
   solicitarCotizacion,
+  buscarDireccionesMapa,
+  calcularRutaMapa,
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   cambiarEstadoServicio,
@@ -23,6 +27,8 @@ const {
 } = vi.hoisted(() => ({
   registrarServicio: vi.fn(),
   solicitarCotizacion: vi.fn(),
+  buscarDireccionesMapa: vi.fn(),
+  calcularRutaMapa: vi.fn(),
   consultarDisponibilidadServicio: vi.fn(),
   obtenerCatalogosServicio: vi.fn(),
   cambiarEstadoServicio: vi.fn(),
@@ -34,6 +40,8 @@ const {
 vi.mock("@/features/servicios/actions", () => ({
   registrarServicio,
   solicitarCotizacion,
+  buscarDireccionesMapa,
+  calcularRutaMapa,
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   cambiarEstadoServicio,
@@ -69,6 +77,23 @@ const tiposVehiculo: TipoVehiculoOpcion[] = [
   },
 ];
 
+const origen: DireccionOpcion = {
+  etiqueta: "Terminal de Ómnibus, Córdoba",
+  longitud: "-64.1888",
+  latitud: "-31.4201",
+};
+
+const destino: DireccionOpcion = {
+  etiqueta: "Plaza San Martín, Córdoba",
+  longitud: "-64.1833",
+  latitud: "-31.4167",
+};
+
+const ruta: ResultadoRuta = {
+  distancia_ida_km: "15.00",
+  duracion_segundos: "3600",
+};
+
 const cotizacion: Cotizacion = {
   id_tipo_vehiculo: 3,
   descripcion_tipo_vehiculo: "Furgón grande",
@@ -79,6 +104,22 @@ const cotizacion: Cotizacion = {
   km_excedente: "20",
   tarifa_hora_base: "3000",
   tarifa_km_excedente: "150",
+  base_horas: "6000.00",
+  base_km: "3000.00",
+  subtotal_base: "9000.00",
+  requiere_ayudante: false,
+  recargo_ayudante: "0.00",
+  acceso_escalera: false,
+  recargo_escalera: "0.00",
+  subtotal_con_fijos: "9000.00",
+  zona_concurrida: false,
+  porcentaje_zona_concurrida: "0.00",
+  importe_recargo_zona_concurrida: "0.00",
+  urgencia_mismo_dia: false,
+  porcentaje_urgencia_mismo_dia: "0.00",
+  importe_recargo_urgencia_mismo_dia: "0.00",
+  total_recargos_porcentuales: "0.00",
+  precio_sugerido: "9000.00",
   precio_final: "9000.00",
   moneda: "ARS",
 };
@@ -99,11 +140,25 @@ function servicioCreado(parcial: Partial<Servicio> = {}): Servicio {
     hora_fin: null,
     horas_estimadas: "2",
     distancia_ida_km: "15",
+    origen_direccion: null,
+    destino_direccion: null,
     distancia_total_km: "30",
     km_franquicia: "10",
     km_excedente: "20",
     tarifa_hora_aplicada: "3000",
     tarifa_km_aplicada: "150",
+    requiere_ayudante: false,
+    acceso_escalera: false,
+    zona_concurrida: false,
+    urgencia_mismo_dia: false,
+    recargo_ayudante_aplicado: "0.00",
+    recargo_escalera_aplicado: "0.00",
+    importe_recargo_zona_aplicado: "0.00",
+    importe_recargo_urgencia_aplicado: "0.00",
+    porcentaje_zona_aplicado: "0.00",
+    porcentaje_urgencia_aplicado: "0.00",
+    precio_sugerido: "9000.00",
+    precio_acordado: "9000.00",
     precio_total: "9000.00",
     moneda: "ARS",
     estado: "pendiente",
@@ -129,15 +184,35 @@ async function completarDatos() {
   await userEvent.selectOptions(screen.getByLabelText("Tipo de vehículo"), "3");
   fireEvent.change(screen.getByLabelText("Fecha"), { target: { value: "2026-10-25" } });
   fireEvent.change(screen.getByLabelText("Horas estimadas"), { target: { value: "2" } });
-  fireEvent.change(screen.getByLabelText("Distancia de ida (km)"), {
-    target: { value: "15" },
-  });
+  await seleccionarDireccion("Origen", "Origen Córdoba", origen);
+  await seleccionarDireccion("Destino", "Destino Córdoba", destino);
+  await waitFor(() =>
+    expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(15),
+  );
+  await screen.findByText(
+    (texto, elemento) => elemento?.tagName === "STRONG" && texto.includes("9.000,00"),
+  );
+}
+
+async function seleccionarDireccion(
+  extremo: string,
+  consulta: string,
+  opcion: DireccionOpcion,
+) {
+  await userEvent.type(screen.getByLabelText(extremo), consulta);
+  await userEvent.click(screen.getByRole("button", { name: `Buscar ${extremo}` }));
+  await userEvent.click(await screen.findByRole("option", { name: opcion.etiqueta }));
 }
 
 describe("FormularioServicio", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     solicitarCotizacion.mockResolvedValue({ ok: true, dato: cotizacion });
+    buscarDireccionesMapa.mockImplementation(async () => ({
+      ok: true,
+      dato: [origen, destino],
+    }));
+    calcularRutaMapa.mockResolvedValue({ ok: true, dato: ruta });
     registrarServicio.mockResolvedValue({ ok: true, dato: servicioCreado() });
     consultarDisponibilidadServicio.mockResolvedValue({
       ok: true,
@@ -161,6 +236,18 @@ describe("FormularioServicio", () => {
     await waitFor(() => expect(screen.getByRole("dialog")).toHaveAttribute("open"));
   });
 
+  it("busca direcciones solo al enviar la consulta explícitamente", async () => {
+    render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
+    await userEvent.click(screen.getByText("Nuevo servicio"));
+    await userEvent.type(screen.getByLabelText("Origen"), "Origen Córdoba");
+
+    expect(buscarDireccionesMapa).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Buscar Origen" }));
+    await waitFor(() => expect(buscarDireccionesMapa).toHaveBeenCalledOnce());
+    expect(buscarDireccionesMapa).toHaveBeenCalledWith("Origen Córdoba");
+  });
+
   it("pide los catálogos al abrir cuando la página no los precarga", async () => {
     const usuario = userEvent.setup();
     render(<FormularioServicio />);
@@ -173,13 +260,12 @@ describe("FormularioServicio", () => {
     expect(screen.getByLabelText("Cliente")).toBeInTheDocument();
   });
 
-  it("cotiza con el backend y solo crea después de confirmar la estimación", async () => {
+  it("calcula la ruta, cotiza automáticamente y solo crea al confirmar", async () => {
     const usuario = userEvent.setup();
     render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
 
     await usuario.click(screen.getByText("Nuevo servicio"));
     await completarDatos();
-    await usuario.click(screen.getByRole("button", { name: "Cotizar viaje" }));
 
     expect(
       await screen.findByText(
@@ -190,7 +276,17 @@ describe("FormularioServicio", () => {
       id_tipo_vehiculo: 3,
       horas_estimadas: 2,
       distancia_ida_km: 15,
+      requiere_ayudante: false,
+      acceso_escalera: false,
+      zona_concurrida: false,
+      urgencia_mismo_dia: false,
     });
+    expect(calcularRutaMapa).toHaveBeenCalledWith(
+      { longitud: origen.longitud, latitud: origen.latitud },
+      { longitud: destino.longitud, latitud: destino.latitud },
+    );
+    expect(screen.getByLabelText("Distancia de ida (km)")).toHaveAttribute("readonly");
+    expect(screen.getByText("Tiempo estimado:")).toBeInTheDocument();
     expect(registrarServicio).not.toHaveBeenCalled();
 
     await usuario.click(
@@ -205,6 +301,13 @@ describe("FormularioServicio", () => {
       hora_inicio: null,
       horas_estimadas: 2,
       distancia_ida_km: 15,
+      requiere_ayudante: false,
+      acceso_escalera: false,
+      zona_concurrida: false,
+      urgencia_mismo_dia: false,
+      precio_acordado: 9000,
+      origen_direccion: origen.etiqueta,
+      destino_direccion: destino.etiqueta,
     });
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Servicio #41 registrado. Precio final: $ 9.000,00.",
@@ -228,11 +331,11 @@ describe("FormularioServicio", () => {
     fireEvent.change(screen.getByLabelText("Horas estimadas"), {
       target: { value: "2" },
     });
-    fireEvent.change(screen.getByLabelText("Distancia de ida (km)"), {
-      target: { value: "15" },
-    });
-
-    await usuario.click(screen.getByRole("button", { name: "Cotizar viaje" }));
+    await seleccionarDireccion("Origen", "Origen Córdoba", origen);
+    await seleccionarDireccion("Destino", "Destino Córdoba", destino);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(15),
+    );
     await screen.findByText(
       (texto, elemento) => elemento?.tagName === "STRONG" && texto.includes("9.000,00"),
     );
@@ -253,16 +356,36 @@ describe("FormularioServicio", () => {
       hora_inicio: null,
       horas_estimadas: 2,
       distancia_ida_km: 15,
+      requiere_ayudante: false,
+      acceso_escalera: false,
+      zona_concurrida: false,
+      urgencia_mismo_dia: false,
+      precio_acordado: 9000,
+      origen_direccion: origen.etiqueta,
+      destino_direccion: destino.etiqueta,
     });
   });
 
-  it("invalida la cotización y bloquea el alta si cambian los datos", async () => {
+  it("recalcula automáticamente cuando cambian los datos de cotización", async () => {
     const usuario = userEvent.setup();
+    solicitarCotizacion
+      .mockResolvedValueOnce({ ok: true, dato: cotizacion })
+      .mockResolvedValueOnce({
+        ok: true,
+        dato: {
+          ...cotizacion,
+          horas_estimadas: "3",
+          base_horas: "9000.00",
+          subtotal_base: "12000.00",
+          subtotal_con_fijos: "12000.00",
+          precio_sugerido: "12000.00",
+          precio_final: "12000.00",
+        },
+      });
     render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
 
     await usuario.click(screen.getByText("Nuevo servicio"));
     await completarDatos();
-    await usuario.click(screen.getByRole("button", { name: "Cotizar viaje" }));
     expect(
       await screen.findByText(
         (texto, elemento) => elemento?.tagName === "STRONG" && texto.includes("9.000,00"),
@@ -273,11 +396,153 @@ describe("FormularioServicio", () => {
       target: { value: "3" },
     });
 
-    expect(screen.getByText("La cotización quedó desactualizada")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Confirmar y registrar servicio" }),
-    ).not.toBeInTheDocument();
-    expect(registrarServicio).not.toHaveBeenCalled();
+      await screen.findByText(
+        (texto, elemento) =>
+          elemento?.tagName === "STRONG" && texto.includes("12.000,00"),
+      ),
+    ).toBeInTheDocument();
+    expect(solicitarCotizacion).toHaveBeenCalledTimes(2);
+  });
+
+  it("recalcula por modificadores, permite acordar otro precio y lo registra", async () => {
+    const usuario = userEvent.setup();
+    solicitarCotizacion
+      .mockResolvedValueOnce({ ok: true, dato: cotizacion })
+      .mockResolvedValueOnce({
+        ok: true,
+        dato: {
+          ...cotizacion,
+          zona_concurrida: true,
+          porcentaje_zona_concurrida: "15.00",
+          importe_recargo_zona_concurrida: "1350.00",
+          total_recargos_porcentuales: "1350.00",
+          precio_sugerido: "10350.00",
+          precio_final: "10350.00",
+        },
+      });
+    render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
+
+    await usuario.click(screen.getByText("Nuevo servicio"));
+    await completarDatos();
+    await usuario.click(screen.getByLabelText("Zona concurrida"));
+
+    expect(
+      await screen.findByText(
+        (texto, elemento) =>
+          elemento?.tagName === "STRONG" && texto.includes("10.350,00"),
+      ),
+    ).toBeInTheDocument();
+    expect(solicitarCotizacion).toHaveBeenLastCalledWith({
+      id_tipo_vehiculo: 3,
+      horas_estimadas: 2,
+      distancia_ida_km: 15,
+      requiere_ayudante: false,
+      acceso_escalera: false,
+      zona_concurrida: true,
+      urgencia_mismo_dia: false,
+    });
+
+    const precioAcordado = screen.getByLabelText("Precio final acordado");
+    expect(precioAcordado).toHaveValue(10350);
+    await usuario.clear(precioAcordado);
+    await usuario.type(precioAcordado, "8000");
+    await usuario.click(
+      screen.getByRole("button", { name: "Confirmar y registrar servicio" }),
+    );
+
+    await waitFor(() => expect(registrarServicio).toHaveBeenCalledOnce());
+    expect(registrarServicio).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zona_concurrida: true,
+        precio_acordado: 8000,
+      }),
+    );
+  });
+
+  it("permite reintentar una ruta fallida sin conservar kilómetros anteriores", async () => {
+    calcularRutaMapa
+      .mockResolvedValueOnce({ ok: false, mensaje: "No encontramos una ruta." })
+      .mockResolvedValueOnce({ ok: true, dato: ruta });
+    render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
+
+    await userEvent.click(screen.getByText("Nuevo servicio"));
+    await userEvent.selectOptions(screen.getByLabelText("Cliente"), "8");
+    await userEvent.selectOptions(screen.getByLabelText("Tipo de vehículo"), "3");
+    fireEvent.change(screen.getByLabelText("Fecha"), {
+      target: { value: "2026-10-25" },
+    });
+    fireEvent.change(screen.getByLabelText("Horas estimadas"), {
+      target: { value: "2" },
+    });
+    await seleccionarDireccion("Origen", "Origen Córdoba", origen);
+    await seleccionarDireccion("Destino", "Destino Córdoba", destino);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No encontramos una ruta.",
+    );
+    expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(null);
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar cálculo" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(15),
+    );
+    expect(calcularRutaMapa).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignora la respuesta de una ruta que quedó obsoleta al cambiar el origen", async () => {
+    let resolverRutaAntigua:
+      ((respuesta: { ok: true; dato: ResultadoRuta }) => void) | undefined;
+    calcularRutaMapa
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ ok: true; dato: ResultadoRuta }>((resolve) => {
+            resolverRutaAntigua = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({ ok: true, dato: ruta });
+    render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
+
+    await userEvent.click(screen.getByText("Nuevo servicio"));
+    await userEvent.selectOptions(screen.getByLabelText("Cliente"), "8");
+    await userEvent.selectOptions(screen.getByLabelText("Tipo de vehículo"), "3");
+    fireEvent.change(screen.getByLabelText("Fecha"), {
+      target: { value: "2026-10-25" },
+    });
+    fireEvent.change(screen.getByLabelText("Horas estimadas"), {
+      target: { value: "2" },
+    });
+    await seleccionarDireccion("Origen", "Origen Córdoba", origen);
+    await seleccionarDireccion("Destino", "Destino Córdoba", destino);
+    await waitFor(() => expect(calcularRutaMapa).toHaveBeenCalledOnce());
+
+    fireEvent.change(screen.getByLabelText("Origen"), {
+      target: { value: "Nuevo origen Córdoba" },
+    });
+    await seleccionarDireccion("Origen", "Origen alternativo", origen);
+    await waitFor(() => expect(calcularRutaMapa).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(15),
+    );
+    await screen.findByText(
+      (texto, elemento) => elemento?.tagName === "STRONG" && texto.includes("9.000,00"),
+    );
+
+    resolverRutaAntigua?.({
+      ok: true,
+      dato: { ...ruta, distancia_ida_km: "99.00" },
+    });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Distancia de ida (km)")).toHaveValue(15),
+    );
+    expect(solicitarCotizacion).toHaveBeenCalledWith({
+      id_tipo_vehiculo: 3,
+      horas_estimadas: 2,
+      distancia_ida_km: 15,
+      requiere_ayudante: false,
+      acceso_escalera: false,
+      zona_concurrida: false,
+      urgencia_mismo_dia: false,
+    });
   });
 
   it("preserva los datos y explica los errores devueltos por el servidor", async () => {
@@ -286,8 +551,16 @@ describe("FormularioServicio", () => {
     render(<FormularioServicio clientes={clientes} tiposVehiculo={tiposVehiculo} />);
 
     await usuario.click(screen.getByText("Nuevo servicio"));
-    await completarDatos();
-    await usuario.click(screen.getByRole("button", { name: "Cotizar viaje" }));
+    await usuario.selectOptions(screen.getByLabelText("Cliente"), "8");
+    await usuario.selectOptions(screen.getByLabelText("Tipo de vehículo"), "3");
+    fireEvent.change(screen.getByLabelText("Fecha"), {
+      target: { value: "2026-10-25" },
+    });
+    fireEvent.change(screen.getByLabelText("Horas estimadas"), {
+      target: { value: "2" },
+    });
+    await seleccionarDireccion("Origen", "Origen Córdoba", origen);
+    await seleccionarDireccion("Destino", "Destino Córdoba", destino);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo cotizar.");
     expect(screen.getByLabelText("Horas estimadas")).toHaveValue(2);

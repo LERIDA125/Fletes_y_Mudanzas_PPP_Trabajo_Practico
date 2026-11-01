@@ -4,6 +4,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -42,11 +43,44 @@ class ServicioORM(Base):
     hora_fin: Mapped[time | None] = mapped_column(Time, nullable=True)
     horas_estimadas: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     distancia_ida_km: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    origen_direccion: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    destino_direccion: Mapped[str | None] = mapped_column(String(500), nullable=True)
     distancia_total_km: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     km_franquicia: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     km_excedente: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     tarifa_hora_aplicada: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     tarifa_km_aplicada: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    requiere_ayudante: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    acceso_escalera: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    zona_concurrida: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    urgencia_mismo_dia: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    recargo_ayudante_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    recargo_escalera_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    importe_recargo_zona_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    importe_recargo_urgencia_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    porcentaje_zona_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, server_default=text("0")
+    )
+    porcentaje_urgencia_aplicado: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, server_default=text("0")
+    )
+    precio_sugerido: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     precio_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     estado: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pendiente'")
@@ -73,8 +107,17 @@ class ServicioORM(Base):
             name="ck_servicios_distancias_no_negativas",
         ),
         CheckConstraint(
-            "tarifa_hora_aplicada >= 0 AND tarifa_km_aplicada >= 0 AND precio_total >= 0",
+            "tarifa_hora_aplicada >= 0 AND tarifa_km_aplicada >= 0 "
+            "AND precio_sugerido >= 0 AND precio_total >= 0 "
+            "AND recargo_ayudante_aplicado >= 0 AND recargo_escalera_aplicado >= 0 "
+            "AND importe_recargo_zona_aplicado >= 0 "
+            "AND importe_recargo_urgencia_aplicado >= 0",
             name="ck_servicios_importes_no_negativos",
+        ),
+        CheckConstraint(
+            "porcentaje_zona_aplicado BETWEEN 0 AND 100 "
+            "AND porcentaje_urgencia_aplicado BETWEEN 0 AND 100",
+            name="ck_servicios_porcentajes_validos",
         ),
         CheckConstraint(
             "estado IN ('pendiente', 'confirmado', 'en curso', 'finalizado', 'cobrado', "

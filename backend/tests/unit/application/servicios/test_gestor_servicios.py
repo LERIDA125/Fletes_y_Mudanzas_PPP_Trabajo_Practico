@@ -9,6 +9,7 @@ from app.application.servicios.puertos import AsignacionDia, ServicioListadoItem
 from app.application.vehiculos.puertos import VehiculoListadoItem
 from app.domain.chofer import Chofer
 from app.domain.cliente import Cliente
+from app.domain.configuracion_cotizacion import ConfiguracionCotizacion
 from app.domain.errores import (
     ClienteInvalido,
     MotivoCancelacionObligatorio,
@@ -187,9 +188,10 @@ def _crear_gestor(
     repo = FakeServicioRepository()
     clientes = FakeClienteRepository()
     tipos = FakeTipoRepository()
+    configuracion = FakeConfiguracionCotizacion()
     gestor = GestorServicios(
         repositorio=repo,
-        calculadora=CalculadoraCotizacion(tipos),
+        calculadora=CalculadoraCotizacion(tipos, configuracion),
         consulta_clientes=clientes,
         consulta_choferes=FakeChoferRepository(),
         consulta_vehiculos=FakeVehiculoRepository(vehiculo_tipo_id),
@@ -197,6 +199,16 @@ def _crear_gestor(
         registro_clientes=clientes,
     )
     return gestor, repo, clientes
+
+
+class FakeConfiguracionCotizacion:
+    def obtener(self) -> ConfiguracionCotizacion:
+        return ConfiguracionCotizacion(
+            recargo_ayudante=Decimal("30000.00"),
+            recargo_escalera=Decimal("15000.00"),
+            porcentaje_zona_concurrida=Decimal("15.00"),
+            porcentaje_urgencia_mismo_dia=Decimal("20.00"),
+        )
 
 
 def test_gestor_guarda_snapshot_calculado_por_la_estrategia() -> None:
@@ -211,6 +223,8 @@ def test_gestor_guarda_snapshot_calculado_por_la_estrategia() -> None:
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
         distancia_ida_km=Decimal("15"),
+        origen_direccion="Terminal de Ómnibus, Córdoba",
+        destino_direccion="Plaza San Martín, Córdoba",
     )
 
     assert repo.guardado is item.servicio
@@ -241,6 +255,8 @@ def test_gestor_rechaza_cliente_inactivo() -> None:
             hora_inicio=None,
             horas_estimadas=Decimal("1"),
             distancia_ida_km=Decimal("0"),
+            origen_direccion="Origen de prueba",
+            destino_direccion="Destino de prueba",
         )
 
     assert repo.guardado is None
@@ -259,6 +275,8 @@ def test_gestor_rechaza_vehiculo_de_otro_tipo() -> None:
             hora_inicio=None,
             horas_estimadas=Decimal("1"),
             distancia_ida_km=Decimal("0"),
+            origen_direccion="Origen de prueba",
+            destino_direccion="Destino de prueba",
         )
 
     assert repo.guardado is None
@@ -274,6 +292,8 @@ def _crear_servicio(gestor: GestorServicios) -> ServicioListadoItem:
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
         distancia_ida_km=Decimal("15"),
+        origen_direccion="Terminal de Ómnibus, Córdoba",
+        destino_direccion="Plaza San Martín, Córdoba",
     )
 
 
@@ -376,6 +396,8 @@ def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:
         hora_inicio=time(9, 30),
         horas_estimadas=Decimal("2"),
         distancia_ida_km=Decimal("15"),
+        origen_direccion="Terminal de Ómnibus, Córdoba",
+        destino_direccion="Plaza San Martín, Córdoba",
     )
 
     assert item.servicio.id_cliente == 20
@@ -396,6 +418,8 @@ def test_gestor_crea_y_vincula_cliente_nuevo_sin_duplicarlo() -> None:
         hora_inicio=time(10, 0),
         horas_estimadas=Decimal("1"),
         distancia_ida_km=Decimal("0"),
+        origen_direccion="Terminal de Ómnibus, Córdoba",
+        destino_direccion="Plaza San Martín, Córdoba",
     )
 
     assert len(clientes.creados) == 1, "La segunda alta debe reutilizar el cliente existente"

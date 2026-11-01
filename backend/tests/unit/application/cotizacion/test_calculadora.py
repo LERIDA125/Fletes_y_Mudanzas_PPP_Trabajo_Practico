@@ -3,7 +3,15 @@ from decimal import Decimal
 import pytest
 
 from app.application.cotizacion.estrategias.por_hora_y_km import EstrategiaPorHoraYKm
+from app.domain.configuracion_cotizacion import ConfiguracionCotizacion
 from app.domain.errores import DatoInvalido
+
+CONFIGURACION = ConfiguracionCotizacion(
+    recargo_ayudante=Decimal("30000"),
+    recargo_escalera=Decimal("15000"),
+    porcentaje_zona_concurrida=Decimal("15"),
+    porcentaje_urgencia_mismo_dia=Decimal("20"),
+)
 
 
 def test_calcula_total_y_kilometros_excedentes() -> None:
@@ -12,6 +20,7 @@ def test_calcula_total_y_kilometros_excedentes() -> None:
         distancia_ida_km=Decimal("15"),
         tarifa_hora_base=Decimal("3000.00"),
         tarifa_km_excedente=Decimal("150.00"),
+        configuracion=CONFIGURACION,
     )
 
     assert resultado.distancia_total_km == Decimal("30")
@@ -25,6 +34,7 @@ def test_no_cobra_kilometros_dentro_de_la_franquicia() -> None:
         distancia_ida_km=Decimal("4"),
         tarifa_hora_base=Decimal("1000.00"),
         tarifa_km_excedente=Decimal("250.00"),
+        configuracion=CONFIGURACION,
     )
 
     assert resultado.distancia_total_km == Decimal("8")
@@ -38,6 +48,7 @@ def test_redondea_empate_con_half_up() -> None:
         distancia_ida_km=Decimal("0"),
         tarifa_hora_base=Decimal("100.01"),
         tarifa_km_excedente=Decimal("0"),
+        configuracion=CONFIGURACION,
     )
 
     assert resultado.precio_final == Decimal("150.02")
@@ -54,4 +65,5 @@ def test_rechaza_duracion_o_distancia_invalida(horas: Decimal, distancia: Decima
             distancia_ida_km=distancia,
             tarifa_hora_base=Decimal("100"),
             tarifa_km_excedente=Decimal("10"),
+            configuracion=CONFIGURACION,
         )

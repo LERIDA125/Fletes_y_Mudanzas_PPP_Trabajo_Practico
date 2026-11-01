@@ -44,6 +44,8 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
             **entrada_cotizacion,
             "id_cliente": cliente_id,
             "fecha": "2026-10-25",
+            "origen_direccion": "Terminal de Ómnibus, Córdoba",
+            "destino_direccion": "Plaza San Martín, Córdoba",
         },
         headers=admin,
     )
@@ -51,6 +53,8 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     servicio = respuesta_servicio.json()
     assert servicio["estado"] == "pendiente"
     assert servicio["razon_social_cliente"] == datos_cliente["razon_social"]
+    assert servicio["origen_direccion"] == "Terminal de Ómnibus, Córdoba"
+    assert servicio["destino_direccion"] == "Plaza San Martín, Córdoba"
     assert Decimal(servicio["precio_total"]) == Decimal("9000.00")
 
     respuesta_listado = cliente.get("/api/servicios?page=1&size=10", headers=admin)
@@ -64,6 +68,8 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
             **entrada_cotizacion,
             "id_cliente": cliente_id,
             "fecha": "2026-10-25",
+            "origen_direccion": "Terminal de Ómnibus, Córdoba",
+            "destino_direccion": "Plaza San Martín, Córdoba",
             "precio_total": 1,
         },
         headers=admin,

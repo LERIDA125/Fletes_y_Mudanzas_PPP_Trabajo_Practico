@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import {
+  calcularRutaMapa,
   consultarDisponibilidadServicio,
   obtenerCatalogosServicio,
   registrarServicio,
@@ -14,7 +15,9 @@ import {
 import type {
   ClienteOpcion,
   Cotizacion,
+  DireccionOpcion,
   Disponibilidad,
+  ResultadoRuta,
   TipoVehiculoOpcion,
 } from "@/features/servicios/types";
 import {
@@ -24,12 +27,12 @@ import {
 } from "@/features/servicios/schemas/servicio";
 
 import { ResumenCotizacion } from "./resumen-cotizacion";
+import { CampoDireccionMapa } from "./campo-direccion-mapa";
 
 const formatoMoneda = new Intl.NumberFormat("es-AR", {
   style: "currency",
   currency: "ARS",
 });
-
 type Propiedades = {
   // Si no se pasan, el formulario los pide al abrirse. Así la página puede
   // renderizar el botón de alta sin esperar a la API.
@@ -49,7 +52,14 @@ const VALORES_INICIALES: ValoresFormularioServicio = {
   fecha: "", // Se completa con la fecha local al abrir el modal (evita `new Date()` en el prerender).
   hora_inicio: "",
   horas_estimadas: "1",
-  distancia_ida_km: "0",
+  requiere_ayudante: false,
+  acceso_escalera: false,
+  zona_concurrida: false,
+  urgencia_mismo_dia: false,
+  origen_direccion: "",
+  destino_direccion: "",
+  distancia_ida_km: "",
+  precio_acordado: "",
   id_chofer: "",
   id_vehiculo: "",
 };
@@ -73,7 +83,11 @@ function cotizacionCoincide(
   return (
     cotizacion.id_tipo_vehiculo === Number(valores.id_tipo_vehiculo) &&
     Number(cotizacion.horas_estimadas) === Number(valores.horas_estimadas) &&
-    Number(cotizacion.distancia_ida_km) === Number(valores.distancia_ida_km)
+    Number(cotizacion.distancia_ida_km) === Number(valores.distancia_ida_km) &&
+    cotizacion.requiere_ayudante === Boolean(valores.requiere_ayudante) &&
+    cotizacion.acceso_escalera === Boolean(valores.acceso_escalera) &&
+    cotizacion.zona_concurrida === Boolean(valores.zona_concurrida) &&
+    cotizacion.urgencia_mismo_dia === Boolean(valores.urgencia_mismo_dia)
   );
 }
 
@@ -88,6 +102,13 @@ export function FormularioServicio({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const aperturaAplicada = useRef(false);
   const solicitudDisponibilidad = useRef(0);
+  const solicitudRuta = useRef(0);
+  const solicitudCotizacion = useRef(0);
+  const temporizadorCotizacionRuta = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const precioAcordadoManual = useRef(false);
+  const origenActual = useRef<DireccionOpcion | null>(null);
+  const destinoActual = useRef<DireccionOpcion | null>(null);
+  const rutaActual = useRef<ResultadoRuta | null>(null);
   const cargaDeCatalogosEnCurso = useRef(false);
   const debeCargarAlAbrir =
     clientesIniciales === undefined || tiposIniciales === undefined;
@@ -103,6 +124,12 @@ export function FormularioServicio({
   const [servicioCreado, setServicioCreado] = useState<string | null>(null);
   const [estaCotizando, setEstaCotizando] = useState(false);
   const [estaRegistrando, setEstaRegistrando] = useState(false);
+  const [origen, setOrigen] = useState<DireccionOpcion | null>(null);
+  const [destino, setDestino] = useState<DireccionOpcion | null>(null);
+  const [reinicioDirecciones, setReinicioDirecciones] = useState(0);
+  const [ruta, setRuta] = useState<ResultadoRuta | null>(null);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
+  const [errorRuta, setErrorRuta] = useState("");
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad | null>(null);
   const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
   const [errorDisponibilidad, setErrorDisponibilidad] = useState("");
@@ -129,6 +156,7 @@ export function FormularioServicio({
   const clienteNuevo = valores.modo_cliente === "nuevo";
   const catalogosDisponibles =
     tiposVehiculo.length > 0 && (clienteNuevo || clientes.length > 0);
+  const duracionRuta = ruta ? formatearDuracion(Number(ruta.duracion_segundos)) : null;
 
   // Los catálogos se piden recién al abrir el modal. Si fallan, el formulario
   // sigue visible y muestra el error; al reabrir se vuelve a intentar.
@@ -254,34 +282,223 @@ export function FormularioServicio({
     }
   }, [disponibilidad, getValues, setValue]);
 
-  async function pedirCotizacion() {
-    setMensaje("");
-    setServicioCreado(null);
-    setCotizacion(null);
-    if (!(await trigger())) {
+  async function consultarCotizacionActual(distanciaIdaKm: number, idRuta?: number) {
+    const actual = getValues();
+    const idTipoVehiculo = Number(actual.id_tipo_vehiculo);
+    const horasEstimadas = Number(actual.horas_estimadas);
+    if (
+      !Number.isInteger(idTipoVehiculo) ||
+      idTipoVehiculo < 1 ||
+      !Number.isFinite(horasEstimadas) ||
+      horasEstimadas < 1
+    ) {
       return;
     }
 
-    const actual = getValues();
+    const idSolicitud = solicitudCotizacion.current + 1;
+    solicitudCotizacion.current = idSolicitud;
     setEstaCotizando(true);
     try {
       const respuesta = await solicitarCotizacion({
-        id_tipo_vehiculo: Number(actual.id_tipo_vehiculo),
-        horas_estimadas: Number(actual.horas_estimadas),
-        distancia_ida_km: Number(actual.distancia_ida_km),
+        id_tipo_vehiculo: idTipoVehiculo,
+        horas_estimadas: horasEstimadas,
+        distancia_ida_km: distanciaIdaKm,
+        requiere_ayudante: Boolean(actual.requiere_ayudante),
+        acceso_escalera: Boolean(actual.acceso_escalera),
+        zona_concurrida: Boolean(actual.zona_concurrida),
+        urgencia_mismo_dia: Boolean(actual.urgencia_mismo_dia),
       });
-      if (respuesta.ok) {
-        setCotizacion(respuesta.dato);
+      if (
+        solicitudCotizacion.current !== idSolicitud ||
+        (idRuta !== undefined && solicitudRuta.current !== idRuta)
+      ) {
         return;
       }
-      setMensaje(respuesta.mensaje);
+      if (!respuesta.ok) {
+        setCotizacion(null);
+        setMensaje(respuesta.mensaje);
+        return;
+      }
+      if (!cotizacionCoincide(respuesta.dato, getValues())) {
+        return;
+      }
+      setCotizacion(respuesta.dato);
+      if (!precioAcordadoManual.current) {
+        setValue("precio_acordado", respuesta.dato.precio_sugerido, {
+          shouldDirty: false,
+          shouldValidate: true,
+        });
+      }
+      setMensaje("");
+    } catch {
+      if (solicitudCotizacion.current === idSolicitud) {
+        setCotizacion(null);
+        setMensaje("No pudimos actualizar la cotización. Intentá de nuevo.");
+      }
     } finally {
-      setEstaCotizando(false);
+      if (solicitudCotizacion.current === idSolicitud) {
+        setEstaCotizando(false);
+      }
     }
+  }
+
+  async function pedirCotizacion() {
+    solicitudCotizacion.current += 1;
+    setMensaje("");
+    setServicioCreado(null);
+    setCotizacion(null);
+    if (
+      !(await trigger([
+        "id_tipo_vehiculo",
+        "horas_estimadas",
+        "origen_direccion",
+        "destino_direccion",
+        "distancia_ida_km",
+      ]))
+    ) {
+      return;
+    }
+
+    if (!ruta) {
+      setMensaje("Calculá una ruta para obtener los kilómetros antes de cotizar.");
+      return;
+    }
+    await consultarCotizacionActual(Number(getValues("distancia_ida_km")));
+  }
+
+  async function calcularRuta(
+    puntoOrigen: DireccionOpcion,
+    puntoDestino: DireccionOpcion,
+  ) {
+    const idSolicitud = solicitudRuta.current + 1;
+    solicitudRuta.current = idSolicitud;
+    setCalculandoRuta(true);
+    setErrorRuta("");
+    setMensaje("");
+
+    try {
+      const respuesta = await calcularRutaMapa(
+        {
+          longitud: puntoOrigen.longitud,
+          latitud: puntoOrigen.latitud,
+        },
+        {
+          longitud: puntoDestino.longitud,
+          latitud: puntoDestino.latitud,
+        },
+      );
+      if (solicitudRuta.current !== idSolicitud) {
+        return;
+      }
+      if (!respuesta.ok) {
+        setRuta(null);
+        rutaActual.current = null;
+        setErrorRuta(respuesta.mensaje);
+        return;
+      }
+
+      setRuta(respuesta.dato);
+      rutaActual.current = respuesta.dato;
+      setValue("distancia_ida_km", respuesta.dato.distancia_ida_km, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      await consultarCotizacionActual(
+        Number(respuesta.dato.distancia_ida_km),
+        idSolicitud,
+      );
+    } catch {
+      if (solicitudRuta.current === idSolicitud) {
+        setRuta(null);
+        rutaActual.current = null;
+        setErrorRuta(
+          "No pudimos calcular la ruta. Revisá las direcciones e intentá de nuevo.",
+        );
+      }
+    } finally {
+      if (solicitudRuta.current === idSolicitud) {
+        setCalculandoRuta(false);
+      }
+    }
+  }
+
+  function cambiarPunto(
+    extremo: "origen" | "destino",
+    seleccion: DireccionOpcion | null,
+  ) {
+    if (extremo === "origen") {
+      origenActual.current = seleccion;
+      setOrigen(seleccion);
+      setValue("origen_direccion", seleccion?.etiqueta ?? "", {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: false,
+      });
+    } else {
+      destinoActual.current = seleccion;
+      setDestino(seleccion);
+      setValue("destino_direccion", seleccion?.etiqueta ?? "", {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: false,
+      });
+    }
+
+    solicitudRuta.current += 1;
+    solicitudCotizacion.current += 1;
+    rutaActual.current = null;
+    if (temporizadorCotizacionRuta.current) {
+      clearTimeout(temporizadorCotizacionRuta.current);
+      temporizadorCotizacionRuta.current = null;
+    }
+    setCalculandoRuta(false);
+    setEstaCotizando(false);
+    setRuta(null);
+    setCotizacion(null);
+    setErrorRuta("");
+    setMensaje("");
+    setValue("distancia_ida_km", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
+    });
+    clearErrors("distancia_ida_km");
+
+    const puntoOrigen = origenActual.current;
+    const puntoDestino = destinoActual.current;
+    if (puntoOrigen && puntoDestino) {
+      void calcularRuta(puntoOrigen, puntoDestino);
+    }
+  }
+
+  function programarCotizacionDeRuta() {
+    if (!rutaActual.current) {
+      return;
+    }
+    solicitudCotizacion.current += 1;
+    setEstaCotizando(false);
+    setCotizacion(null);
+    if (temporizadorCotizacionRuta.current) {
+      clearTimeout(temporizadorCotizacionRuta.current);
+    }
+    temporizadorCotizacionRuta.current = setTimeout(() => {
+      const rutaVigente = rutaActual.current;
+      if (rutaVigente) {
+        void consultarCotizacionActual(
+          Number(rutaVigente.distancia_ida_km),
+          solicitudRuta.current,
+        );
+      }
+    }, TIEMPO_DE_ESPERA_MS);
   }
 
   async function confirmarYCrear() {
     setMensaje("");
+    if (!ruta || !origenActual.current || !destinoActual.current) {
+      setMensaje("Elegí un origen y un destino y esperá el cálculo de la ruta.");
+      return;
+    }
     if (
       !(await trigger()) ||
       !cotizacion ||
@@ -320,6 +537,13 @@ export function FormularioServicio({
         hora_inicio: actual.hora_inicio || null,
         horas_estimadas: Number(actual.horas_estimadas),
         distancia_ida_km: Number(actual.distancia_ida_km),
+        requiere_ayudante: actual.requiere_ayudante ?? false,
+        acceso_escalera: actual.acceso_escalera ?? false,
+        zona_concurrida: actual.zona_concurrida ?? false,
+        urgencia_mismo_dia: actual.urgencia_mismo_dia ?? false,
+        precio_acordado: Number(actual.precio_acordado.replace(",", ".")),
+        origen_direccion: actual.origen_direccion,
+        destino_direccion: actual.destino_direccion,
       });
       if (!respuesta.ok) {
         setMensaje(respuesta.mensaje);
@@ -333,6 +557,14 @@ export function FormularioServicio({
       );
       setCotizacion(null);
       setDisponibilidad(null);
+      origenActual.current = null;
+      destinoActual.current = null;
+      precioAcordadoManual.current = false;
+      setOrigen(null);
+      setDestino(null);
+      setRuta(null);
+      rutaActual.current = null;
+      setReinicioDirecciones((actual) => actual + 1);
       reset({ ...valoresIniciales(), fecha: fechaLocal() });
       router.refresh();
     } finally {
@@ -352,6 +584,9 @@ export function FormularioServicio({
     dialogRef.current?.showModal();
     void cargarCatalogos();
   }
+
+  const registroTipoVehiculo = register("id_tipo_vehiculo");
+  const registroHorasEstimadas = register("horas_estimadas");
 
   return (
     <>
@@ -569,7 +804,11 @@ export function FormularioServicio({
                 aria-describedby={
                   errors.id_tipo_vehiculo ? "id_tipo_vehiculo-error" : undefined
                 }
-                {...register("id_tipo_vehiculo")}
+                {...registroTipoVehiculo}
+                onChange={async (evento) => {
+                  await registroTipoVehiculo.onChange(evento);
+                  programarCotizacionDeRuta();
+                }}
                 className={claseControl}
               >
                 <option value="">Elegí un tipo</option>
@@ -617,30 +856,139 @@ export function FormularioServicio({
               aria-describedby={
                 errors.horas_estimadas ? "horas_estimadas-error" : undefined
               }
-              {...register("horas_estimadas")}
+              {...registroHorasEstimadas}
+              onChange={async (evento) => {
+                await registroHorasEstimadas.onChange(evento);
+                programarCotizacionDeRuta();
+              }}
               className={claseControl}
             />
           </Campo>
 
-          <Campo
-            id="distancia_ida_km"
-            etiqueta="Distancia de ida (km)"
-            error={errors.distancia_ida_km?.message}
-          >
-            <input
-              id="distancia_ida_km"
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              aria-invalid={Boolean(errors.distancia_ida_km)}
-              aria-describedby={
-                errors.distancia_ida_km ? "distancia_ida_km-error" : undefined
-              }
-              {...register("distancia_ida_km")}
-              className={claseControl}
-            />
-          </Campo>
+          <fieldset className="sm:col-span-2 rounded-xl border border-panel-borde/70 bg-panel-suave/30 p-4">
+            <legend className="px-1 text-sm font-semibold text-panel-texto">
+              Recorrido del servicio
+            </legend>
+            <p className="mb-3 text-xs text-panel-secundario">
+              Buscá cada dirección y elegí el resultado para calcular la distancia de ida.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CampoDireccionMapa
+                key={`origen-${reinicioDirecciones}`}
+                id="origen-ruta"
+                etiqueta="Origen"
+                seleccion={origen}
+                onSeleccionar={(opcion) => cambiarPunto("origen", opcion)}
+              />
+              <CampoDireccionMapa
+                key={`destino-${reinicioDirecciones}`}
+                id="destino-ruta"
+                etiqueta="Destino"
+                seleccion={destino}
+                onSeleccionar={(opcion) => cambiarPunto("destino", opcion)}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-panel-secundario">
+              Geocodificación y rutas:{" "}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-panel-texto"
+              >
+                © OpenStreetMap contributors
+              </a>
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <Campo
+                id="distancia_ida_km"
+                etiqueta="Distancia de ida (km)"
+                error={errors.distancia_ida_km?.message}
+              >
+                <input
+                  id="distancia_ida_km"
+                  type="number"
+                  readOnly
+                  aria-readonly="true"
+                  aria-invalid={Boolean(errors.distancia_ida_km)}
+                  aria-describedby={
+                    errors.distancia_ida_km ? "distancia_ida_km-error" : undefined
+                  }
+                  {...register("distancia_ida_km")}
+                  className={`${claseControl} bg-panel-suave tabular-nums`}
+                  placeholder="Se calcula al elegir las dos direcciones"
+                  value={ruta ? String(ruta.distancia_ida_km) : ""}
+                />
+              </Campo>
+              <div className="min-h-10 self-end pb-2 text-sm text-panel-secundario">
+                {calculandoRuta ? (
+                  <span role="status" className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="size-4 animate-spin rounded-full border-2 border-panel-borde border-t-panel-primario motion-reduce:animate-none"
+                    />
+                    Calculando distancia y tiempo…
+                  </span>
+                ) : ruta && duracionRuta ? (
+                  <p role="status" aria-live="polite">
+                    Tiempo estimado: <strong>{duracionRuta}</strong>
+                  </p>
+                ) : (
+                  <p aria-live="polite">La distancia y el tiempo aparecerán acá.</p>
+                )}
+              </div>
+            </div>
+            {errorRuta ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p role="alert" className="text-sm text-alerta">
+                  {errorRuta}
+                </p>
+                {origen && destino ? (
+                  <button
+                    type="button"
+                    disabled={calculandoRuta}
+                    onClick={() => void calcularRuta(origen, destino)}
+                    className={claseBoton}
+                  >
+                    Reintentar cálculo
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </fieldset>
+
+          <fieldset className="sm:col-span-2 grid gap-2 rounded-xl border border-panel-borde/70 bg-panel-suave/30 p-4 sm:grid-cols-2">
+            <legend className="px-1 text-sm font-semibold text-panel-texto">
+              Condiciones del viaje
+            </legend>
+            {(
+              [
+                ["requiere_ayudante", "Requiere ayudante"],
+                ["acceso_escalera", "Acceso por escalera"],
+                ["zona_concurrida", "Zona concurrida"],
+                ["urgencia_mismo_dia", "Urgencia para el mismo día"],
+              ] as const
+            ).map(([nombre, etiqueta]) => {
+              const registro = register(nombre);
+              return (
+                <label
+                  key={nombre}
+                  className="flex min-h-9 items-center gap-2 text-sm text-panel-texto"
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-panel-primario"
+                    {...registro}
+                    onChange={(evento) => {
+                      void registro.onChange(evento);
+                      programarCotizacionDeRuta();
+                    }}
+                  />
+                  <span>{etiqueta}</span>
+                </label>
+              );
+            })}
+          </fieldset>
 
           <fieldset className="sm:col-span-2 rounded-xl border border-panel-borde/70 bg-panel-suave/30 p-3">
             <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-panel-secundario">
@@ -721,7 +1069,13 @@ export function FormularioServicio({
           <div className="sm:col-span-2 pt-2">
             <button
               type="button"
-              disabled={estaCotizando || estaRegistrando || !catalogosDisponibles}
+              disabled={
+                estaCotizando ||
+                calculandoRuta ||
+                estaRegistrando ||
+                !catalogosDisponibles ||
+                !ruta
+              }
               onClick={pedirCotizacion}
               className={claseBoton}
             >
@@ -732,6 +1086,33 @@ export function FormularioServicio({
           {cotizacion ? (
             <div className="sm:col-span-2 mt-2">
               <ResumenCotizacion cotizacion={cotizacion} vigente={cotizacionVigente} />
+              <Campo
+                id="precio_acordado"
+                etiqueta="Precio final acordado"
+                error={errors.precio_acordado?.message}
+              >
+                <input
+                  id="precio_acordado"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  aria-invalid={Boolean(errors.precio_acordado)}
+                  aria-describedby={
+                    errors.precio_acordado ? "precio_acordado-error" : undefined
+                  }
+                  {...register("precio_acordado")}
+                  onChange={(evento) => {
+                    precioAcordadoManual.current = true;
+                    setValue("precio_acordado", evento.target.value, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                      shouldValidate: true,
+                    });
+                  }}
+                  className={claseControl}
+                />
+              </Campo>
               {cotizacionVigente ? (
                 <button
                   type="button"
@@ -754,6 +1135,24 @@ function botonModo(activo: boolean): string {
   return activo
     ? "inline-flex min-h-9 items-center justify-center rounded-lg bg-panel-primario px-3 text-xs font-bold text-white shadow-sm"
     : "inline-flex min-h-9 items-center justify-center rounded-lg border border-panel-borde bg-white px-3 text-xs font-semibold text-panel-texto transition-colors hover:bg-panel-suave dark:bg-[#0d1626] dark:text-white dark:hover:bg-[#16253d]";
+}
+
+function formatearDuracion(segundos: number): string {
+  if (!Number.isFinite(segundos)) {
+    return "No disponible";
+  }
+
+  const minutosTotales = Math.max(0, Math.round(segundos / 60));
+  if (minutosTotales === 0) {
+    return "menos de 1 min";
+  }
+
+  const horas = Math.floor(minutosTotales / 60);
+  const minutos = minutosTotales % 60;
+  if (horas === 0) {
+    return `${minutos} min`;
+  }
+  return minutos === 0 ? `${horas} h` : `${horas} h ${minutos} min`;
 }
 
 const claseControl =

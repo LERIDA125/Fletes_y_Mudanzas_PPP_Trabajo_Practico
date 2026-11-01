@@ -93,11 +93,19 @@ class GestorServicios:
         id_tipo_vehiculo: int,
         horas_estimadas: Decimal,
         distancia_ida_km: Decimal,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
     ) -> Cotizacion:
         return self._calculadora.cotizar(
             id_tipo_vehiculo=id_tipo_vehiculo,
             horas_estimadas=horas_estimadas,
             distancia_ida_km=distancia_ida_km,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
         )
 
     def crear(
@@ -111,6 +119,13 @@ class GestorServicios:
         hora_inicio: time | None,
         horas_estimadas: Decimal,
         distancia_ida_km: Decimal,
+        origen_direccion: str,
+        destino_direccion: str,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
+        precio_acordado: Decimal | None = None,
         nuevo_cliente: Cliente | None = None,
         usuario_id: int | None = None,
     ) -> ServicioListadoItem:
@@ -136,6 +151,13 @@ class GestorServicios:
             id_tipo_vehiculo=id_tipo_vehiculo,
             horas_estimadas=horas_estimadas,
             distancia_ida_km=distancia_ida_km,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
+        )
+        importe_acordado = (
+            cotizacion.resultado.precio_sugerido if precio_acordado is None else precio_acordado
         )
         servicio = Servicio.crear(
             id_cliente=cliente_id,
@@ -151,7 +173,28 @@ class GestorServicios:
             km_excedente=cotizacion.resultado.km_excedente,
             tarifa_hora_aplicada=cotizacion.resultado.tarifa_hora_base,
             tarifa_km_aplicada=cotizacion.resultado.tarifa_km_excedente,
-            precio_total=cotizacion.resultado.precio_final,
+            precio_total=importe_acordado,
+            origen_direccion=origen_direccion,
+            destino_direccion=destino_direccion,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
+            recargo_ayudante_aplicado=cotizacion.resultado.recargo_ayudante,
+            recargo_escalera_aplicado=cotizacion.resultado.recargo_escalera,
+            importe_recargo_zona_aplicado=(
+                cotizacion.resultado.importe_recargo_zona_concurrida
+            ),
+            importe_recargo_urgencia_aplicado=(
+                cotizacion.resultado.importe_recargo_urgencia_mismo_dia
+            ),
+            porcentaje_zona_aplicado=(
+                cotizacion.resultado.porcentaje_zona_concurrida
+            ),
+            porcentaje_urgencia_aplicado=(
+                cotizacion.resultado.porcentaje_urgencia_mismo_dia
+            ),
+            precio_sugerido=cotizacion.resultado.precio_sugerido,
             creado_por_id=usuario_id,
         )
         return self._repo.crear(servicio)
