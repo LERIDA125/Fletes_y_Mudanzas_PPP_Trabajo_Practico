@@ -38,6 +38,7 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         tarifa_hora_aplicada=orm.tarifa_hora_aplicada,
         tarifa_km_aplicada=orm.tarifa_km_aplicada,
         precio_total=orm.precio_total,
+        compensacion_chofer=orm.compensacion_chofer,
         estado=orm.estado,
         motivo_cancelacion=orm.motivo_cancelacion,
         creado_en=orm.creado_en,
@@ -65,6 +66,7 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         tarifa_hora_aplicada=servicio.tarifa_hora_aplicada,
         tarifa_km_aplicada=servicio.tarifa_km_aplicada,
         precio_total=servicio.precio_total,
+        compensacion_chofer=servicio.compensacion_chofer,
         estado=servicio.estado,
         motivo_cancelacion=servicio.motivo_cancelacion,
         creado_en=servicio.creado_en,
@@ -118,6 +120,7 @@ class ServicioRepo:
         orm.tarifa_hora_aplicada = servicio.tarifa_hora_aplicada
         orm.tarifa_km_aplicada = servicio.tarifa_km_aplicada
         orm.precio_total = servicio.precio_total
+        orm.compensacion_chofer = servicio.compensacion_chofer
         orm.estado = servicio.estado
         orm.motivo_cancelacion = servicio.motivo_cancelacion
         orm.modificado_por_id = servicio.modificado_por_id

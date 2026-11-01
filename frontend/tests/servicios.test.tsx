@@ -105,6 +105,7 @@ function servicioCreado(parcial: Partial<Servicio> = {}): Servicio {
     tarifa_hora_aplicada: "3000",
     tarifa_km_aplicada: "150",
     precio_total: "9000.00",
+    compensacion_chofer: "0.00",
     moneda: "ARS",
     estado: "pendiente",
     transiciones_validas: ["confirmado", "cancelado"],

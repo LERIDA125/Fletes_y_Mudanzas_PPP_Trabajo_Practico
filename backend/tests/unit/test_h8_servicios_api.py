@@ -1,7 +1,9 @@
 """Pruebas HTTP del backend de Servicios y Cotizaciones (H8)."""
 
 from collections.abc import Generator
+from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -104,6 +106,7 @@ def test_cotiza_crea_y_lista_servicio_con_precio_server_side(cliente_api: TestCl
     assert Decimal(servicio["tarifa_km_aplicada"]) == Decimal("150.00")
     assert Decimal(servicio["km_franquicia"]) == Decimal("10.00")
     assert Decimal(servicio["precio_total"]) == Decimal("9000.00")
+    assert Decimal(servicio["compensacion_chofer"]) == Decimal("0.00")
 
     listado = cliente_api.get("/api/servicios?page=1&size=10", headers=admin)
     assert listado.status_code == 200
@@ -127,6 +130,7 @@ def test_no_acepta_precio_enviado_por_el_cliente(cliente_api: TestClient) -> Non
             "horas_estimadas": 1,
             "distancia_ida_km": 0,
             "precio_total": 1,
+            "compensacion_chofer": 1,
         },
     )
 
@@ -183,6 +187,7 @@ def test_cancela_servicio_con_motivo_y_hora_del_servidor(cliente_api: TestClient
     assert cancelacion.json()["estado"] == "cancelado"
     assert cancelacion.json()["motivo_cancelacion"] == "Cliente reprogramó"
     assert cancelacion.json()["hora_fin"] is not None
+    assert Decimal(cancelacion.json()["compensacion_chofer"]) == Decimal("0.00")
 
     assert cliente_api.patch(ruta, headers=admin, json={"motivo": "Otra vez"}).status_code == 409
     assert (
@@ -191,6 +196,50 @@ def test_cancela_servicio_con_motivo_y_hora_del_servidor(cliente_api: TestClient
         ).status_code
         == 404
     )
+
+
+def test_api_persiste_compensacion_chofer_en_cancelacion_tardia(
+    cliente_api: TestClient,
+) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+    chofer = cliente_api.post(
+        "/api/choferes",
+        headers=admin,
+        json={"nombre_completo": "Chofer beneficiario", "telefono": "3515550101"},
+    )
+    assert chofer.status_code == 201
+
+    inicio_programado = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")) + timedelta(
+        minutes=90
+    )
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "id_chofer": chofer.json()["id"],
+            "fecha": inicio_programado.date().isoformat(),
+            "hora_inicio": inicio_programado.time().replace(second=0, microsecond=0).isoformat(),
+            "horas_estimadas": 2,
+            "distancia_ida_km": 15,
+        },
+    )
+    assert alta.status_code == 201
+
+    cancelacion = cliente_api.patch(
+        f"/api/servicios/{alta.json()['id_servicio']}/cancelar",
+        headers=admin,
+        json={"motivo": "El cliente cancela dentro de la ventana"},
+    )
+
+    assert cancelacion.status_code == 200
+    respuesta = cancelacion.json()
+    assert respuesta["id_chofer"] == chofer.json()["id"]
+    assert Decimal(respuesta["precio_total"]) == Decimal("9000.00")
+    assert Decimal(respuesta["compensacion_chofer"]) == Decimal("2700.00")
 
 
 def test_cambia_estado_siguiendo_la_maquina_y_requiere_admin(cliente_api: TestClient) -> None:

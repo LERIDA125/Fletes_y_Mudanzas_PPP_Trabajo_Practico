@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
-from decimal import Decimal
+from datetime import date, datetime, time, timedelta
+from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo
 
 from app.domain.errores import (
     DatoInvalido,
@@ -16,6 +17,10 @@ from app.domain.errores import (
 ESTADOS_SERVICIO = ("pendiente", "confirmado", "en curso", "finalizado", "cobrado", "cancelado")
 ESTADOS_NO_CANCELABLES = ("finalizado", "cobrado", "cancelado")
 MOTIVO_CANCELACION_MAX = 255
+ZONA_HORARIA_SERVICIOS = ZoneInfo("America/Argentina/Buenos_Aires")
+VENTANA_CANCELACION_TARDIA = timedelta(hours=2)
+PORCENTAJE_COMPENSACION_CHOFER = Decimal("0.30")
+CENTAVO = Decimal("0.01")
 TRANSICIONES_ESTADO_SERVICIO = {
     "pendiente": "confirmado",
     "confirmado": "en curso",
@@ -61,6 +66,7 @@ class Servicio:
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
     precio_total: Decimal
+    compensacion_chofer: Decimal = Decimal("0.00")
     estado: str = "pendiente"
     hora_fin: time | None = None
     motivo_cancelacion: str | None = None
@@ -129,7 +135,7 @@ class Servicio:
         self,
         *,
         motivo: str,
-        hora_fin: time,
+        ahora: datetime,
         modificado_por_id: int | None = None,
     ) -> Servicio:
         if self.estado in ESTADOS_NO_CANCELABLES:
@@ -142,11 +148,27 @@ class Servicio:
             raise DatoInvalido(
                 f"El motivo de cancelación no puede superar los {MOTIVO_CANCELACION_MAX} caracteres"
             )
-        if not isinstance(hora_fin, time):
-            raise DatoInvalido("La hora de finalización debe ser una hora válida")
+        if ahora.tzinfo is None:
+            ahora_local = ahora.replace(tzinfo=ZONA_HORARIA_SERVICIOS)
+        else:
+            ahora_local = ahora.astimezone(ZONA_HORARIA_SERVICIOS)
+
+        compensacion_chofer = Decimal("0.00")
+        if self.id_chofer is not None and self.hora_inicio is not None:
+            inicio_programado = datetime.combine(
+                self.fecha,
+                self.hora_inicio,
+                tzinfo=ZONA_HORARIA_SERVICIOS,
+            )
+            tiempo_restante = inicio_programado - ahora_local
+            if timedelta(0) <= tiempo_restante <= VENTANA_CANCELACION_TARDIA:
+                compensacion_chofer = (self.precio_total * PORCENTAJE_COMPENSACION_CHOFER).quantize(
+                    CENTAVO, rounding=ROUND_HALF_UP
+                )
 
         self.motivo_cancelacion = motivo_limpio
-        self.hora_fin = hora_fin
+        self.hora_fin = ahora_local.time().replace(microsecond=0, tzinfo=None)
+        self.compensacion_chofer = compensacion_chofer
         self.estado = "cancelado"
         if modificado_por_id is not None:
             self.modificado_por_id = modificado_por_id
@@ -163,6 +185,7 @@ class Servicio:
             ("tarifa_hora_aplicada", self.tarifa_hora_aplicada),
             ("tarifa_km_aplicada", self.tarifa_km_aplicada),
             ("precio_total", self.precio_total),
+            ("compensacion_chofer", self.compensacion_chofer),
         ):
             if not isinstance(valor, Decimal) or not valor.is_finite():
                 raise DatoInvalido(f"{nombre} debe ser un valor numérico finito")

@@ -232,7 +232,7 @@ export interface paths {
         head?: never;
         /**
          * Cancelar un servicio
-         * @description Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y registra la hora de finalización con la hora del servidor; no acepta hora ni estado.
+         * @description Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y registra la hora de finalización con la hora de Buenos Aires. Si faltan entre 0 y 2 horas para el inicio y hay un chofer asignado, guarda una compensación del 30 % de precio_total en el servicio; sin hora o chofer, o si el inicio ya pasó, la compensación es cero. El importe es un snapshot, no un pago ni un movimiento de rendición. No acepta hora, estado ni importe de compensación en el request.
          */
         patch: operations["cancelar_servicio_api_servicios__id_servicio__cancelar_patch"];
         trace?: never;
@@ -887,6 +887,11 @@ export interface components {
             /** Precio Total */
             precio_total: string;
             /**
+             * Compensacion Chofer
+             * @description Snapshot del 30 % de precio_total imputado al chofer por cancelación tardía; no representa un pago ni un movimiento de rendición.
+             */
+            compensacion_chofer: string;
+            /**
              * Moneda
              * @default ARS
              * @constant
@@ -1123,10 +1128,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /**
          * VehiculoCreate

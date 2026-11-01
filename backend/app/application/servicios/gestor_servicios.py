@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 from decimal import ROUND_CEILING, Decimal
+from zoneinfo import ZoneInfo
 
 from app.application.cotizacion.calculadora import CalculadoraCotizacion, Cotizacion
 from app.application.servicios.puertos import (
@@ -30,6 +31,8 @@ from app.domain.errores import (
     VehiculoTipoIncompatible,
 )
 from app.domain.servicio import Servicio
+
+ZONA_HORARIA_SERVICIOS = ZoneInfo("America/Argentina/Buenos_Aires")
 
 
 def _minutos_desde_medianoche(hora: time) -> int:
@@ -194,8 +197,7 @@ class GestorServicios:
         vehiculos = [
             vehiculo
             for vehiculo in self._vehiculos.listar_activos_por_tipo(id_tipo_vehiculo)
-            if vehiculo.vehiculo.id is not None
-            and vehiculo.vehiculo.id not in vehiculos_ocupados
+            if vehiculo.vehiculo.id is not None and vehiculo.vehiculo.id not in vehiculos_ocupados
         ]
         return Disponibilidad(
             hora_fin=_hora_fin(hora_inicio, horas_estimadas),
@@ -215,10 +217,10 @@ class GestorServicios:
         if actual is None:
             raise ServicioNoEncontrado(id_servicio)
 
-        hora_fin = (ahora or datetime.now()).time().replace(microsecond=0)
+        instante_cancelacion = ahora or datetime.now(ZONA_HORARIA_SERVICIOS)
         actual.servicio.cancelar(
             motivo=motivo,
-            hora_fin=hora_fin,
+            ahora=instante_cancelacion,
             modificado_por_id=usuario_id,
         )
         return self._repo.actualizar(actual.servicio)
@@ -260,9 +262,7 @@ class GestorServicios:
             )
         assert nuevo_cliente is not None
 
-        existente = self._registro_clientes.obtener_por_razon_social(
-            nuevo_cliente.razon_social_key
-        )
+        existente = self._registro_clientes.obtener_por_razon_social(nuevo_cliente.razon_social_key)
         if existente is not None:
             if not existente.activo:
                 raise RazonSocialDuplicada(nuevo_cliente.razon_social)

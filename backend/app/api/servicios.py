@@ -181,7 +181,11 @@ def crear_servicio(
     summary="Cancelar un servicio",
     description=(
         "Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y "
-        "registra la hora de finalización con la hora del servidor; no acepta hora ni estado."
+        "registra la hora de finalización con la hora de Buenos Aires. Si faltan entre 0 y 2 horas "
+        "para el inicio y hay un chofer asignado, guarda una compensación del 30 % de precio_total "
+        "en el servicio; sin hora o chofer, o si el inicio ya pasó, la compensación es cero. "
+        "El importe es un snapshot, no un pago ni un movimiento de rendición. No acepta hora, "
+        "estado ni importe de compensación en el request."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {

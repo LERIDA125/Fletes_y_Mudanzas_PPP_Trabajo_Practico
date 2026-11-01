@@ -97,7 +97,11 @@ fletes-mudanzas-express/
 │   │   ├── ssd.md                # Diagramas de Secuencia del Sistema (Mermaid) y trazabilidad
 │   │   ├── quickstart.md         # cómo levantar y ejercitar todo el sistema
 │   │   └── feature.json          # mapeo historia ↔ directorio ↔ rama
-│   └── 009-autenticacion-roles/          # Especificación de login y JWT por rol
+│   ├── 009-autenticacion-roles/          # Especificación de login y JWT por rol
+│   └── 013-cancelacion-tardia/           # Retención del 30 % por cancelación tardía (pendiente)
+│       ├── spec.md                       # Regla de negocio y aclaraciones pendientes
+│       ├── plan.md                       # Plan backend por capas, bloqueado hasta aprobación
+│       └── tasks.md                      # Tareas de documentación y backend
 ├── backend/
 │   ├── app/
 │   │   ├── api/                  # 1. Presentación — routers y schemas Pydantic de FastAPI
@@ -202,6 +206,10 @@ el MVP, quedó documentado como `[Supuesto temporal]` en la spec respectiva:
   `pendiente`, `confirmado` o `en curso` exigiendo `motivo` obligatorio (1–255 caracteres) y
   registrando automáticamente `hora_fin` del servidor. No se permite cancelar servicios `finalizado`,
   `cobrado` ni ya `cancelado` (`409 Conflict`).
+- **Ticket 013 — cancelación tardía (aprobado)**: si se cancela de 0 a 2 horas antes del inicio,
+  se persiste un snapshot del 30 % de `precio_total` a favor del chofer asignado. Se compara usando
+  `America/Argentina/Buenos_Aires`; sin horario/chofer o si el inicio ya pasó, el snapshot es cero.
+  No representa un pago ni movimiento de rendición. Ver `specs/013-cancelacion-tardia/`.
 - **Modo exacto de rendición y pagos**: la vista `/rendiciones` está maquetada en el frontend como
   prototipo interactivo; la persistencia y reglas finales de liquidación/pagos se implementarán
   en su historia de backend correspondiente.

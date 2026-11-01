@@ -84,6 +84,7 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     assert cancelado["estado"] == "cancelado"
     assert cancelado["motivo_cancelacion"] == "El cliente reprogramó el viaje"
     assert cancelado["hora_fin"] is not None
+    assert Decimal(cancelado["compensacion_chofer"]) == Decimal("0.00")
 
     repetida = cliente.patch(
         ruta_cancelacion,
@@ -104,3 +105,4 @@ def test_servicios_api_cotiza_crea_y_lista_en_postgresql(
     assert item_cancelado["estado"] == "cancelado"
     assert item_cancelado["motivo_cancelacion"] == "El cliente reprogramó el viaje"
     assert item_cancelado["hora_fin"] is not None
+    assert Decimal(item_cancelado["compensacion_chofer"]) == Decimal("0.00")

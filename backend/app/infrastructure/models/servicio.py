@@ -48,6 +48,9 @@ class ServicioORM(Base):
     tarifa_hora_aplicada: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     tarifa_km_aplicada: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     precio_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    compensacion_chofer: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
     estado: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pendiente'")
     )
@@ -75,6 +78,10 @@ class ServicioORM(Base):
         CheckConstraint(
             "tarifa_hora_aplicada >= 0 AND tarifa_km_aplicada >= 0 AND precio_total >= 0",
             name="ck_servicios_importes_no_negativos",
+        ),
+        CheckConstraint(
+            "compensacion_chofer >= 0",
+            name="ck_servicios_compensacion_chofer_no_negativa",
         ),
         CheckConstraint(
             "estado IN ('pendiente', 'confirmado', 'en curso', 'finalizado', 'cobrado', "

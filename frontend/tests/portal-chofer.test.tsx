@@ -40,6 +40,7 @@ function servicio(parcial: Partial<Servicio> = {}): Servicio {
     tarifa_hora_aplicada: "25000.00",
     tarifa_km_aplicada: "850.00",
     precio_total: "42000.00",
+    compensacion_chofer: "0.00",
     moneda: "ARS",
     estado: "pendiente",
     transiciones_validas: ["confirmado", "cancelado"],

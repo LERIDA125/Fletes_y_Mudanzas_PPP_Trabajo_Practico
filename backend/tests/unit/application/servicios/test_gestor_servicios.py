@@ -264,14 +264,19 @@ def test_gestor_rechaza_vehiculo_de_otro_tipo() -> None:
     assert repo.guardado is None
 
 
-def _crear_servicio(gestor: GestorServicios) -> ServicioListadoItem:
+def _crear_servicio(
+    gestor: GestorServicios,
+    *,
+    id_chofer: int | None = None,
+    hora_inicio: time | None = time(9, 30),
+) -> ServicioListadoItem:
     return gestor.crear(
         id_cliente=8,
         id_tipo_vehiculo=3,
-        id_chofer=None,
+        id_chofer=id_chofer,
         id_vehiculo=None,
         fecha=date(2026, 10, 25),
-        hora_inicio=time(9, 30),
+        hora_inicio=hora_inicio,
         horas_estimadas=Decimal("2"),
         distancia_ida_km=Decimal("15"),
     )
@@ -290,8 +295,76 @@ def test_gestor_cancela_con_motivo_recortado_y_hora_inyectada() -> None:
     assert cancelado.servicio.estado == "cancelado"
     assert cancelado.servicio.motivo_cancelacion == "El cliente reprogramó el viaje"
     assert cancelado.servicio.hora_fin == time(16, 45, 30)
+    assert cancelado.servicio.compensacion_chofer == Decimal("0.00")
     assert repo.guardado is cancelado.servicio
     assert repo.items[item.servicio.id].estado == "cancelado"
+
+
+def test_gestor_aplica_compensacion_30_por_ciento_dentro_de_dos_horas() -> None:
+    gestor, repo, _ = _crear_gestor()
+    item = _crear_servicio(gestor, id_chofer=1)
+
+    cancelado = gestor.cancelar(
+        id_servicio=item.servicio.id,
+        motivo="Cliente cancela el viaje",
+        ahora=datetime(2026, 10, 25, 10, 30, tzinfo=UTC),
+    )
+
+    assert cancelado.servicio.compensacion_chofer == Decimal("2700.00")
+    assert cancelado.servicio.id_chofer == 1
+    assert repo.items[item.servicio.id].compensacion_chofer == Decimal("2700.00")
+
+
+def test_gestor_no_aplica_compensacion_con_mas_de_dos_horas() -> None:
+    gestor, _, _ = _crear_gestor()
+    item = _crear_servicio(gestor, id_chofer=1)
+
+    cancelado = gestor.cancelar(
+        id_servicio=item.servicio.id,
+        motivo="Cliente cancela el viaje",
+        ahora=datetime(2026, 10, 25, 10, 29, tzinfo=UTC),
+    )
+
+    assert cancelado.servicio.compensacion_chofer == Decimal("0.00")
+
+
+def test_gestor_no_aplica_compensacion_si_falta_horario_o_chofer() -> None:
+    gestor_sin_horario, _, _ = _crear_gestor()
+    servicio_sin_horario = _crear_servicio(
+        gestor_sin_horario,
+        id_chofer=1,
+        hora_inicio=None,
+    )
+
+    cancelado_sin_horario = gestor_sin_horario.cancelar(
+        id_servicio=servicio_sin_horario.servicio.id,
+        motivo="Cliente cancela el viaje",
+        ahora=datetime(2026, 10, 25, 8, 30, tzinfo=UTC),
+    )
+
+    gestor_sin_chofer, _, _ = _crear_gestor()
+    servicio_sin_chofer = _crear_servicio(gestor_sin_chofer)
+    cancelado_sin_chofer = gestor_sin_chofer.cancelar(
+        id_servicio=servicio_sin_chofer.servicio.id,
+        motivo="Cliente cancela el viaje",
+        ahora=datetime(2026, 10, 25, 8, 30, tzinfo=UTC),
+    )
+
+    assert cancelado_sin_horario.servicio.compensacion_chofer == Decimal("0.00")
+    assert cancelado_sin_chofer.servicio.compensacion_chofer == Decimal("0.00")
+
+
+def test_gestor_no_aplica_compensacion_si_inicio_programado_ya_paso() -> None:
+    gestor, _, _ = _crear_gestor()
+    item = _crear_servicio(gestor, id_chofer=1)
+
+    cancelado = gestor.cancelar(
+        id_servicio=item.servicio.id,
+        motivo="Cliente cancela el viaje",
+        ahora=datetime(2026, 10, 25, 13, 0, tzinfo=UTC),
+    )
+
+    assert cancelado.servicio.compensacion_chofer == Decimal("0.00")
 
 
 def test_gestor_rechaza_cancelacion_sin_motivo() -> None:

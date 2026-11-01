@@ -147,6 +147,12 @@ class ServicioRead(BaseModel):
     tarifa_hora_aplicada: Decimal
     tarifa_km_aplicada: Decimal
     precio_total: Decimal
+    compensacion_chofer: Decimal = Field(
+        description=(
+            "Snapshot del 30 % de precio_total imputado al chofer por cancelación tardía; "
+            "no representa un pago ni un movimiento de rendición."
+        )
+    )
     moneda: Literal["ARS"] = "ARS"
     estado: str
     transiciones_validas: list[str]
@@ -183,6 +189,7 @@ class ServicioRead(BaseModel):
             tarifa_hora_aplicada=servicio.tarifa_hora_aplicada,
             tarifa_km_aplicada=servicio.tarifa_km_aplicada,
             precio_total=servicio.precio_total,
+            compensacion_chofer=servicio.compensacion_chofer,
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,
