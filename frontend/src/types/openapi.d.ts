@@ -277,6 +277,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/servicios/{id_servicio}/finalizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id_servicio: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ServicioFinalizarRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    content: {
+                        "application/json": components["schemas"]["ServicioRead"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/rendicion/aprobar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id_servicio: number;
+                };
+                cookie?: never;
+            };
+            responses: {
+                200: {
+                    content: {
+                        "application/json": components["schemas"]["ServicioRead"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/servicios/{id_servicio}/rendicion/observar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id_servicio: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RendicionObservarRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    content: {
+                        "application/json": components["schemas"]["ServicioRead"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mapas/direcciones": {
         parameters: {
             query?: never;
@@ -1125,6 +1231,30 @@ export interface components {
              * Format: date-time
              */
             actualizado_en: string;
+            /** Foto Remito Url */
+            foto_remito_url?: string | null;
+            /** Monto Cobrado Real */
+            monto_cobrado_real?: number | string | null;
+            /** Estado Rendicion */
+            estado_rendicion?: string | null;
+            /** Observacion Rendicion */
+            observacion_rendicion?: string | null;
+            /** Rendido En */
+            rendido_en?: string | null;
+            /** Rendido Por Id */
+            rendido_por_id?: number | null;
+        };
+        /** ServicioFinalizarRequest */
+        ServicioFinalizarRequest: {
+            /** Foto Remito Url */
+            foto_remito_url?: string | null;
+            /** Monto Cobrado Real */
+            monto_cobrado_real: number | string;
+        };
+        /** RendicionObservarRequest */
+        RendicionObservarRequest: {
+            /** Observacion */
+            observacion: string;
         };
         /**
          * TipoVehiculoCreate

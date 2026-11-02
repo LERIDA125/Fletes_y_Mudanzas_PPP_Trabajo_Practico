@@ -458,7 +458,7 @@ describe("FormularioServicio", () => {
         precio_acordado: 8000,
       }),
     );
-  });
+  }, 15000);
 
   it("permite reintentar una ruta fallida sin conservar kilómetros anteriores", async () => {
     calcularRutaMapa

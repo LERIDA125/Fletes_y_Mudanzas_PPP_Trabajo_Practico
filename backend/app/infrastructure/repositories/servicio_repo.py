@@ -41,6 +41,12 @@ def a_dominio(orm: ServicioORM) -> Servicio:
         compensacion_chofer=orm.compensacion_chofer,
         estado=orm.estado,
         motivo_cancelacion=orm.motivo_cancelacion,
+        foto_remito_url=orm.foto_remito_url,
+        monto_cobrado_real=orm.monto_cobrado_real,
+        estado_rendicion=orm.estado_rendicion,
+        observacion_rendicion=orm.observacion_rendicion,
+        rendido_en=orm.rendido_en,
+        rendido_por_id=orm.rendido_por_id,
         creado_en=orm.creado_en,
         actualizado_en=orm.actualizado_en,
         creado_por_id=orm.creado_por_id,
@@ -69,6 +75,12 @@ def a_orm(servicio: Servicio) -> ServicioORM:
         compensacion_chofer=servicio.compensacion_chofer,
         estado=servicio.estado,
         motivo_cancelacion=servicio.motivo_cancelacion,
+        foto_remito_url=servicio.foto_remito_url,
+        monto_cobrado_real=servicio.monto_cobrado_real,
+        estado_rendicion=servicio.estado_rendicion,
+        observacion_rendicion=servicio.observacion_rendicion,
+        rendido_en=servicio.rendido_en,
+        rendido_por_id=servicio.rendido_por_id,
         creado_en=servicio.creado_en,
         actualizado_en=servicio.actualizado_en,
         creado_por_id=servicio.creado_por_id,
@@ -123,6 +135,12 @@ class ServicioRepo:
         orm.compensacion_chofer = servicio.compensacion_chofer
         orm.estado = servicio.estado
         orm.motivo_cancelacion = servicio.motivo_cancelacion
+        orm.foto_remito_url = servicio.foto_remito_url
+        orm.monto_cobrado_real = servicio.monto_cobrado_real
+        orm.estado_rendicion = servicio.estado_rendicion
+        orm.observacion_rendicion = servicio.observacion_rendicion
+        orm.rendido_en = servicio.rendido_en
+        orm.rendido_por_id = servicio.rendido_por_id
         orm.modificado_por_id = servicio.modificado_por_id
         orm.actualizado_en = func.now()
 
@@ -148,51 +166,58 @@ class ServicioRepo:
         consulta = select(func.count()).select_from(ServicioORM)
         if id_chofer is not None:
             consulta = consulta.where(ServicioORM.id_chofer == id_chofer)
-        return self._db.scalar(consulta) or 0
+        resultado = self._db.scalar(consulta)
+        return int(resultado or 0)
 
     def tiene_historial(self, cliente_id: int) -> bool:
-        consulta = select(ServicioORM.id).where(ServicioORM.id_cliente == cliente_id)
-        return self._db.scalar(consulta.limit(1)) is not None
+        consulta = select(ServicioORM.id).where(ServicioORM.id_cliente == cliente_id).limit(1)
+        return self._db.scalar(consulta) is not None
 
     def tiene_servicios(self, vehiculo_id: int) -> bool:
-        consulta = select(ServicioORM.id).where(ServicioORM.id_vehiculo == vehiculo_id)
-        return self._db.scalar(consulta.limit(1)) is not None
+        consulta = select(ServicioORM.id).where(ServicioORM.id_vehiculo == vehiculo_id).limit(1)
+        return self._db.scalar(consulta) is not None
 
     def listar_asignaciones_del_dia(self, fecha: date) -> list[AsignacionDia]:
-        """Servicios no cancelados de una fecha, para detectar recursos ocupados.
-
-        No se filtra por estado finalizado/cobrado porque un servicio de ese día
-        puede seguir consumiendo la franja estimada; la regla se documenta en la
-        spec 008. Los cancelados no bloquean recursos.
-        """
-        consulta = select(
-            ServicioORM.id_chofer,
-            ServicioORM.id_vehiculo,
-            ServicioORM.hora_inicio,
-            ServicioORM.horas_estimadas,
-        ).where(
-            ServicioORM.fecha == fecha,
-            ServicioORM.estado != "cancelado",
+        consulta = (
+            select(
+                ServicioORM.id_chofer,
+                ServicioORM.id_vehiculo,
+                ServicioORM.hora_inicio,
+                ServicioORM.horas_estimadas,
+            )
+            .where(ServicioORM.fecha == fecha)
+            .where(ServicioORM.estado != "cancelado")
         )
         return [
             AsignacionDia(
-                id_chofer=id_chofer,
-                id_vehiculo=id_vehiculo,
-                hora_inicio=hora_inicio,
-                horas_estimadas=horas_estimadas,
+                id_chofer=fila.id_chofer,
+                id_vehiculo=fila.id_vehiculo,
+                hora_inicio=fila.hora_inicio,
+                horas_estimadas=fila.horas_estimadas,
             )
-            for id_chofer, id_vehiculo, hora_inicio, horas_estimadas in self._db.execute(consulta)
+            for fila in self._db.execute(consulta)
         ]
 
-    @staticmethod
-    def _consulta_con_nombres():
+    def eliminar(self, servicio_id: int) -> None:
+        orm = self._db.get(ServicioORM, servicio_id)
+        if orm is None:
+            raise ServicioNoEncontrado(servicio_id)
+
+        self._db.delete(orm)
+        try:
+            self._db.commit()
+        except IntegrityError as error:
+            self._db.rollback()
+            raise ServicioConDependencias(servicio_id) from error
+
+    def _consulta_con_nombres(self):
         return (
             select(
                 ServicioORM,
-                ClienteORM.razon_social,
-                TipoVehiculoORM.descripcion,
-                ChoferORM.nombre_completo,
-                VehiculoORM.patente,
+                ClienteORM.razon_social.label("razon_social_cliente"),
+                TipoVehiculoORM.descripcion.label("descripcion_tipo_vehiculo"),
+                ChoferORM.nombre_completo.label("nombre_chofer"),
+                VehiculoORM.patente.label("patente_vehiculo"),
             )
             .join(ClienteORM, ServicioORM.id_cliente == ClienteORM.id)
             .join(TipoVehiculoORM, ServicioORM.id_tipo_vehiculo == TipoVehiculoORM.id)
@@ -200,24 +225,11 @@ class ServicioRepo:
             .outerjoin(VehiculoORM, ServicioORM.id_vehiculo == VehiculoORM.id)
         )
 
-    @staticmethod
-    def _a_item(fila) -> ServicioListadoItem:
-        orm, razon_social, descripcion_tipo, nombre_chofer, patente = fila
+    def _a_item(self, fila) -> ServicioListadoItem:
         return ServicioListadoItem(
-            servicio=a_dominio(orm),
-            razon_social_cliente=razon_social,
-            descripcion_tipo_vehiculo=descripcion_tipo,
-            nombre_chofer=nombre_chofer,
-            patente_vehiculo=patente,
+            servicio=a_dominio(fila[0]),
+            razon_social_cliente=fila.razon_social_cliente,
+            descripcion_tipo_vehiculo=fila.descripcion_tipo_vehiculo,
+            nombre_chofer=fila.nombre_chofer,
+            patente_vehiculo=fila.patente_vehiculo,
         )
-
-    def eliminar(self, servicio_id: int) -> None:
-        orm = self._db.get(ServicioORM, servicio_id)
-        if orm is None:
-            raise ServicioNoEncontrado(servicio_id)
-        self._db.delete(orm)
-        try:
-            self._db.commit()
-        except IntegrityError as error:
-            self._db.rollback()
-            raise ServicioConDependencias(servicio_id) from error

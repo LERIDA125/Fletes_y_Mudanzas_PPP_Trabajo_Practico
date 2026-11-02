@@ -4,12 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PortalChofer } from "@/features/servicios/components/portal-chofer";
 import type { Servicio } from "@/features/servicios/types";
 
-const { obtenerServiciosChofer } = vi.hoisted(() => ({
-  obtenerServiciosChofer: vi.fn(),
-}));
+const { obtenerServiciosChofer, iniciarViajeChofer, finalizarViajeChofer } = vi.hoisted(
+  () => ({
+    obtenerServiciosChofer: vi.fn(),
+    iniciarViajeChofer: vi.fn(),
+    finalizarViajeChofer: vi.fn(),
+  }),
+);
 
 vi.mock("@/features/servicios/actions", () => ({
   obtenerServiciosChofer,
+  iniciarViajeChofer,
+  finalizarViajeChofer,
 }));
 
 vi.mock("@/features/auth/components/boton-cerrar-sesion", () => ({

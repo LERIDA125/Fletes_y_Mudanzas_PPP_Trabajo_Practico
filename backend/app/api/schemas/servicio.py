@@ -157,6 +157,12 @@ class ServicioRead(BaseModel):
     estado: str
     transiciones_validas: list[str]
     motivo_cancelacion: str | None
+    foto_remito_url: str | None = None
+    monto_cobrado_real: Decimal | None = None
+    estado_rendicion: str | None = None
+    observacion_rendicion: str | None = None
+    rendido_en: datetime | None = None
+    rendido_por_id: int | None = None
     creado_por_id: int | None = None
     modificado_por_id: int | None = None
     creado_en: datetime
@@ -193,6 +199,12 @@ class ServicioRead(BaseModel):
             estado=servicio.estado,
             transiciones_validas=transiciones_validas_desde(servicio.estado),
             motivo_cancelacion=servicio.motivo_cancelacion,
+            foto_remito_url=servicio.foto_remito_url,
+            monto_cobrado_real=servicio.monto_cobrado_real,
+            estado_rendicion=servicio.estado_rendicion,
+            observacion_rendicion=servicio.observacion_rendicion,
+            rendido_en=servicio.rendido_en,
+            rendido_por_id=servicio.rendido_por_id,
             creado_por_id=servicio.creado_por_id,
             modificado_por_id=servicio.modificado_por_id,
             creado_en=servicio.creado_en,
@@ -215,3 +227,26 @@ class ServicioEstadoUpdate(BaseModel):
         "cobrado",
         "cancelado",
     ] = Field(description="Nuevo estado solicitado para el servicio.")
+
+
+class ServicioFinalizarRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    foto_remito_url: str | None = Field(
+        default=None,
+        description="URL pública o Data URL Base64 de la foto del remito firmado.",
+    )
+    monto_cobrado_real: Decimal = Field(
+        ge=0,
+        description="Monto cobrado en efectivo/real por el chofer al finalizar el servicio.",
+    )
+
+
+class RendicionObservarRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    observacion: str = Field(
+        min_length=1,
+        max_length=255,
+        description="Motivo u observación por el cual la rendición queda observada.",
+    )

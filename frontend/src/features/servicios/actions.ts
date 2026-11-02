@@ -23,6 +23,9 @@ import {
   cambiarEstadoServicio as actualizarEstadoServicio,
   cotizarServicio,
   eliminarServicio as borrarServicio,
+  finalizarViajeServicio,
+  aprobarRendicionServicio,
+  observarRendicionServicio,
   listarServiciosAsignados,
   listarClientesParaAlta,
   listarTiposParaAlta,
@@ -201,6 +204,84 @@ export async function eliminarServicio(
   }
 }
 
+export async function iniciarViajeChofer(
+  idServicio: number,
+): Promise<ResultadoAccion<Servicio>> {
+  try {
+    const servicio = await actualizarEstadoServicio(idServicio, "en curso");
+    revalidatePath("/chofer");
+    revalidatePath("/servicios");
+    revalidatePath("/agenda");
+    revalidatePath("/rendiciones");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "cambiar-estado") };
+    }
+    throw error;
+  }
+}
+
+export async function finalizarViajeChofer(
+  idServicio: number,
+  datos: { foto_remito_url?: string | null; monto_cobrado_real: number },
+): Promise<ResultadoAccion<Servicio>> {
+  try {
+    const servicio = await finalizarViajeServicio(idServicio, datos);
+    revalidatePath("/chofer");
+    revalidatePath("/servicios");
+    revalidatePath("/rendiciones");
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "finalizar") };
+    }
+    throw error;
+  }
+}
+
+export async function aprobarRendicionAccion(
+  idServicio: number,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("ADMIN");
+  try {
+    const servicio = await aprobarRendicionServicio(idServicio);
+    revalidatePath("/rendiciones");
+    revalidatePath("/servicios");
+    revalidatePath("/chofer");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "rendicion") };
+    }
+    throw error;
+  }
+}
+
+export async function observarRendicionAccion(
+  idServicio: number,
+  observacion: string,
+): Promise<ResultadoAccion<Servicio>> {
+  await exigirRol("ADMIN");
+  try {
+    const servicio = await observarRendicionServicio(idServicio, observacion);
+    revalidatePath("/rendiciones");
+    revalidatePath("/servicios");
+    revalidatePath("/chofer");
+    revalidatePath("/");
+    return { ok: true, dato: servicio };
+  } catch (error) {
+    if (error instanceof ErrorApi) {
+      return { ok: false, mensaje: mensajeDeError(error, "rendicion") };
+    }
+    throw error;
+  }
+}
+
 function mensajeDeError(
   error: ErrorApi,
   operacion:
@@ -209,6 +290,8 @@ function mensajeDeError(
     | "disponibilidad"
     | "catalogos"
     | "cambiar-estado"
+    | "finalizar"
+    | "rendicion"
     | "cancelar"
     | "eliminar"
     | "listar-chofer"
@@ -238,6 +321,12 @@ function mensajeDeError(
   }
   if (operacion === "cambiar-estado") {
     return "No pudimos cambiar el estado del servicio. Revisá el estado actual e intentá de nuevo.";
+  }
+  if (operacion === "finalizar") {
+    return "No pudimos finalizar el viaje. Asegurate de adjuntar la foto del remito e indicar el monto cobrado.";
+  }
+  if (operacion === "rendicion") {
+    return "No pudimos procesar la rendición. Intentá de nuevo.";
   }
   if (operacion === "cancelar") {
     return "No pudimos cancelar el servicio. Revisá el estado actual e intentá de nuevo.";

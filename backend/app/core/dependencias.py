@@ -20,7 +20,7 @@ from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
 from app.application.servicios.gestor_servicios import GestorServicios
-from app.application.servicios.puertos import ServicioRepository
+from app.application.servicios.puertos import AlmacenamientoRemitosPort, ServicioRepository
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
 from app.application.tipos_vehiculo.puertos import (
     ConsultaVehiculosPorTipo,
@@ -44,6 +44,7 @@ from app.infrastructure.repositories.usuario_repo import UsuarioRepo
 from app.infrastructure.repositories.vehiculo_repo import VehiculoRepo
 from app.infrastructure.security.jwt_service import JWTService
 from app.infrastructure.security.password_hasher import PasswordHasher
+from app.infrastructure.storage.almacenamiento_remitos import AlmacenamientoRemitosHibrido
 
 HEADER_ROL = "X-Rol"
 ROL_ADMIN = "admin"
@@ -106,6 +107,10 @@ def get_usuario_actual(
     x_rol: Annotated[
         str | None, Header(alias=HEADER_ROL, description="Rol de prueba en modo desarrollo local.")
     ] = None,
+    x_chofer_id: Annotated[
+        int | None, 
+        Header(alias="X-Chofer-Id", description="ID de chofer simulado para desarrollo.")
+    ] = None,
     authorization: Annotated[
         str | None, Header(alias="Authorization", description="Token Bearer JWT.")
     ] = None,
@@ -142,10 +147,10 @@ def get_usuario_actual(
     if settings.ENVIRONMENT.lower() == "dev" and settings.DEV_ASSUME_ADMIN:
         rol_dev = (x_rol if isinstance(x_rol, str) and x_rol else ROL_ADMIN).strip().lower()
         return UsuarioAutenticado(
-            id=None,
+            id=1 if rol_dev == ROL_ADMIN else 2,
             username=f"dev-{rol_dev}",
             rol=rol_dev,
-            id_chofer=None,
+            id_chofer=x_chofer_id,
             activo=True,
         )
 
@@ -327,12 +332,19 @@ def get_repo_servicios(db: Annotated[Session, Depends(get_db)]) -> ServicioRepos
     return ServicioRepo(db)
 
 
+def get_almacenamiento_remitos() -> AlmacenamientoRemitosPort:
+    return AlmacenamientoRemitosHibrido()
+
+
 def get_gestor_servicios(
     repositorio: Annotated[ServicioRepository, Depends(get_repo_servicios)],
     tipos: Annotated[TipoVehiculoRepository, Depends(get_repo_tipos_vehiculo)],
     clientes: Annotated[ClienteRepository, Depends(get_repo_clientes)],
     choferes: Annotated[ChoferRepository, Depends(get_repo_choferes)],
     vehiculos: Annotated[VehiculoRepository, Depends(get_repo_vehiculos)],
+    almacenamiento_remitos: Annotated[
+        AlmacenamientoRemitosPort, Depends(get_almacenamiento_remitos)
+    ],
 ) -> GestorServicios:
     return GestorServicios(
         repositorio=repositorio,
@@ -342,4 +354,5 @@ def get_gestor_servicios(
         consulta_vehiculos=vehiculos,
         consulta_tipos=tipos,
         registro_clientes=clientes,
+        almacenamiento_remitos=almacenamiento_remitos,
     )

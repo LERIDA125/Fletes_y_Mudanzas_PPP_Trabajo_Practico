@@ -18,6 +18,11 @@ export type ResultadoRuta = components["schemas"]["RutaRead"];
 export type EstadoServicio =
   "pendiente" | "confirmado" | "en curso" | "finalizado" | "cobrado" | "cancelado";
 
+export type EstadoRendicion = "PENDIENTE" | "RENDIDO" | "OBSERVADO";
+
+export type FinalizarServicioPayload = components["schemas"]["ServicioFinalizarRequest"];
+export type ObservarRendicionPayload = components["schemas"]["RendicionObservarRequest"];
+
 export type ConsultaDisponibilidad = {
   fecha: string;
   id_tipo_vehiculo: number;

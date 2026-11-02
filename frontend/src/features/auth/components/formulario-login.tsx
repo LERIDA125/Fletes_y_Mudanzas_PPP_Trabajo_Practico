@@ -1,7 +1,15 @@
 "use client";
 
-import { ArrowRight, Loader2, LockKeyhole, UserRound } from "lucide-react";
-import { useActionState } from "react";
+import {
+  ArrowRight,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  ShieldCheck,
+  Truck,
+  UserRound,
+} from "lucide-react";
+import { useActionState, useState } from "react";
 
 import { iniciarSesion, type EstadoLogin } from "@/features/auth/actions";
 
@@ -9,6 +17,13 @@ const ESTADO_INICIAL: EstadoLogin = {};
 
 export function FormularioLogin() {
   const [estado, accion, pendiente] = useActionState(iniciarSesion, ESTADO_INICIAL);
+  const [usuario, setUsuario] = useState("");
+  const [password, setPassword] = useState("");
+
+  function llenarCredenciales(u: string, p: string) {
+    setUsuario(u);
+    setPassword(p);
+  }
 
   return (
     <form action={accion} className="flex flex-col gap-5" noValidate>
@@ -29,6 +44,8 @@ export function FormularioLogin() {
             id="username"
             name="username"
             type="text"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
@@ -57,6 +74,8 @@ export function FormularioLogin() {
             id="password"
             name="password"
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             required
             aria-invalid={Boolean(estado.error)}
@@ -92,6 +111,43 @@ export function FormularioLogin() {
           </>
         )}
       </button>
+
+      {/* Accesos rápidos de desarrollo / demo para el equipo */}
+      <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-3.5 dark:border-gray-800 dark:bg-gray-900/40">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <KeyRound size={13} className="text-[#2165d5]" />
+          Accesos rápidos de prueba
+        </p>
+        <div className="mt-2.5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => llenarCredenciales("admin", "admin1234")}
+            className="flex flex-col items-start rounded-xl border border-gray-200 bg-white p-2 text-left hover:border-blue-400 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 transition active:scale-98"
+          >
+            <span className="flex items-center gap-1 text-[11px] font-bold text-[#2165d5] dark:text-blue-400">
+              <ShieldCheck size={12} />
+              Admin
+            </span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              admin / admin1234
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => llenarCredenciales("marcelo", "chofer1234")}
+            className="flex flex-col items-start rounded-xl border border-gray-200 bg-white p-2 text-left hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-500 transition active:scale-98"
+          >
+            <span className="flex items-center gap-1 text-[11px] font-bold text-[#1f6c58] dark:text-emerald-400">
+              <Truck size={12} />
+              Chofer
+            </span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              marcelo / chofer1234
+            </span>
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

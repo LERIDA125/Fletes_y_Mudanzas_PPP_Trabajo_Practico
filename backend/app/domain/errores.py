@@ -173,6 +173,41 @@ class ReferenciasServicioInvalidas(DatoInvalido):
         )
 
 
+class RemitoObligatorio(DatoInvalido):
+    def __init__(
+        self,
+        detalle: str = (
+            "Para finalizar el viaje debés adjuntar la foto del remito firmado "
+            "y declarar el monto cobrado."
+        ),
+    ) -> None:
+        super().__init__(detalle)
+
+
+class MontoCobradoInvalido(DatoInvalido):
+    def __init__(
+        self,
+        detalle: str = "El monto cobrado debe ser un importe numérico mayor o igual a cero",
+    ) -> None:
+        super().__init__(detalle)
+
+
+class ServicioNoFinalizable(ConflictoOperacion):
+    def __init__(self, estado_actual: str) -> None:
+        super().__init__(
+            f"Solo se puede finalizar un servicio en estado 'confirmado' o 'en curso' "
+            f"(estado actual: {estado_actual!r})"
+        )
+        self.estado_actual = estado_actual
+
+
+class RendicionNoDisponible(ConflictoOperacion):
+    def __init__(
+        self, detalle: str = "La operación de rendición no está disponible para este servicio"
+    ) -> None:
+        super().__init__(detalle)
+
+
 # ── Choferes (H3) ──────────────────────────────────────────────────────────────
 
 

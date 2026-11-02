@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from app.application.cotizacion.calculadora import CalculadoraCotizacion, Cotizacion
 from app.application.servicios.puertos import (
+    AlmacenamientoRemitosPort,
     AsignacionDia,
     ConsultaChoferServicio,
     ConsultaClienteServicio,
@@ -25,6 +26,7 @@ from app.domain.errores import (
     DatoInvalido,
     PermisoDenegado,
     RazonSocialDuplicada,
+    RemitoObligatorio,
     ServicioNoEncontrado,
     TipoVehiculoInvalido,
     VehiculoInvalido,
@@ -81,6 +83,7 @@ class GestorServicios:
         consulta_vehiculos: ConsultaVehiculoServicio,
         consulta_tipos: ConsultaTipoServicio | None = None,
         registro_clientes: RegistroClienteServicio | None = None,
+        almacenamiento_remitos: AlmacenamientoRemitosPort | None = None,
     ) -> None:
         self._repo = repositorio
         self._calculadora = calculadora
@@ -89,6 +92,7 @@ class GestorServicios:
         self._vehiculos = consulta_vehiculos
         self._tipos = consulta_tipos
         self._registro_clientes = registro_clientes
+        self._almacenamiento_remitos = almacenamiento_remitos
 
     def cotizar(
         self,
@@ -299,9 +303,111 @@ class GestorServicios:
                 raise PermisoDenegado(
                     "El chofer solo puede actualizar servicios asignados a sí mismo."
                 )
-            if estado not in ("en curso", "finalizado"):
+            if estado == "finalizado":
+                raise RemitoObligatorio(
+                    "El chofer no puede marcar el viaje como 'finalizado' sin adjuntar "
+                    "la foto del remito firmado y confirmar el monto cobrado."
+                )
+            if estado != "en curso":
                 raise PermisoDenegado(
-                    "El chofer solo puede avanzar el servicio a 'en curso' o 'finalizado'."
+                    "El chofer solo puede avanzar el servicio a 'en curso' o "
+                    "finalizarlo con remito."
                 )
         actual.servicio.transicionar_a(estado, modificado_por_id=usuario_id)
+        return self._repo.actualizar(actual.servicio)
+
+    def finalizar_viaje(
+        self,
+        *,
+        id_servicio: int,
+        foto_remito_url: str | None = None,
+        foto_bytes: bytes | None = None,
+        foto_content_type: str = "image/jpeg",
+        foto_nombre: str | None = None,
+        monto_cobrado_real: Decimal,
+        hora_fin: time | None = None,
+        usuario_id: int | None = None,
+        rol_usuario: str = "admin",
+        id_chofer_usuario: int | None = None,
+    ) -> ServicioListadoItem:
+        actual = self._repo.obtener_por_id(id_servicio)
+        if actual is None:
+            raise ServicioNoEncontrado(id_servicio)
+
+        if rol_usuario == "chofer":
+            if id_chofer_usuario is None or actual.servicio.id_chofer != id_chofer_usuario:
+                raise PermisoDenegado(
+                    "El chofer solo puede finalizar servicios asignados a sí mismo."
+                )
+
+        url_foto = (foto_remito_url or "").strip()
+        if foto_bytes:
+            if self._almacenamiento_remitos is not None:
+                url_foto = self._almacenamiento_remitos.guardar(
+                    id_servicio=id_servicio,
+                    contenido=foto_bytes,
+                    content_type=foto_content_type,
+                    nombre_archivo=foto_nombre,
+                )
+            else:
+                import base64
+
+                codificado = base64.b64encode(foto_bytes).decode("ascii")
+                mime = foto_content_type or "image/jpeg"
+                url_foto = f"data:{mime};base64,{codificado}"
+
+        if not url_foto:
+            raise RemitoObligatorio(
+                "La foto del remito firmado es obligatoria para finalizar el servicio."
+            )
+
+        ahora_momento = datetime.now(ZONA_HORARIA_SERVICIOS)
+        hora_efectiva = hora_fin or ahora_momento.time().replace(microsecond=0)
+
+        actual.servicio.finalizar_con_remito(
+            foto_remito_url=url_foto,
+            monto_cobrado_real=monto_cobrado_real,
+            hora_fin=hora_efectiva,
+            modificado_por_id=usuario_id,
+            exigir_foto=True,
+        )
+        return self._repo.actualizar(actual.servicio)
+
+    def aprobar_rendicion(
+        self,
+        *,
+        id_servicio: int,
+        usuario_id: int | None = None,
+        rol_usuario: str = "admin",
+    ) -> ServicioListadoItem:
+        if rol_usuario != "admin":
+            raise PermisoDenegado("Solo un administrador puede aprobar la rendición.")
+        actual = self._repo.obtener_por_id(id_servicio)
+        if actual is None:
+            raise ServicioNoEncontrado(id_servicio)
+
+        actual.servicio.aprobar_rendicion(
+            usuario_id=usuario_id,
+            ahora=datetime.now(ZONA_HORARIA_SERVICIOS),
+        )
+        return self._repo.actualizar(actual.servicio)
+
+    def observar_rendicion(
+        self,
+        *,
+        id_servicio: int,
+        observacion: str,
+        usuario_id: int | None = None,
+        rol_usuario: str = "admin",
+    ) -> ServicioListadoItem:
+        if rol_usuario != "admin":
+            raise PermisoDenegado("Solo un administrador puede observar la rendición.")
+        actual = self._repo.obtener_por_id(id_servicio)
+        if actual is None:
+            raise ServicioNoEncontrado(id_servicio)
+
+        actual.servicio.observar_rendicion(
+            observacion=observacion,
+            usuario_id=usuario_id,
+        )
         return self._repo.actualizar(actual.servicio)

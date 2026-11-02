@@ -134,3 +134,31 @@ export async function cancelarServicio(
     body: JSON.stringify({ motivo }),
   });
 }
+
+export async function finalizarViajeServicio(
+  idServicio: number,
+  datos: { foto_remito_url?: string | null; monto_cobrado_real: number },
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/finalizar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  });
+}
+
+export async function aprobarRendicionServicio(idServicio: number): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/rendicion/aprobar`, {
+    method: "POST",
+  });
+}
+
+export async function observarRendicionServicio(
+  idServicio: number,
+  observacion: string,
+): Promise<Servicio> {
+  return request<Servicio>(`/api/servicios/${idServicio}/rendicion/observar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ observacion }),
+  });
+}

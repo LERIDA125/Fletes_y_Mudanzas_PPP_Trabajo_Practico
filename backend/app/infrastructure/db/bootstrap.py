@@ -223,6 +223,20 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                     )
                     conn.execute(
                         text(
+                            "ALTER TABLE servicios "
+                            "ADD COLUMN IF NOT EXISTS foto_remito_url TEXT, "
+                            "ADD COLUMN IF NOT EXISTS monto_cobrado_real NUMERIC(12, 2), "
+                            "ADD COLUMN IF NOT EXISTS estado_rendicion VARCHAR(20), "
+                            "ADD COLUMN IF NOT EXISTS observacion_rendicion VARCHAR(255), "
+                            "ADD COLUMN IF NOT EXISTS rendido_en TIMESTAMP WITH TIME ZONE, "
+                            "ADD COLUMN IF NOT EXISTS rendido_por_id INTEGER "
+                            "REFERENCES usuarios(id) ON DELETE SET NULL, "
+                            "ADD COLUMN IF NOT EXISTS compensacion_chofer_cancelacion "
+                            "NUMERIC(12, 2) DEFAULT 0.00 NOT NULL"
+                        )
+                    )
+                    conn.execute(
+                        text(
                             """
                             DO $$
                             BEGIN
@@ -299,6 +313,11 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                     db.add(admin)
                     db.commit()
                     db.refresh(admin)
+                else:
+                    if not hasher.verificar("admin1234", admin.password_hash) or not admin.activo:
+                        admin.password_hash = hasher.hashear("admin1234")
+                        admin.activo = True
+                        db.commit()
 
                 admin2 = (
                     db.query(UsuarioORM)
@@ -318,6 +337,11 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                         )
                     )
                     db.commit()
+                else:
+                    if not hasher.verificar("admin1234", admin2.password_hash) or not admin2.activo:
+                        admin2.password_hash = hasher.hashear("admin1234")
+                        admin2.activo = True
+                        db.commit()
 
                 _poblar_catalogo_inicial_si_vacio(db, admin.id)
 
@@ -350,6 +374,11 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                                 modificado_por_id=admin.id,
                             )
                         )
+                    else:
+                        pass_inv = not hasher.verificar("chofer1234", existe_usuario.password_hash)
+                        if pass_inv or not existe_usuario.activo:
+                            existe_usuario.password_hash = hash_chofer
+                            existe_usuario.activo = True
                 db.commit()
                 _engines_inicializados.add(engine_id)
         except Exception as exc:

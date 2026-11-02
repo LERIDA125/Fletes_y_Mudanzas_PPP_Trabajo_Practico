@@ -12,6 +12,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    Text,
     Time,
     func,
     text,
@@ -55,6 +56,14 @@ class ServicioORM(Base):
         String(20), nullable=False, server_default=text("'pendiente'")
     )
     motivo_cancelacion: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    foto_remito_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    monto_cobrado_real: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    estado_rendicion: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    observacion_rendicion: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    rendido_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rendido_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
     creado_por_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
     )
@@ -87,6 +96,10 @@ class ServicioORM(Base):
             "estado IN ('pendiente', 'confirmado', 'en curso', 'finalizado', 'cobrado', "
             "'cancelado')",
             name="ck_servicios_estado_valido",
+        ),
+        CheckConstraint(
+            "estado_rendicion IS NULL OR estado_rendicion IN ('PENDIENTE', 'RENDIDO', 'OBSERVADO')",
+            name="ck_servicios_estado_rendicion_valido",
         ),
         CheckConstraint(
             "estado <> 'cancelado' OR (motivo_cancelacion IS NOT NULL "

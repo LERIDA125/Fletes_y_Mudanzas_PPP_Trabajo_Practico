@@ -9,14 +9,20 @@ from zoneinfo import ZoneInfo
 
 from app.domain.errores import (
     DatoInvalido,
+    MontoCobradoInvalido,
     MotivoCancelacionObligatorio,
+    RemitoObligatorio,
+    RendicionNoDisponible,
     ServicioNoCancelable,
+    ServicioNoFinalizable,
     TransicionEstadoServicioInvalida,
 )
 
 ESTADOS_SERVICIO = ("pendiente", "confirmado", "en curso", "finalizado", "cobrado", "cancelado")
 ESTADOS_NO_CANCELABLES = ("finalizado", "cobrado", "cancelado")
+ESTADOS_RENDICION = ("PENDIENTE", "RENDIDO", "OBSERVADO")
 MOTIVO_CANCELACION_MAX = 255
+OBSERVACION_RENDICION_MAX = 255
 ZONA_HORARIA_SERVICIOS = ZoneInfo("America/Argentina/Buenos_Aires")
 VENTANA_CANCELACION_TARDIA = timedelta(hours=2)
 PORCENTAJE_COMPENSACION_CHOFER = Decimal("0.30")
@@ -70,6 +76,12 @@ class Servicio:
     estado: str = "pendiente"
     hora_fin: time | None = None
     motivo_cancelacion: str | None = None
+    foto_remito_url: str | None = None
+    monto_cobrado_real: Decimal | None = None
+    estado_rendicion: str | None = None
+    observacion_rendicion: str | None = None
+    rendido_en: datetime | None = None
+    rendido_por_id: int | None = None
     creado_en: datetime | None = None
     actualizado_en: datetime | None = None
     creado_por_id: int | None = None
@@ -131,6 +143,91 @@ class Servicio:
             self.modificado_por_id = modificado_por_id
         return self
 
+    def finalizar_con_remito(
+        self,
+        *,
+        foto_remito_url: str | None,
+        monto_cobrado_real: Decimal,
+        hora_fin: time,
+        modificado_por_id: int | None = None,
+        exigir_foto: bool = True,
+    ) -> Servicio:
+        if self.estado not in ("confirmado", "en curso"):
+            raise ServicioNoFinalizable(self.estado)
+
+        url_limpia = (foto_remito_url or "").strip()
+        if exigir_foto and not url_limpia:
+            raise RemitoObligatorio()
+
+        if not isinstance(monto_cobrado_real, Decimal) or not monto_cobrado_real.is_finite():
+            raise MontoCobradoInvalido()
+        if monto_cobrado_real < Decimal("0"):
+            raise MontoCobradoInvalido("El monto real cobrado no puede ser negativo")
+
+        if not isinstance(hora_fin, time):
+            raise DatoInvalido("La hora de finalización debe ser una hora válida")
+
+        self.foto_remito_url = url_limpia or None
+        self.monto_cobrado_real = monto_cobrado_real.quantize(CENTAVO, rounding=ROUND_HALF_UP)
+        self.estado = "finalizado"
+        self.estado_rendicion = "PENDIENTE"
+        self.hora_fin = hora_fin
+        if modificado_por_id is not None:
+            self.modificado_por_id = modificado_por_id
+        self._validar()
+        return self
+
+    def aprobar_rendicion(
+        self,
+        *,
+        usuario_id: int | None = None,
+        ahora: datetime | None = None,
+    ) -> Servicio:
+        if self.estado not in ("finalizado", "cobrado") or self.estado_rendicion not in (
+            "PENDIENTE",
+            "OBSERVADO",
+        ):
+            raise RendicionNoDisponible(
+                "Solo se puede aprobar la rendición de un viaje finalizado con rendición "
+                "PENDIENTE u OBSERVADA"
+            )
+        self.estado_rendicion = "RENDIDO"
+        if self.estado == "finalizado":
+            self.estado = "cobrado"
+        self.rendido_en = ahora or datetime.now()
+        self.rendido_por_id = usuario_id
+        if usuario_id is not None:
+            self.modificado_por_id = usuario_id
+        self._validar()
+        return self
+
+    def observar_rendicion(
+        self,
+        *,
+        observacion: str,
+        usuario_id: int | None = None,
+    ) -> Servicio:
+        if self.estado not in ("finalizado", "cobrado") or self.estado_rendicion not in (
+            "PENDIENTE",
+            "OBSERVADO",
+        ):
+            raise RendicionNoDisponible(
+                "Solo se puede observar la rendición de un viaje con rendición PENDIENTE"
+            )
+        obs_limpia = (observacion or "").strip()
+        if not obs_limpia:
+            raise DatoInvalido("La observación de la rendición es obligatoria")
+        if len(obs_limpia) > OBSERVACION_RENDICION_MAX:
+            raise DatoInvalido(
+                f"La observación no puede superar los {OBSERVACION_RENDICION_MAX} caracteres"
+            )
+        self.estado_rendicion = "OBSERVADO"
+        self.observacion_rendicion = obs_limpia
+        if usuario_id is not None:
+            self.modificado_por_id = usuario_id
+        self._validar()
+        return self
+
     def cancelar(
         self,
         *,
@@ -148,6 +245,7 @@ class Servicio:
             raise DatoInvalido(
                 f"El motivo de cancelación no puede superar los {MOTIVO_CANCELACION_MAX} caracteres"
             )
+
         if ahora.tzinfo is None:
             ahora_local = ahora.replace(tzinfo=ZONA_HORARIA_SERVICIOS)
         else:
@@ -192,6 +290,19 @@ class Servicio:
             if valor < 0:
                 raise DatoInvalido(f"{nombre} no puede ser negativo")
 
+        if self.monto_cobrado_real is not None:
+            es_decimal_finito = (
+                isinstance(self.monto_cobrado_real, Decimal)
+                and self.monto_cobrado_real.is_finite()
+            )
+            if not es_decimal_finito:
+                raise MontoCobradoInvalido()
+            if self.monto_cobrado_real < 0:
+                raise MontoCobradoInvalido("El monto real cobrado no puede ser negativo")
+
+        if self.estado_rendicion is not None and self.estado_rendicion not in ESTADOS_RENDICION:
+            raise DatoInvalido(f"Estado de rendición inválido: {self.estado_rendicion}")
+
         if self.horas_estimadas < Decimal("1"):
             raise DatoInvalido("Las horas estimadas deben ser como mínimo 1")
         if min(self.id_cliente, self.id_tipo_vehiculo) < 1:
@@ -218,7 +329,9 @@ class Servicio:
                 raise MotivoCancelacionObligatorio()
             if self.hora_fin is None:
                 raise DatoInvalido("Un servicio cancelado debe registrar la hora de finalización")
-        elif self.motivo_cancelacion is not None or self.hora_fin is not None:
+        elif self.motivo_cancelacion is not None or (
+            self.hora_fin is not None and self.estado not in ("finalizado", "cobrado")
+        ):
             raise DatoInvalido(
-                "Solo un servicio cancelado puede tener motivo y hora de finalización"
+                "Solo un servicio cancelado, finalizado o cobrado puede registrar hora_fin"
             )

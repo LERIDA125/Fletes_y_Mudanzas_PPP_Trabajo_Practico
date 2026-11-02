@@ -97,3 +97,15 @@ class ConsultaVehiculoServicio(Protocol):
 @runtime_checkable
 class ConsultaTipoServicio(Protocol):
     def obtener_por_id(self, tipo_vehiculo_id: int) -> TipoVehiculo | None: ...
+
+
+@runtime_checkable
+class AlmacenamientoRemitosPort(Protocol):
+    def guardar(
+        self,
+        *,
+        id_servicio: int,
+        contenido: bytes,
+        content_type: str,
+        nombre_archivo: str | None = None,
+    ) -> str: ...

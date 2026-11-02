@@ -455,10 +455,20 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
     assert en_curso.json()["estado"] == "en curso"
     assert en_curso.json()["modificado_por_id"] == 2  # id del usuario chofer1
 
-    finalizado = cliente.patch(
+    intento_sin_remito = cliente.patch(
         f"/api/servicios/{serv_1['id_servicio']}/estado",
         headers=headers_chofer_1,
         json={"estado": "finalizado"},
+    )
+    assert intento_sin_remito.status_code == 422
+
+    finalizado = cliente.post(
+        f"/api/servicios/{serv_1['id_servicio']}/finalizar",
+        headers=headers_chofer_1,
+        json={
+            "foto_remito_url": "data:image/jpeg;base64,YWJj",
+            "monto_cobrado_real": "45000.00",
+        },
     )
     assert finalizado.status_code == 200
     assert finalizado.json()["estado"] == "finalizado"

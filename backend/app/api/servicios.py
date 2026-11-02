@@ -2,18 +2,22 @@
 
 from datetime import date, time
 from decimal import Decimal
+from email.parser import BytesParser
+from email.policy import default
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, Response, status
+from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 
 from app.api.schemas.chofer import ChoferRead
 from app.api.schemas.servicio import (
     CotizacionRead,
     CotizacionRequest,
     DisponibilidadRead,
+    RendicionObservarRequest,
     ServicioCancelar,
     ServicioCreate,
     ServicioEstadoUpdate,
+    ServicioFinalizarRequest,
     ServicioListado,
     ServicioRead,
 )
@@ -29,6 +33,7 @@ from app.core.dependencias import (
     require_roles,
 )
 from app.domain.cliente import Cliente
+from app.domain.errores import DatoInvalido
 
 router = APIRouter(prefix="/api/servicios", tags=["servicios"])
 
@@ -330,3 +335,163 @@ def listar_servicios(
         page=page,
         size=size,
     )
+
+
+@router.post(
+    "/{id_servicio}/finalizar",
+    response_model=ServicioRead,
+    summary="Finalizar viaje con remito y monto cobrado",
+    description=(
+        "Marca el servicio como finalizado adjuntando la foto del remito firmado y declarando "
+        "el monto real cobrado. Acepta tanto JSON (con foto_remito_url en base64 o link) como "
+        "multipart/form-data con archivo de foto."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "El chofer solo puede finalizar viajes asignados a sí mismo."
+        },
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El servicio no está en estado confirmado o en curso."
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "La foto del remito o el monto cobrado es inválido."
+        },
+    },
+    dependencies=[Depends(require_roles(ROL_ADMIN, ROL_CHOFER))],
+)
+async def finalizar_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    request: Request,
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
+) -> ServicioRead:
+    content_type = request.headers.get("content-type", "")
+    foto_url: str | None = None
+    foto_bytes: bytes | None = None
+    foto_ct: str = "image/jpeg"
+    foto_nombre: str | None = None
+    monto_cobrado: Decimal | None = None
+
+    if "multipart/form-data" in content_type:
+        raw_body = await request.body()
+        cabecera_ct = f"Content-Type: {content_type}\r\n\r\n".encode()
+        msg = BytesParser(policy=default).parsebytes(cabecera_ct + raw_body)
+        for part in msg.iter_parts():
+            nombre_campo = part.get_param("name", header="content-disposition")
+            nombre_archivo = part.get_filename()
+            cuerpo_parte = part.get_payload(decode=True)
+            if nombre_campo in ("foto_remito", "foto", "remito", "imagen") or (
+                nombre_archivo and cuerpo_parte
+            ):
+                foto_bytes = cuerpo_parte
+                foto_ct = part.get_content_type() or "image/jpeg"
+                foto_nombre = nombre_archivo
+            elif nombre_campo == "monto_cobrado_real" and cuerpo_parte:
+                monto_str = cuerpo_parte.decode("utf-8", errors="replace").strip()
+                try:
+                    monto_cobrado = Decimal(monto_str)
+                except Exception as exc:
+                    raise DatoInvalido("El monto cobrado debe ser un número válido.") from exc
+            elif nombre_campo == "foto_remito_url" and cuerpo_parte:
+                foto_url = cuerpo_parte.decode("utf-8", errors="replace").strip()
+
+        if monto_cobrado is None:
+            raise DatoInvalido("El campo 'monto_cobrado_real' es obligatorio.")
+    else:
+        try:
+            datos_json = await request.json()
+        except Exception as exc:
+            raise DatoInvalido("El cuerpo de la solicitud no es un JSON válido.") from exc
+        try:
+            solicitud = ServicioFinalizarRequest.model_validate(datos_json)
+        except Exception as exc:
+            raise DatoInvalido(f"Datos inválidos para finalizar servicio: {exc}") from exc
+        foto_url = solicitud.foto_remito_url
+        monto_cobrado = solicitud.monto_cobrado_real
+
+    item = gestor.finalizar_viaje(
+        id_servicio=id_servicio,
+        foto_remito_url=foto_url,
+        foto_bytes=foto_bytes,
+        foto_content_type=foto_ct,
+        foto_nombre=foto_nombre,
+        monto_cobrado_real=monto_cobrado,
+        usuario_id=usuario_actual.id,
+        rol_usuario=usuario_actual.rol,
+        id_chofer_usuario=usuario_actual.id_chofer,
+    )
+    return ServicioRead.de_item(item)
+
+
+@router.post(
+    "/{id_servicio}/rendicion/aprobar",
+    response_model=ServicioRead,
+    summary="Aprobar rendición de viaje",
+    description=(
+        "El administrador aprueba la rendición del servicio luego de revisar el remito y el "
+        "dinero recaudado. Deja el saldo en cero para la caja y marca el servicio como "
+        "RENDIDO/cobrado."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El servicio no está en estado finalizado o rendición pendiente."
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def aprobar_rendicion_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
+) -> ServicioRead:
+    item = gestor.aprobar_rendicion(
+        id_servicio=id_servicio,
+        usuario_id=usuario_actual.id,
+        rol_usuario=usuario_actual.rol,
+    )
+    return ServicioRead.de_item(item)
+
+
+@router.post(
+    "/{id_servicio}/rendicion/observar",
+    response_model=ServicioRead,
+    summary="Observar rendición de viaje",
+    description="Permite al administrador rechazar u observar la rendición adjuntando un motivo.",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "La autenticación no está habilitada para este entorno."
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "La operación requiere el rol admin."},
+        status.HTTP_404_NOT_FOUND: {"description": "No existe un servicio con ese id."},
+        status.HTTP_409_CONFLICT: {
+            "description": "El servicio no está disponible para observar rendición."
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "La observación es inválida o vacía."
+        },
+    },
+    dependencies=[Depends(require_rol(ROL_ADMIN))],
+)
+def observar_rendicion_servicio(
+    id_servicio: Annotated[int, Path(gt=0, description="Identificador del servicio.")],
+    datos: RendicionObservarRequest,
+    gestor: Annotated[GestorServicios, Depends(get_gestor_servicios)],
+    usuario_actual: Annotated[UsuarioAutenticado, Depends(get_usuario_actual)],
+) -> ServicioRead:
+    item = gestor.observar_rendicion(
+        id_servicio=id_servicio,
+        observacion=datos.observacion,
+        usuario_id=usuario_actual.id,
+        rol_usuario=usuario_actual.rol,
+    )
+    return ServicioRead.de_item(item)
+

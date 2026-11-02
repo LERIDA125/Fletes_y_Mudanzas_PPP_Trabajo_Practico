@@ -91,6 +91,19 @@ export function PortalChofer({
     };
   }, []);
 
+  async function recargarViajes() {
+    setActualizando(true);
+    const resultado = await obtenerServiciosChofer();
+    if (resultado.ok) {
+      setServicios(resultado.dato);
+      setMensajeError(null);
+      setFechaHoy(obtenerFechaArgentina(new Date()));
+    } else {
+      setMensajeError(resultado.mensaje);
+    }
+    setActualizando(false);
+  }
+
   const viajesDeHoy = ordenarServicios(
     servicios.filter((servicio) => servicio.fecha === fechaHoy),
   );
@@ -156,6 +169,7 @@ export function PortalChofer({
                     key={servicio.id_servicio}
                     servicio={servicio}
                     numero={indice + 1}
+                    alActualizar={recargarViajes}
                   />
                 ))}
               </div>

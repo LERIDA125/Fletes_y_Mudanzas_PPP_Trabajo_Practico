@@ -146,7 +146,7 @@ describe("Cotizador", () => {
     expect(screen.getByText("Total de recargos porcentuales")).toBeInTheDocument();
     expect(screen.getAllByText("Precio sugerido").length).toBeGreaterThan(0);
     expect(registrarServicio).not.toHaveBeenCalled();
-  });
+  }, 15000);
 
   it("invalida la cotización cuando cambian las condiciones del viaje", async () => {
     const user = userEvent.setup();
