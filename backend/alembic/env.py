@@ -8,7 +8,9 @@ from app.infrastructure import models  # noqa: F401  registra las tablas en Base
 from app.infrastructure.db.base import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().DATABASE_URL)
+settings = get_settings()
+migration_url = settings.DATABASE_URL_UNPOOLED or settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", migration_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -32,6 +34,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"connect_timeout": 15},
     )
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
