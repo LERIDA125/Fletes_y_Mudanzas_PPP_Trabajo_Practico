@@ -97,11 +97,19 @@ class GestorServicios:
         id_tipo_vehiculo: int,
         horas_estimadas: Decimal,
         distancia_ida_km: Decimal,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
     ) -> Cotizacion:
         return self._calculadora.cotizar(
             id_tipo_vehiculo=id_tipo_vehiculo,
             horas_estimadas=horas_estimadas,
             distancia_ida_km=distancia_ida_km,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
         )
 
     def crear(
@@ -115,6 +123,10 @@ class GestorServicios:
         hora_inicio: time | None,
         horas_estimadas: Decimal,
         distancia_ida_km: Decimal,
+        requiere_ayudante: bool = False,
+        acceso_escalera: bool = False,
+        zona_concurrida: bool = False,
+        urgencia_mismo_dia: bool = False,
         nuevo_cliente: Cliente | None = None,
         usuario_id: int | None = None,
     ) -> ServicioListadoItem:
@@ -140,6 +152,10 @@ class GestorServicios:
             id_tipo_vehiculo=id_tipo_vehiculo,
             horas_estimadas=horas_estimadas,
             distancia_ida_km=distancia_ida_km,
+            requiere_ayudante=requiere_ayudante,
+            acceso_escalera=acceso_escalera,
+            zona_concurrida=zona_concurrida,
+            urgencia_mismo_dia=urgencia_mismo_dia,
         )
         servicio = Servicio.crear(
             id_cliente=cliente_id,

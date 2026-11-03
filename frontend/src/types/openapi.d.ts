@@ -748,15 +748,15 @@ export interface components {
              */
             moneda: "ARS";
             /** Precio Sugerido */
-            precio_sugerido?: string | null;
+            precio_sugerido: string;
             /** Base Horas */
-            base_horas?: string | null;
+            base_horas: string;
             /** Base Km */
-            base_km?: string | null;
+            base_km: string;
             /** Subtotal Base */
-            subtotal_base?: string | null;
+            subtotal_base: string;
             /** Subtotal Con Fijos */
-            subtotal_con_fijos?: string | null;
+            subtotal_con_fijos: string;
             /**
              * Total Recargos Porcentuales
              * @default 0.00
@@ -830,6 +830,30 @@ export interface components {
              * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
              */
             distancia_ida_km: number | string;
+            /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo por ayudante configurado por la empresa.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo por acceso con escalera configurado por la empresa.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje de recargo por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje de recargo por urgencia para el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
         };
         /** DireccionBuscarRequest */
         DireccionBuscarRequest: {
@@ -939,6 +963,30 @@ export interface components {
              * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
              */
             distancia_ida_km: number | string;
+            /**
+             * Requiere Ayudante
+             * @description Aplica el recargo fijo por ayudante configurado por la empresa.
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Acceso Escalera
+             * @description Aplica el recargo fijo por acceso con escalera configurado por la empresa.
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Zona Concurrida
+             * @description Aplica el porcentaje de recargo por zona concurrida.
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Urgencia Mismo Dia
+             * @description Aplica el porcentaje de recargo por urgencia para el mismo día.
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
             /**
              * Id Cliente
              * @description Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.

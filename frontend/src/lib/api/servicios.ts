@@ -1,5 +1,5 @@
 import type {
-  AltaServicio,
+  AltaServicioConAcuerdo,
   ConsultaDisponibilidad,
   Cotizacion,
   Disponibilidad,
@@ -96,27 +96,22 @@ export async function cotizarServicio(
     id_tipo_vehiculo: Number(solicitud.id_tipo_vehiculo),
     horas_estimadas: Number(solicitud.horas_estimadas),
     distancia_ida_km: Number(solicitud.distancia_ida_km),
-  };
-  const cotizacion = await request<Cotizacion>("/api/servicios/cotizar", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payloadLimpio),
-  });
-  return {
-    ...cotizacion,
     requiere_ayudante: Boolean(solicitud.requiere_ayudante),
     acceso_escalera: Boolean(solicitud.acceso_escalera),
     zona_concurrida: Boolean(solicitud.zona_concurrida),
     urgencia_mismo_dia: Boolean(solicitud.urgencia_mismo_dia),
   };
+  return request<Cotizacion>("/api/servicios/cotizar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payloadLimpio),
+  });
 }
 
-export async function crearServicio(solicitud: AltaServicio): Promise<Servicio> {
+export async function crearServicio(
+  solicitud: AltaServicioConAcuerdo,
+): Promise<Servicio> {
   const datos = { ...(solicitud as Record<string, unknown>) };
-  delete datos.requiere_ayudante;
-  delete datos.acceso_escalera;
-  delete datos.zona_concurrida;
-  delete datos.urgencia_mismo_dia;
   delete datos.precio_acordado;
   delete datos.origen_direccion;
   delete datos.destino_direccion;

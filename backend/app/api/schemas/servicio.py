@@ -35,6 +35,22 @@ class CotizacionRequest(BaseModel):
         allow_inf_nan=False,
         description="Kilómetros de ida. El backend los duplica para obtener el recorrido total.",
     )
+    requiere_ayudante: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo por ayudante configurado por la empresa.",
+    )
+    acceso_escalera: bool = Field(
+        default=False,
+        description="Aplica el recargo fijo por acceso con escalera configurado por la empresa.",
+    )
+    zona_concurrida: bool = Field(
+        default=False,
+        description="Aplica el porcentaje de recargo por zona concurrida.",
+    )
+    urgencia_mismo_dia: bool = Field(
+        default=False,
+        description="Aplica el porcentaje de recargo por urgencia para el mismo día.",
+    )
 
 
 class CotizacionRead(BaseModel):
@@ -50,12 +66,12 @@ class CotizacionRead(BaseModel):
     precio_final: Decimal
     moneda: Literal["ARS"] = "ARS"
 
-    # Compatibilidad con UI enriquecida (resumen cotizador)
-    precio_sugerido: Decimal | None = None
-    base_horas: Decimal | None = None
-    base_km: Decimal | None = None
-    subtotal_base: Decimal | None = None
-    subtotal_con_fijos: Decimal | None = None
+    # Desglose del precio sugerido que consume el resumen del cotizador.
+    precio_sugerido: Decimal
+    base_horas: Decimal
+    base_km: Decimal
+    subtotal_base: Decimal
+    subtotal_con_fijos: Decimal
     total_recargos_porcentuales: Decimal = Decimal("0.00")
     requiere_ayudante: bool = False
     recargo_ayudante: Decimal = Decimal("0.00")
@@ -71,10 +87,6 @@ class CotizacionRead(BaseModel):
     @classmethod
     def de_cotizacion(cls, cotizacion: Cotizacion) -> CotizacionRead:
         resultado = cotizacion.resultado
-        base_horas = (resultado.tarifa_hora_base * resultado.horas_estimadas).quantize(
-            Decimal("0.01")
-        )
-        base_km = (resultado.tarifa_km_excedente * resultado.km_excedente).quantize(Decimal("0.01"))
         return cls(
             id_tipo_vehiculo=cotizacion.id_tipo_vehiculo,
             descripcion_tipo_vehiculo=cotizacion.descripcion_tipo_vehiculo,
@@ -87,10 +99,23 @@ class CotizacionRead(BaseModel):
             tarifa_km_excedente=resultado.tarifa_km_excedente,
             precio_final=resultado.precio_final,
             precio_sugerido=resultado.precio_final,
-            base_horas=base_horas,
-            base_km=base_km,
-            subtotal_base=resultado.precio_final,
-            subtotal_con_fijos=resultado.precio_final,
+            base_horas=resultado.base_horas,
+            base_km=resultado.base_km,
+            subtotal_base=resultado.subtotal_base,
+            subtotal_con_fijos=resultado.subtotal_con_fijos,
+            total_recargos_porcentuales=resultado.total_recargos_porcentuales,
+            requiere_ayudante=resultado.requiere_ayudante,
+            recargo_ayudante=resultado.recargo_ayudante,
+            acceso_escalera=resultado.acceso_escalera,
+            recargo_escalera=resultado.recargo_escalera,
+            zona_concurrida=resultado.zona_concurrida,
+            porcentaje_zona_concurrida=resultado.porcentaje_zona_concurrida,
+            importe_recargo_zona_concurrida=resultado.importe_recargo_zona_concurrida,
+            urgencia_mismo_dia=resultado.urgencia_mismo_dia,
+            porcentaje_urgencia_mismo_dia=resultado.porcentaje_urgencia_mismo_dia,
+            importe_recargo_urgencia_mismo_dia=(
+                resultado.importe_recargo_urgencia_mismo_dia
+            ),
         )
 
 
