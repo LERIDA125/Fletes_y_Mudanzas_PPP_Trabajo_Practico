@@ -1275,7 +1275,6 @@ export interface components {
             /** Actualizado En */
             actualizado_en?: string | null;
         };
-        
         /** ValidationError */
         ValidationError: {
             /** Location */
