@@ -1275,6 +1275,7 @@ export interface components {
             /** Actualizado En */
             actualizado_en?: string | null;
         };
+        
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1283,6 +1284,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * VehiculoCreate
