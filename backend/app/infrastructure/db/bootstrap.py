@@ -17,6 +17,7 @@ from app.infrastructure.db.base import Base
 from app.infrastructure.models import (  # noqa: F401
     chofer,
     cliente,
+    rendicion,
     servicio,
     tipo_vehiculo,
     usuario,
@@ -42,6 +43,7 @@ _TABLAS_AUDITORIA = (
     "tipos_vehiculo",
     "vehiculos",
     "servicios",
+    "rendiciones",
 )
 
 _USUARIOS_CHOFER_POR_NOMBRE = {

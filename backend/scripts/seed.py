@@ -5,6 +5,7 @@ from decimal import Decimal
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.models.chofer import ChoferORM
 from app.infrastructure.models.cliente import ClienteORM
+from app.infrastructure.models.rendicion import RendicionORM
 from app.infrastructure.models.servicio import ServicioORM
 from app.infrastructure.models.tipo_vehiculo import TipoVehiculoORM
 from app.infrastructure.models.usuario import UsuarioORM
@@ -24,6 +25,7 @@ def run_seed():
     db = SessionLocal()
     hasher = PasswordHasher()
     try:
+        db.query(RendicionORM).delete()
         db.query(ServicioORM).delete()
         db.query(VehiculoORM).delete()
         db.query(TipoVehiculoORM).delete()
@@ -181,6 +183,7 @@ def run_seed():
             + [hoy + timedelta(days=i) for i in range(1, 8)]
         )
         horas = [time(8, 0), time(9, 30), time(11, 0), time(14, 0), time(16, 30)]
+        servicios_creados: list[ServicioORM] = []
 
         for i in range(15):
             cliente = random.choice(db_clientes)
@@ -224,6 +227,42 @@ def run_seed():
                 modificado_por_id=autor_id,
             )
             db.add(servicio)
+            servicios_creados.append(servicio)
+
+        db.commit()
+
+        rendibles = [
+            servicio
+            for servicio in servicios_creados
+            if servicio.id_chofer is not None and servicio.estado == "finalizado"
+        ][:3]
+        rendiciones_demo = []
+        for idx, servicio in enumerate(rendibles):
+            gastos = (
+                Decimal("2500.00"),
+                Decimal("1800.00"),
+                Decimal("1500.00"),
+            )[idx % 3]
+            rendicion = RendicionORM(
+                id_servicio=servicio.id,
+                id_chofer=servicio.id_chofer,
+                fecha=servicio.fecha,
+                tarifa=servicio.precio_total,
+                adelanto=(servicio.precio_total * Decimal("0.60")).quantize(Decimal("0.01")),
+                gasto_combustible=gastos,
+                gasto_peajes=Decimal("0.00"),
+                gasto_otros=Decimal("0.00"),
+                estado=("pendiente", "en revision", "aprobada")[idx % 3],
+                observaciones="Rendición de demostración",
+                creado_por_id=admin_1.id,
+                modificado_por_id=admin_1.id,
+            )
+            db.add(rendicion)
+            rendiciones_demo.append(rendicion)
+
+        db.flush()
+        for rendicion in rendiciones_demo:
+            rendicion.codigo = f"REN-{rendicion.id:03d}"
 
         db.commit()
         print("¡Base poblada con éxito!")

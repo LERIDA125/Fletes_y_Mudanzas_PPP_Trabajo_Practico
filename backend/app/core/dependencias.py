@@ -22,6 +22,11 @@ from app.application.clientes.puertos import ClienteRepository, ConsultaHistoria
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
 from app.application.mapas.gestor_mapas import GestorMapas
 from app.application.mapas.puertos import ServicioMapas
+from app.application.rendiciones.gestor_rendiciones import GestorRendiciones
+from app.application.rendiciones.puertos import (
+    ConsultaServiciosRendibles,
+    RendicionRepository,
+)
 from app.application.servicios.gestor_servicios import GestorServicios
 from app.application.servicios.puertos import ServicioRepository
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
@@ -42,6 +47,10 @@ from app.infrastructure.db.session import get_db
 from app.infrastructure.maps.mapas_client import ClienteMapas
 from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
+from app.infrastructure.repositories.rendicion_repo import (
+    RendicionRepo,
+    ServicioRendibleRepo,
+)
 from app.infrastructure.repositories.servicio_repo import ServicioRepo
 from app.infrastructure.repositories.tipo_vehiculo_repo import TipoVehiculoRepo
 from app.infrastructure.repositories.usuario_repo import UsuarioRepo
@@ -342,6 +351,31 @@ def get_gestor_servicios(
         consulta_vehiculos=vehiculos,
         consulta_tipos=tipos,
         registro_clientes=clientes,
+    )
+
+
+# ── Rendiciones (H15) ─────────────────────────────────────────────────────────
+
+
+def get_repo_rendiciones(db: Annotated[Session, Depends(get_db)]) -> RendicionRepository:
+    return RendicionRepo(db)
+
+
+def get_consulta_servicios_rendibles(
+    db: Annotated[Session, Depends(get_db)],
+) -> ConsultaServiciosRendibles:
+    return ServicioRendibleRepo(db)
+
+
+def get_gestor_rendiciones(
+    repositorio: Annotated[RendicionRepository, Depends(get_repo_rendiciones)],
+    consulta_servicios: Annotated[
+        ConsultaServiciosRendibles, Depends(get_consulta_servicios_rendibles)
+    ],
+) -> GestorRendiciones:
+    return GestorRendiciones(
+        repositorio=repositorio,
+        consulta_servicios=consulta_servicios,
     )
 
 

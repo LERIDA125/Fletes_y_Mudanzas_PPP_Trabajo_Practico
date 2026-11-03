@@ -11,6 +11,7 @@ from app.api.autenticacion import (
 from app.api.choferes import router as choferes_router
 from app.api.clientes import router as clientes_router
 from app.api.mapas import router as mapas_router
+from app.api.rendiciones import router as rendiciones_router
 from app.api.servicios import router as servicios_router
 from app.api.tipos_vehiculo import router as tipos_vehiculo_router
 from app.api.vehiculos import router as vehiculos_router
@@ -140,6 +141,7 @@ app.include_router(autenticacion_router)
 app.include_router(usuarios_router)
 app.include_router(clientes_router)
 app.include_router(servicios_router)
+app.include_router(rendiciones_router)
 app.include_router(mapas_router)
 app.include_router(choferes_router)
 app.include_router(tipos_vehiculo_router)

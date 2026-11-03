@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import type {
-  AltaServicio,
+  AltaServicioConAcuerdo,
   ClienteOpcion,
   ConsultaDisponibilidad,
   Cotizacion,
@@ -131,7 +131,7 @@ export async function consultarDisponibilidadServicio(
 }
 
 export async function registrarServicio(
-  solicitud: AltaServicio,
+  solicitud: AltaServicioConAcuerdo,
 ): Promise<ResultadoAccion<Servicio>> {
   try {
     const servicio = await crearServicio(solicitud);
