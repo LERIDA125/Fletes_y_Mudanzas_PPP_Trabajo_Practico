@@ -232,7 +232,7 @@ export interface paths {
         head?: never;
         /**
          * Cancelar un servicio
-         * @description Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y registra la hora de finalización con la hora del servidor; no acepta hora ni estado.
+         * @description Cancela un servicio en estado pendiente, confirmado o en curso. Exige un motivo y registra la hora de finalización con la hora de Buenos Aires. Si faltan entre 0 y 2 horas para el inicio y hay un chofer asignado, guarda una compensación del 30 % de precio_total en el servicio y la acredita a su saldo a favor; sin hora o chofer, o si el inicio ya pasó, la compensación es cero. El importe es un snapshot, no un pago ni un movimiento de rendición. No acepta hora, estado ni importe de compensación en el request.
          */
         patch: operations["cancelar_servicio_api_servicios__id_servicio__cancelar_patch"];
         trace?: never;
@@ -739,38 +739,6 @@ export interface components {
             tarifa_hora_base: string;
             /** Tarifa Km Excedente */
             tarifa_km_excedente: string;
-            /** Base Horas */
-            base_horas: string;
-            /** Base Km */
-            base_km: string;
-            /** Subtotal Base */
-            subtotal_base: string;
-            /** Requiere Ayudante */
-            requiere_ayudante: boolean;
-            /** Recargo Ayudante */
-            recargo_ayudante: string;
-            /** Acceso Escalera */
-            acceso_escalera: boolean;
-            /** Recargo Escalera */
-            recargo_escalera: string;
-            /** Subtotal Con Fijos */
-            subtotal_con_fijos: string;
-            /** Zona Concurrida */
-            zona_concurrida: boolean;
-            /** Porcentaje Zona Concurrida */
-            porcentaje_zona_concurrida: string;
-            /** Importe Recargo Zona Concurrida */
-            importe_recargo_zona_concurrida: string;
-            /** Urgencia Mismo Dia */
-            urgencia_mismo_dia: boolean;
-            /** Porcentaje Urgencia Mismo Dia */
-            porcentaje_urgencia_mismo_dia: string;
-            /** Importe Recargo Urgencia Mismo Dia */
-            importe_recargo_urgencia_mismo_dia: string;
-            /** Total Recargos Porcentuales */
-            total_recargos_porcentuales: string;
-            /** Precio Sugerido */
-            precio_sugerido: string;
             /** Precio Final */
             precio_final: string;
             /**
@@ -779,6 +747,71 @@ export interface components {
              * @constant
              */
             moneda: "ARS";
+            /** Precio Sugerido */
+            precio_sugerido?: string | null;
+            /** Base Horas */
+            base_horas?: string | null;
+            /** Base Km */
+            base_km?: string | null;
+            /** Subtotal Base */
+            subtotal_base?: string | null;
+            /** Subtotal Con Fijos */
+            subtotal_con_fijos?: string | null;
+            /**
+             * Total Recargos Porcentuales
+             * @default 0.00
+             */
+            total_recargos_porcentuales: string;
+            /**
+             * Requiere Ayudante
+             * @default false
+             */
+            requiere_ayudante: boolean;
+            /**
+             * Recargo Ayudante
+             * @default 0.00
+             */
+            recargo_ayudante: string;
+            /**
+             * Acceso Escalera
+             * @default false
+             */
+            acceso_escalera: boolean;
+            /**
+             * Recargo Escalera
+             * @default 0.00
+             */
+            recargo_escalera: string;
+            /**
+             * Zona Concurrida
+             * @default false
+             */
+            zona_concurrida: boolean;
+            /**
+             * Porcentaje Zona Concurrida
+             * @default 0.00
+             */
+            porcentaje_zona_concurrida: string;
+            /**
+             * Importe Recargo Zona Concurrida
+             * @default 0.00
+             */
+            importe_recargo_zona_concurrida: string;
+            /**
+             * Urgencia Mismo Dia
+             * @default false
+             */
+            urgencia_mismo_dia: boolean;
+            /**
+             * Porcentaje Urgencia Mismo Dia
+             * @default 0.00
+             */
+            porcentaje_urgencia_mismo_dia: string;
+            /**
+             * Importe Recargo Urgencia Mismo Dia
+             * @default 0.00
+             */
+            importe_recargo_urgencia_mismo_dia: string;
         };
         /** CotizacionRequest */
         CotizacionRequest: {
@@ -797,30 +830,6 @@ export interface components {
              * @description Kilómetros de ida. El backend los duplica para obtener el recorrido total.
              */
             distancia_ida_km: number | string;
-            /**
-             * Requiere Ayudante
-             * @description Aplica el recargo fijo vigente por ayudante.
-             * @default false
-             */
-            requiere_ayudante: boolean;
-            /**
-             * Acceso Escalera
-             * @description Aplica el recargo fijo vigente por acceso con escalera.
-             * @default false
-             */
-            acceso_escalera: boolean;
-            /**
-             * Zona Concurrida
-             * @description Aplica el porcentaje vigente por zona concurrida.
-             * @default false
-             */
-            zona_concurrida: boolean;
-            /**
-             * Urgencia Mismo Dia
-             * @description Aplica el porcentaje vigente por urgencia en el mismo día.
-             * @default false
-             */
-            urgencia_mismo_dia: boolean;
         };
         /** DireccionBuscarRequest */
         DireccionBuscarRequest: {
@@ -931,30 +940,6 @@ export interface components {
              */
             distancia_ida_km: number | string;
             /**
-             * Requiere Ayudante
-             * @description Aplica el recargo fijo vigente por ayudante.
-             * @default false
-             */
-            requiere_ayudante: boolean;
-            /**
-             * Acceso Escalera
-             * @description Aplica el recargo fijo vigente por acceso con escalera.
-             * @default false
-             */
-            acceso_escalera: boolean;
-            /**
-             * Zona Concurrida
-             * @description Aplica el porcentaje vigente por zona concurrida.
-             * @default false
-             */
-            zona_concurrida: boolean;
-            /**
-             * Urgencia Mismo Dia
-             * @description Aplica el porcentaje vigente por urgencia en el mismo día.
-             * @default false
-             */
-            urgencia_mismo_dia: boolean;
-            /**
              * Id Cliente
              * @description Cliente existente que solicita el servicio. Excluyente con `nuevo_cliente`.
              */
@@ -978,21 +963,6 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio?: string | null;
-            /**
-             * Origen Direccion
-             * @description Etiqueta seleccionada para el origen del recorrido.
-             */
-            origen_direccion: string;
-            /**
-             * Destino Direccion
-             * @description Etiqueta seleccionada para el destino del recorrido.
-             */
-            destino_direccion: string;
-            /**
-             * Precio Acordado
-             * @description Importe acordado con el cliente. Si se omite, se usa el precio sugerido vigente.
-             */
-            precio_acordado?: number | string | null;
         };
         /** ServicioEstadoUpdate */
         ServicioEstadoUpdate: {
@@ -1059,10 +1029,6 @@ export interface components {
             horas_estimadas: string;
             /** Distancia Ida Km */
             distancia_ida_km: string;
-            /** Origen Direccion */
-            origen_direccion: string | null;
-            /** Destino Direccion */
-            destino_direccion: string | null;
             /** Distancia Total Km */
             distancia_total_km: string;
             /** Km Franquicia */
@@ -1073,32 +1039,13 @@ export interface components {
             tarifa_hora_aplicada: string;
             /** Tarifa Km Aplicada */
             tarifa_km_aplicada: string;
-            /** Requiere Ayudante */
-            requiere_ayudante: boolean;
-            /** Acceso Escalera */
-            acceso_escalera: boolean;
-            /** Zona Concurrida */
-            zona_concurrida: boolean;
-            /** Urgencia Mismo Dia */
-            urgencia_mismo_dia: boolean;
-            /** Recargo Ayudante Aplicado */
-            recargo_ayudante_aplicado: string;
-            /** Recargo Escalera Aplicado */
-            recargo_escalera_aplicado: string;
-            /** Importe Recargo Zona Aplicado */
-            importe_recargo_zona_aplicado: string;
-            /** Importe Recargo Urgencia Aplicado */
-            importe_recargo_urgencia_aplicado: string;
-            /** Porcentaje Zona Aplicado */
-            porcentaje_zona_aplicado: string;
-            /** Porcentaje Urgencia Aplicado */
-            porcentaje_urgencia_aplicado: string;
-            /** Precio Sugerido */
-            precio_sugerido: string;
-            /** Precio Acordado */
-            precio_acordado: string;
             /** Precio Total */
             precio_total: string;
+            /**
+             * Compensacion Chofer
+             * @description Snapshot del 30 % de precio_total imputado al chofer por cancelación tardía; no representa un pago ni un movimiento de rendición.
+             */
+            compensacion_chofer: string;
             /**
              * Moneda
              * @default ARS
