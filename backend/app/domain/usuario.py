@@ -35,9 +35,7 @@ def normalizar_username(username: str) -> str:
 
 def validar_password_en_claro(password: str) -> str:
     if len(password.strip()) < LONGITUD_MIN_PASSWORD:
-        raise DatoInvalido(
-            f"La contraseña debe tener al menos {LONGITUD_MIN_PASSWORD} caracteres"
-        )
+        raise DatoInvalido(f"La contraseña debe tener al menos {LONGITUD_MIN_PASSWORD} caracteres")
     return password
 
 
@@ -74,9 +72,7 @@ class Usuario:
         if rol_norm == "admin" and id_chofer is not None:
             raise DatoInvalido("Una cuenta con rol 'admin' no puede vincularse a un chofer")
         if rol_norm == "chofer" and (id_chofer is None or id_chofer <= 0):
-            raise DatoInvalido(
-                "Una cuenta con rol 'chofer' debe vincularse a un id_chofer válido"
-            )
+            raise DatoInvalido("Una cuenta con rol 'chofer' debe vincularse a un id_chofer válido")
 
         return cls(
             username=username_norm,

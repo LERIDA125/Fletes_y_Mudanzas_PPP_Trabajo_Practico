@@ -7,6 +7,7 @@ Aplicación y la identidad/rol del usuario— y no *qué* se hace con los datos.
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
@@ -19,6 +20,8 @@ from app.application.choferes.puertos import ChoferRepository
 from app.application.clientes.gestor_clientes import GestorClientes
 from app.application.clientes.puertos import ClienteRepository, ConsultaHistorialCliente
 from app.application.cotizacion.calculadora import CalculadoraCotizacion
+from app.application.mapas.gestor_mapas import GestorMapas
+from app.application.mapas.puertos import ServicioMapas
 from app.application.servicios.gestor_servicios import GestorServicios
 from app.application.servicios.puertos import ServicioRepository
 from app.application.tipos_vehiculo.gestor_tipos_vehiculo import GestorTiposVehiculo
@@ -36,6 +39,7 @@ from app.application.vehiculos.puertos import (
 from app.core.config import get_settings
 from app.domain.errores import CredencialesInvalidas
 from app.infrastructure.db.session import get_db
+from app.infrastructure.maps.mapas_client import ClienteMapas
 from app.infrastructure.repositories.chofer_repo import ChoferRepo
 from app.infrastructure.repositories.cliente_repo import ClienteRepo
 from app.infrastructure.repositories.servicio_repo import ServicioRepo
@@ -109,9 +113,7 @@ def get_usuario_actual(
     authorization: Annotated[
         str | None, Header(alias="Authorization", description="Token Bearer JWT.")
     ] = None,
-    gestor_auth: Annotated[
-        GestorAutenticacion | None, Depends(get_gestor_autenticacion)
-    ] = None,
+    gestor_auth: Annotated[GestorAutenticacion | None, Depends(get_gestor_autenticacion)] = None,
 ) -> UsuarioAutenticado:
     """Resuelve el usuario autenticado vía Bearer JWT o fallback explícito de desarrollo."""
     if isinstance(authorization, str) and authorization.strip():
@@ -163,9 +165,7 @@ def get_rol_actual(
     authorization: Annotated[
         str | None, Header(alias="Authorization", description="Token Bearer JWT.")
     ] = None,
-    gestor_auth: Annotated[
-        GestorAutenticacion | None, Depends(get_gestor_autenticacion)
-    ] = None,
+    gestor_auth: Annotated[GestorAutenticacion | None, Depends(get_gestor_autenticacion)] = None,
 ) -> str:
     """Devuelve el rol vigente del usuario autenticado (o fallback en modo dev explícito)."""
     usuario = get_usuario_actual(
@@ -343,3 +343,17 @@ def get_gestor_servicios(
         consulta_tipos=tipos,
         registro_clientes=clientes,
     )
+
+
+# ── Mapas y Rutas (H12) ──────────────────────────────────────────────────────
+
+
+@lru_cache
+def get_servicio_mapas() -> ServicioMapas:
+    return ClienteMapas()
+
+
+def get_gestor_mapas(
+    servicio: Annotated[ServicioMapas, Depends(get_servicio_mapas)],
+) -> GestorMapas:
+    return GestorMapas(servicio)

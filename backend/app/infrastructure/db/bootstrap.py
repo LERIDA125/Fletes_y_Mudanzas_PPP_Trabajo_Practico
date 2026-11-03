@@ -283,11 +283,7 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
         try:
             with Session(bind=engine) as db:
                 hasher = PasswordHasher()
-                admin = (
-                    db.query(UsuarioORM)
-                    .filter(UsuarioORM.username == "admin")
-                    .one_or_none()
-                )
+                admin = db.query(UsuarioORM).filter(UsuarioORM.username == "admin").one_or_none()
                 if admin is None:
                     admin = UsuarioORM(
                         username="admin",
@@ -300,11 +296,7 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
                     db.commit()
                     db.refresh(admin)
 
-                admin2 = (
-                    db.query(UsuarioORM)
-                    .filter(UsuarioORM.username == "admin2")
-                    .one_or_none()
-                )
+                admin2 = db.query(UsuarioORM).filter(UsuarioORM.username == "admin2").one_or_none()
                 if admin2 is None:
                     db.add(
                         UsuarioORM(
@@ -321,9 +313,7 @@ def asegurar_esquema_y_usuarios(engine: Engine) -> None:
 
                 _poblar_catalogo_inicial_si_vacio(db, admin.id)
 
-                choferes_activos = (
-                    db.query(ChoferORM).filter(ChoferORM.activo.is_(True)).all()
-                )
+                choferes_activos = db.query(ChoferORM).filter(ChoferORM.activo.is_(True)).all()
                 hash_chofer = hasher.hashear("chofer1234")
                 for chofer_orm in choferes_activos:
                     clave = " ".join(chofer_orm.nombre_completo.lower().split())

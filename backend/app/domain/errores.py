@@ -27,9 +27,7 @@ class CredencialesInvalidas(ReglaNegocioError):
 class PermisoDenegado(ReglaNegocioError):
     """El usuario autenticado no tiene permisos sobre el recurso (mapea a HTTP 403)."""
 
-    def __init__(
-        self, detalle: str = "No tenés permisos para realizar esta operación"
-    ) -> None:
+    def __init__(self, detalle: str = "No tenés permisos para realizar esta operación") -> None:
         super().__init__(detalle)
 
 

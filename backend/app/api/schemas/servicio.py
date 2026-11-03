@@ -50,9 +50,31 @@ class CotizacionRead(BaseModel):
     precio_final: Decimal
     moneda: Literal["ARS"] = "ARS"
 
+    # Compatibilidad con UI enriquecida (resumen cotizador)
+    precio_sugerido: Decimal | None = None
+    base_horas: Decimal | None = None
+    base_km: Decimal | None = None
+    subtotal_base: Decimal | None = None
+    subtotal_con_fijos: Decimal | None = None
+    total_recargos_porcentuales: Decimal = Decimal("0.00")
+    requiere_ayudante: bool = False
+    recargo_ayudante: Decimal = Decimal("0.00")
+    acceso_escalera: bool = False
+    recargo_escalera: Decimal = Decimal("0.00")
+    zona_concurrida: bool = False
+    porcentaje_zona_concurrida: Decimal = Decimal("0.00")
+    importe_recargo_zona_concurrida: Decimal = Decimal("0.00")
+    urgencia_mismo_dia: bool = False
+    porcentaje_urgencia_mismo_dia: Decimal = Decimal("0.00")
+    importe_recargo_urgencia_mismo_dia: Decimal = Decimal("0.00")
+
     @classmethod
     def de_cotizacion(cls, cotizacion: Cotizacion) -> CotizacionRead:
         resultado = cotizacion.resultado
+        base_horas = (resultado.tarifa_hora_base * resultado.horas_estimadas).quantize(
+            Decimal("0.01")
+        )
+        base_km = (resultado.tarifa_km_excedente * resultado.km_excedente).quantize(Decimal("0.01"))
         return cls(
             id_tipo_vehiculo=cotizacion.id_tipo_vehiculo,
             descripcion_tipo_vehiculo=cotizacion.descripcion_tipo_vehiculo,
@@ -64,6 +86,11 @@ class CotizacionRead(BaseModel):
             tarifa_hora_base=resultado.tarifa_hora_base,
             tarifa_km_excedente=resultado.tarifa_km_excedente,
             precio_final=resultado.precio_final,
+            precio_sugerido=resultado.precio_final,
+            base_horas=base_horas,
+            base_km=base_km,
+            subtotal_base=resultado.precio_final,
+            subtotal_con_fijos=resultado.precio_final,
         )
 
 

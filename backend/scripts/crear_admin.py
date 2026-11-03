@@ -18,9 +18,7 @@ class ErrorProvisionAdmin(Exception):
 
 def crear_primer_admin(username: str, password: str) -> str:
     with SessionLocal() as db:
-        admin_existente = db.scalar(
-            select(UsuarioORM.id).where(UsuarioORM.rol == "admin").limit(1)
-        )
+        admin_existente = db.scalar(select(UsuarioORM.id).where(UsuarioORM.rol == "admin").limit(1))
         if admin_existente is not None:
             raise ErrorProvisionAdmin(
                 "Ya existe una cuenta ADMIN. Las cuentas adicionales se crean desde el sistema."

@@ -92,18 +92,38 @@ export async function consultarDisponibilidad(
 export async function cotizarServicio(
   solicitud: SolicitudCotizacion,
 ): Promise<Cotizacion> {
-  return request<Cotizacion>("/api/servicios/cotizar", {
+  const payloadLimpio = {
+    id_tipo_vehiculo: Number(solicitud.id_tipo_vehiculo),
+    horas_estimadas: Number(solicitud.horas_estimadas),
+    distancia_ida_km: Number(solicitud.distancia_ida_km),
+  };
+  const cotizacion = await request<Cotizacion>("/api/servicios/cotizar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(solicitud),
+    body: JSON.stringify(payloadLimpio),
   });
+  return {
+    ...cotizacion,
+    requiere_ayudante: Boolean(solicitud.requiere_ayudante),
+    acceso_escalera: Boolean(solicitud.acceso_escalera),
+    zona_concurrida: Boolean(solicitud.zona_concurrida),
+    urgencia_mismo_dia: Boolean(solicitud.urgencia_mismo_dia),
+  };
 }
 
 export async function crearServicio(solicitud: AltaServicio): Promise<Servicio> {
+  const datos = { ...(solicitud as Record<string, unknown>) };
+  delete datos.requiere_ayudante;
+  delete datos.acceso_escalera;
+  delete datos.zona_concurrida;
+  delete datos.urgencia_mismo_dia;
+  delete datos.precio_acordado;
+  delete datos.origen_direccion;
+  delete datos.destino_direccion;
   return request<Servicio>("/api/servicios", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(solicitud),
+    body: JSON.stringify(datos),
   });
 }
 

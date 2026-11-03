@@ -66,9 +66,7 @@ class JWTService:
             "iat": instante,
             "exp": instante + self._ttl_segundos,
         }
-        segmento_header = _b64url_encode(
-            json.dumps(header, separators=(",", ":")).encode("utf-8")
-        )
+        segmento_header = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
         segmento_payload = _b64url_encode(
             json.dumps(payload, separators=(",", ":")).encode("utf-8")
         )

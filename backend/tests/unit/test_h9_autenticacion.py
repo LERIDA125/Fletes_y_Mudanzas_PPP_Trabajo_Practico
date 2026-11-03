@@ -201,7 +201,6 @@ def test_h9_api_login_multi_admin_y_usuario_chofer(
     )
 
 
-
 def test_h9_trazabilidad_y_auditoria_multi_admin(
     cliente_auth: tuple[TestClient, Session],
 ) -> None:
@@ -472,4 +471,3 @@ def test_h9_vista_restringida_chofer_y_cambio_estado_propio(
         ).status_code
         == 403
     )
-
