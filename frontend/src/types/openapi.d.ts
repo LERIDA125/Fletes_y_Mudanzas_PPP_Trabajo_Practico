@@ -277,6 +277,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rendiciones/servicios-elegibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar servicios rendibles
+         * @description Devuelve los servicios con chofer asignado, estado finalizado o cobrado, que todavía no tienen una rendición registrada.
+         */
+        get: operations["listar_servicios_elegibles_api_rendiciones_servicios_elegibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rendiciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar rendiciones
+         * @description Devuelve rendiciones paginadas, ordenadas por id descendente, con el chofer y el cliente del servicio. Incluye un resumen global para los KPIs de la pantalla.
+         */
+        get: operations["listar_rendiciones_api_rendiciones_get"];
+        put?: never;
+        /**
+         * Registrar una rendición
+         * @description Registra la liquidación de un servicio elegible. El backend deriva el chofer y la fecha del servicio, genera el código y calcula gastos totales y saldo; el cliente no puede enviar esos campos.
+         */
+        post: operations["crear_rendicion_api_rendiciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rendiciones/{rendicion_id}/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el estado de una rendición
+         * @description Actualiza el estado de una rendición existente a pendiente, en revisión o aprobada.
+         */
+        patch: operations["cambiar_estado_rendicion_api_rendiciones__rendicion_id__estado_patch"];
+        trace?: never;
+    };
     "/api/mapas/direcciones": {
         parameters: {
             query?: never;
@@ -901,6 +965,42 @@ export interface components {
             /** Vehiculos */
             vehiculos: components["schemas"]["VehiculoListadoRead"][];
         };
+        /** GastosInformados */
+        "GastosInformados-Input": {
+            /**
+             * Combustible
+             * @default 0.00
+             */
+            combustible: number | string;
+            /**
+             * Peajes
+             * @default 0.00
+             */
+            peajes: number | string;
+            /**
+             * Otros
+             * @default 0.00
+             */
+            otros: number | string;
+        };
+        /** GastosInformados */
+        "GastosInformados-Output": {
+            /**
+             * Combustible
+             * @default 0.00
+             */
+            combustible: string;
+            /**
+             * Peajes
+             * @default 0.00
+             */
+            peajes: string;
+            /**
+             * Otros
+             * @default 0.00
+             */
+            otros: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -918,6 +1018,122 @@ export interface components {
              * @description Contraseña en claro.
              */
             password: string;
+        };
+        /** RendicionCreate */
+        RendicionCreate: {
+            /**
+             * Id Servicio
+             * @description Servicio finalizado o cobrado sin rendición.
+             */
+            id_servicio: number;
+            /**
+             * Tarifa
+             * @description Importe acordado con el chofer.
+             */
+            tarifa: number | string;
+            /**
+             * Adelanto
+             * @description Adelanto ya entregado.
+             * @default 0.00
+             */
+            adelanto: number | string;
+            gastos_informados?: components["schemas"]["GastosInformados-Input"];
+            /** Observaciones */
+            observaciones?: string | null;
+        };
+        /** RendicionEstadoUpdate */
+        RendicionEstadoUpdate: {
+            /**
+             * Estado
+             * @description Nuevo estado de la rendición.
+             * @enum {string}
+             */
+            estado: "pendiente" | "en revision" | "aprobada";
+        };
+        /** RendicionListado */
+        RendicionListado: {
+            /** Items */
+            items: components["schemas"]["RendicionRead"][];
+            /**
+             * Total
+             * @description Cantidad total de registros que cumplen el filtro.
+             */
+            total: number;
+            /**
+             * Page
+             * @description Número de página actual (base 1).
+             */
+            page: number;
+            /**
+             * Size
+             * @description Cantidad de elementos por página.
+             */
+            size: number;
+            resumen: components["schemas"]["ResumenRendicionesRead"];
+        };
+        /** RendicionRead */
+        RendicionRead: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Id Servicio */
+            id_servicio: number;
+            /** Id Chofer */
+            id_chofer: number;
+            /** Nombre Chofer */
+            nombre_chofer: string;
+            /** Razon Social Cliente */
+            razon_social_cliente: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tarifa */
+            tarifa: string;
+            /** Adelanto */
+            adelanto: string;
+            gastos_informados: components["schemas"]["GastosInformados-Output"];
+            /** Gastos Total */
+            gastos_total: string;
+            /** Saldo */
+            saldo: string;
+            /**
+             * Moneda
+             * @default ARS
+             * @constant
+             */
+            moneda: "ARS";
+            /** Estado */
+            estado: string;
+            /** Observaciones */
+            observaciones: string | null;
+            /** Creado Por Id */
+            creado_por_id?: number | null;
+            /** Modificado Por Id */
+            modificado_por_id?: number | null;
+            /**
+             * Creado En
+             * Format: date-time
+             */
+            creado_en: string;
+            /**
+             * Actualizado En
+             * Format: date-time
+             */
+            actualizado_en: string;
+        };
+        /** ResumenRendicionesRead */
+        ResumenRendicionesRead: {
+            /** Pendiente Total */
+            pendiente_total: string;
+            /** Pendiente Cantidad */
+            pendiente_cantidad: number;
+            /** Aprobado Mes Total */
+            aprobado_mes_total: string;
+            /** Gastos Total */
+            gastos_total: string;
         };
         /** RutaRead */
         RutaRead: {
@@ -1011,6 +1227,24 @@ export interface components {
             fecha: string;
             /** Hora Inicio */
             hora_inicio?: string | null;
+        };
+        /** ServicioElegibleRead */
+        ServicioElegibleRead: {
+            /** Id Servicio */
+            id_servicio: number;
+            /** Razon Social Cliente */
+            razon_social_cliente: string;
+            /** Nombre Chofer */
+            nombre_chofer: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Hora Inicio */
+            hora_inicio: string | null;
+            /** Precio Total */
+            precio_total: string;
         };
         /** ServicioEstadoUpdate */
         ServicioEstadoUpdate: {
@@ -2445,6 +2679,233 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    listar_servicios_elegibles_api_rendiciones_servicios_elegibles_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicioElegibleRead"][];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_rendiciones_api_rendiciones_get: {
+        parameters: {
+            query?: {
+                /** @description Texto a buscar en código, chofer, cliente o servicio. */
+                q?: string | null;
+                /** @description Número de página, empezando en 1. */
+                page?: number;
+                /** @description Cantidad de rendiciones por página. */
+                size?: number;
+            };
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RendicionListado"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_rendicion_api_rendiciones_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RendicionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RendicionRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe el servicio indicado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio no está finalizado/cobrado o ya tiene una rendición. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El servicio no tiene chofer o los importes son inválidos. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cambiar_estado_rendicion_api_rendiciones__rendicion_id__estado_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Rol de prueba en modo desarrollo local. */
+                "X-Rol"?: string | null;
+                /** @description Token Bearer JWT. */
+                Authorization?: string | null;
+            };
+            path: {
+                /** @description Identificador de la rendición. */
+                rendicion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RendicionEstadoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RendicionRead"];
+                };
+            };
+            /** @description La autenticación no está habilitada para este entorno. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La operación requiere el rol admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe una rendición con ese id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El estado no es válido. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

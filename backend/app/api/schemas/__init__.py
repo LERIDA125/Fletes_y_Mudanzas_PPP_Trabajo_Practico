@@ -19,7 +19,11 @@ from app.api.schemas.peon import (
     ServicioPeonRead,
 )
 from app.api.schemas.remito import RemitoCreate, RemitoRead
-from app.api.schemas.rendicion import RendicionCreate, RendicionRead, RendicionUpdate
+from app.api.schemas.rendicion import (
+    RendicionCreate,
+    RendicionListado,
+    RendicionRead,
+)
 from app.api.schemas.servicio import (
     CotizacionRead,
     CotizacionRequest,
@@ -76,6 +80,6 @@ __all__ = [
     "RemitoCreate",
     "RemitoRead",
     "RendicionCreate",
-    "RendicionUpdate",
+    "RendicionListado",
     "RendicionRead",
 ]

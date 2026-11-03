@@ -199,3 +199,39 @@ class ChoferConUsuarioExistente(ConflictoOperacion):
     def __init__(self, chofer_id: int) -> None:
         super().__init__(f"El chofer {chofer_id} ya tiene una cuenta de usuario asignada")
         self.chofer_id = chofer_id
+
+
+# ── Rendiciones (H15) ─────────────────────────────────────────────────────────
+
+
+class RendicionNoEncontrada(RecursoNoEncontrado):
+    def __init__(self, rendicion_id: int) -> None:
+        super().__init__(f"No existe una rendición con id {rendicion_id}")
+        self.rendicion_id = rendicion_id
+
+
+class ServicioNoRendible(ConflictoOperacion):
+    def __init__(self, estado_actual: str) -> None:
+        super().__init__(
+            f"Un servicio en estado {estado_actual!r} no se puede rendir; "
+            "debe estar finalizado o cobrado"
+        )
+        self.estado_actual = estado_actual
+
+
+class ServicioYaRendido(ConflictoOperacion):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(f"El servicio {servicio_id} ya tiene una rendición registrada")
+        self.servicio_id = servicio_id
+
+
+class ServicioSinChoferParaRendir(DatoInvalido):
+    def __init__(self, servicio_id: int) -> None:
+        super().__init__(f"El servicio {servicio_id} no tiene un chofer asignado")
+        self.servicio_id = servicio_id
+
+
+class EstadoRendicionInvalido(DatoInvalido):
+    def __init__(self, estado: str) -> None:
+        super().__init__(f"Estado de rendición inválido: {estado!r}")
+        self.estado = estado
