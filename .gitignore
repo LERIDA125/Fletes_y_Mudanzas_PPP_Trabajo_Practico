@@ -26,3 +26,6 @@ raw-data/
 # Contiene rutas absolutas de la máquina de cada desarrollador y se regenera solo: es caché local,
 # no fuente del proyecto.
 .atl/
+.neon
+node_modules/
+.env.local

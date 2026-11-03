@@ -16,7 +16,12 @@ def _crear_engine(url: str) -> Engine:
             connect_args={"check_same_thread": False},
             future=True,
         )
-    return create_engine(url, pool_pre_ping=True, future=True)
+    return create_engine(
+        url,
+        connect_args={"connect_timeout": 15},
+        pool_pre_ping=True,
+        future=True,
+    )
 
 
 engine = _crear_engine(get_settings().DATABASE_URL)
@@ -44,6 +49,11 @@ def get_db() -> Generator[Session, None, None]:
         asegurar_esquema_y_usuarios(engine)
         db = SessionLocal()
     except OperationalError:
+        if (
+            get_settings().ENVIRONMENT.lower() != "dev"
+            or engine.url.host not in {"localhost", "127.0.0.1", "::1", "postgres"}
+        ):
+            raise
         db = _obtener_sesion_respaldo()
     try:
         yield db

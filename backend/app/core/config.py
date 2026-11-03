@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_DB_URL = "postgresql+psycopg://fletes:fletes@localhost:5432/fletes"
 _DEFAULT_JWT_SECRET = "fletes-express-dev-secret-key-2026-mvp"
 
@@ -55,9 +56,14 @@ def url_sqlite_respaldo() -> str:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(_PROJECT_ROOT / ".env.local", ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     DATABASE_URL: str = _DEFAULT_DB_URL
+    DATABASE_URL_UNPOOLED: str | None = None
     ENVIRONMENT: str = "dev"
     DEV_ASSUME_ADMIN: bool = False
     JWT_SECRET: str = _DEFAULT_JWT_SECRET
@@ -80,6 +86,10 @@ class Settings(BaseSettings):
             ):
                 candidato = url_sqlite_respaldo()
         self.DATABASE_URL = _normalizar_esquema_postgres(candidato or _DEFAULT_DB_URL)
+        if self.DATABASE_URL_UNPOOLED:
+            self.DATABASE_URL_UNPOOLED = _normalizar_esquema_postgres(
+                self.DATABASE_URL_UNPOOLED.strip()
+            )
 
         secreto = (self.JWT_SECRET or "").strip()
         self.JWT_SECRET = secreto if secreto else _DEFAULT_JWT_SECRET
