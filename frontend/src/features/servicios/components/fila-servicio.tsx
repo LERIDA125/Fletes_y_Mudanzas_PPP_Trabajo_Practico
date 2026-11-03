@@ -112,6 +112,7 @@ export function FilaServicio({ servicio }: { servicio: Servicio }) {
         setMensajeError(resultado.mensaje);
         return;
       }
+      setMensajeError("");
       cerrarMenu();
       setMotivoCancelacion("");
       router.refresh();

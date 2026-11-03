@@ -80,6 +80,13 @@ class FakeChoferRepository:
     def listar_activos(self) -> list[Chofer]:
         return list(self.choferes)
 
+    def actualizar(self, chofer: Chofer) -> Chofer:
+        for indice, existente in enumerate(self.choferes):
+            if existente.id == chofer.id:
+                self.choferes[indice] = chofer
+                return chofer
+        raise AssertionError(f"Chofer inexistente: {chofer.id}")
+
 
 class FakeVehiculoRepository:
     def __init__(self, tipo_id: int = 3) -> None:
@@ -151,7 +158,10 @@ class FakeServicioRepository:
         servicio = self.items.get(servicio_id)
         return self._item(servicio) if servicio is not None else None
 
-    def actualizar(self, servicio: Servicio) -> ServicioListadoItem:
+    def obtener_para_cancelar(self, servicio_id: int) -> ServicioListadoItem | None:
+        return self.obtener_por_id(servicio_id)
+
+    def actualizar(self, servicio: Servicio, *, commit: bool = True) -> ServicioListadoItem:
         self.guardado = servicio
         if servicio.id is not None:
             self.items[servicio.id] = servicio
@@ -183,15 +193,17 @@ class FakeServicioRepository:
 def _crear_gestor(
     *,
     vehiculo_tipo_id: int = 3,
+    choferes: FakeChoferRepository | None = None,
 ) -> tuple[GestorServicios, FakeServicioRepository, FakeClienteRepository]:
     repo = FakeServicioRepository()
     clientes = FakeClienteRepository()
     tipos = FakeTipoRepository()
+    consulta_choferes = choferes or FakeChoferRepository()
     gestor = GestorServicios(
         repositorio=repo,
         calculadora=CalculadoraCotizacion(tipos),
         consulta_clientes=clientes,
-        consulta_choferes=FakeChoferRepository(),
+        consulta_choferes=consulta_choferes,
         consulta_vehiculos=FakeVehiculoRepository(vehiculo_tipo_id),
         consulta_tipos=tipos,
         registro_clientes=clientes,
@@ -301,7 +313,8 @@ def test_gestor_cancela_con_motivo_recortado_y_hora_inyectada() -> None:
 
 
 def test_gestor_aplica_compensacion_30_por_ciento_dentro_de_dos_horas() -> None:
-    gestor, repo, _ = _crear_gestor()
+    choferes = FakeChoferRepository()
+    gestor, repo, _ = _crear_gestor(choferes=choferes)
     item = _crear_servicio(gestor, id_chofer=1)
 
     cancelado = gestor.cancelar(
@@ -313,6 +326,7 @@ def test_gestor_aplica_compensacion_30_por_ciento_dentro_de_dos_horas() -> None:
     assert cancelado.servicio.compensacion_chofer == Decimal("2700.00")
     assert cancelado.servicio.id_chofer == 1
     assert repo.items[item.servicio.id].compensacion_chofer == Decimal("2700.00")
+    assert choferes.obtener_por_id(1).saldo_a_favor == 2700.0
 
 
 def test_gestor_no_aplica_compensacion_con_mas_de_dos_horas() -> None:

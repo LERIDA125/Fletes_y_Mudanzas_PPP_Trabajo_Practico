@@ -3,19 +3,20 @@
 **Branch**: `feature/013-cancelacion-tardia` | **Date**: 2026-11-01 | **Spec**:
 [spec.md](./spec.md)
 
-**Status**: Aprobado — implementación backend completada; migración pendiente de aplicar y CI final pendiente
+**Status**: Implementación local completada; migración pendiente de aplicar y CI/aprobación pendientes
 
 ## Resumen
 
 Extender la operación de cancelación de servicios para registrar, desde el backend, una retención
 equivalente al 30 % del valor total del viaje a favor del chofer asignado cuando falten dos horas
-o menos para el inicio programado. La implementación debe preservar la cancelación existente de
-H8 y ser atómica, auditable y no duplicable.
+o menos para el inicio programado. Además del snapshot de compensación, se acredita el mismo
+importe en `choferes.saldo_a_favor`. La implementación debe preservar la cancelación existente de
+H8 y confirmar la cancelación, el snapshot y el saldo de forma atómica.
 
 El porcentaje se calcula sobre `Servicio.precio_total`. Se persiste `compensacion_chofer` en el
-snapshot del servicio, sin crear un pago o movimiento de cuenta corriente/rendición. El umbral usa
-`America/Argentina/Buenos_Aires`; sin hora de inicio, sin chofer o con inicio ya pasado se conserva
-la cancelación y se registra compensación cero.
+snapshot del servicio y se incrementa el saldo del chofer asignado, sin crear un pago ni movimiento
+de rendición. El umbral usa `America/Argentina/Buenos_Aires`; sin hora de inicio, sin chofer o con
+inicio ya pasado se conserva la cancelación y se registra compensación cero.
 
 ## Contexto técnico
 
@@ -26,7 +27,7 @@ la cancelación y se registra compensación cero.
 | Contrato | OpenAPI de FastAPI; regenerar los tipos de frontend solo si cambia un contrato consumido por UI |
 | Pruebas | Pytest unitario para reglas de Aplicación/Dominio e integración de API contra PostgreSQL |
 | Alcance | Backend y persistencia de la regla; frontend y flujo de autenticación de clientes fuera de alcance salvo decisión aprobada |
-| Estado | Especificación aprobada; backend implementado. No se aplicó la migración a una base de datos. |
+| Estado | Enmienda de alcance aprobada e implementada localmente. No se aplicó la migración a una base de datos; CI y aprobación siguen pendientes. |
 
 ## Revisión de Constitución
 
@@ -54,10 +55,18 @@ la cancelación y se registra compensación cero.
 
 - `compensacion_chofer` forma parte del modelo ORM y del dominio de Servicio, con valor inicial
   cero y persistencia en la misma actualización atómica que la cancelación.
+- Si la compensación es positiva, el gestor obtiene el chofer asignado mediante el puerto de
+  choferes, suma el importe a `saldo_a_favor` y prepara la actualización del servicio. La lectura
+  del servicio para cancelar toma un bloqueo de fila; así, cancelaciones concurrentes no pueden
+  acreditar dos veces. Los dos repositorios comparten la `Session` de la request; la actualización
+  del chofer confirma una sola transacción que incluye también el servicio. Si falla el commit, no
+  queda persistido ninguno de los cambios.
+- Para una cancelación sin compensación se conserva la actualización normal del servicio. La
+  escritura del saldo solo se realiza cuando la cancelación produjo una compensación positiva.
 - La migración `0007_compensacion_chofer_cancelacion_tardia` agrega la columna, aplica backfill a
   cero y puede revertirse. No se ejecutó contra ninguna base de datos.
-- No crear ledger, pago ni movimiento de rendición; la columna es únicamente el importe snapshot
-  atribuido al chofer asignado al servicio.
+- No crear ledger, pago ni movimiento de rendición; el snapshot del servicio y el saldo a favor del
+  chofer conservan la trazabilidad de la compensación.
 
 ### Presentación y contrato
 
@@ -71,28 +80,27 @@ la cancelación y se registra compensación cero.
 
 | Superficie | Cambio implementado |
 |---|---|
-| `backend/app/application/servicios/gestor_servicios.py` | Inyecta el instante actual en hora de Buenos Aires y delega la cancelación al dominio. |
+| `backend/app/application/servicios/gestor_servicios.py` | Inyecta el instante actual, delega el cálculo al dominio y coordina la acreditación del saldo con los repositorios. |
 | `backend/app/domain/servicio.py` | Calcula y valida el snapshot durante la cancelación. |
 | `backend/app/api/schemas/servicio.py` | Expone `compensacion_chofer` en lectura; los requests no admiten el importe. |
-| `backend/app/infrastructure/models/servicio.py` y `servicio_repo.py` | Persisten el snapshot junto con estado y motivo en la misma actualización. |
+| `backend/app/infrastructure/models/servicio.py`, `servicio_repo.py` y `chofer_repo.py` | Persisten snapshot, estado, motivo y saldo del chofer en una única transacción de la `Session` compartida. |
 | `backend/alembic/versions/0007_compensacion_chofer_cancelacion_tardia.py` | Migración reversible con backfill a cero para servicios existentes. |
-| `backend/tests/unit/` y `backend/tests/integration/` | Cobertura de regla, elegibilidad, persistencia de API, contrato y reintento. |
+| `backend/tests/unit/` y `backend/tests/integration/` | Cobertura de regla, elegibilidad, persistencia del snapshot y saldo, atomicidad, contrato y reintento. |
+| `backend/tests/unit/test_h8_servicios_api.py` | Comprueba que el saldo persistido del chofer aumenta exactamente por el snapshot acreditado. |
 | `frontend/src/types/openapi.d.ts` | Sincronizado con el campo de respuesta agregado. |
 
 ## Estrategia de verificación
 
-1. Los tests focalizados de aplicación y API pasaron (28 tests), incluidos límite exacto,
-   elegibilidad, rechazo de importe cliente y persistencia API.
-2. Ruff pasó en todo el backend; los tipos OpenAPI se regeneraron, `npm run typecheck` pasó y
-   Vitest pasó (96 tests).
-3. El test de integración de cancelación pasó (1 test); la cadena Alembic reconoce `0007` como
+1. Verificar los tests focalizados de aplicación y API: cálculo en el umbral, rechazo de importe
+   cliente, saldo acreditado exactamente una vez y persistencia del snapshot.
+2. Verificar que ambas actualizaciones se confirman mediante una sola transacción y que un fallo
+   de persistencia revierte tanto la cancelación como el saldo.
+3. Ejecutar Ruff y la suite backend relevante; confirmar que la cadena Alembic reconoce `0007` como
    `head`.
-4. `npm run verificar` no completó porque el chequeo global de Prettier reporta 127 archivos del
-   frontend con formato previo no conforme. No se formateó el repositorio fuera de alcance.
-5. No se ejecutó upgrade/downgrade ni se aplicó la migración a una base de datos. Completar CI y
-   aplicar la migración en el entorno autorizado antes de cerrar formalmente el ticket.
+4. No ejecutar upgrade/downgrade ni aplicar la migración a una base de datos sin autorización.
 
 ## Alcance no incluido
 
-No se genera un pago ni se modifica cuenta corriente/rendición. El flujo sigue siendo la operación
-administrativa de cancelación existente; la directiva no crea un endpoint de cliente.
+No se genera un pago ni se modifica la rendición. La compensación sí incrementa
+`choferes.saldo_a_favor`. El flujo sigue siendo la operación administrativa de cancelación
+existente; la directiva no crea un endpoint de cliente.

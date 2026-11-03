@@ -97,7 +97,16 @@ class ServicioRepo:
         fila = self._db.execute(consulta).one_or_none()
         return self._a_item(fila) if fila is not None else None
 
-    def actualizar(self, servicio: Servicio) -> ServicioListadoItem:
+    def obtener_para_cancelar(self, servicio_id: int) -> ServicioListadoItem | None:
+        consulta = (
+            self._consulta_con_nombres()
+            .where(ServicioORM.id == servicio_id)
+            .with_for_update(of=ServicioORM)
+        )
+        fila = self._db.execute(consulta).one_or_none()
+        return self._a_item(fila) if fila is not None else None
+
+    def actualizar(self, servicio: Servicio, *, commit: bool = True) -> ServicioListadoItem:
         if servicio.id is None:
             raise ValueError("No se puede actualizar un servicio sin identidad")
 
@@ -126,12 +135,13 @@ class ServicioRepo:
         orm.modificado_por_id = servicio.modificado_por_id
         orm.actualizado_en = func.now()
 
-        try:
-            self._db.commit()
-        except IntegrityError as error:
-            self._db.rollback()
-            raise ReferenciasServicioInvalidas() from error
-        self._db.refresh(orm)
+        if commit:
+            try:
+                self._db.commit()
+            except IntegrityError as error:
+                self._db.rollback()
+                raise ReferenciasServicioInvalidas() from error
+            self._db.refresh(orm)
         fila = self._db.execute(self._consulta_con_nombres().where(ServicioORM.id == orm.id)).one()
         return self._a_item(fila)
 

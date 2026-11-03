@@ -677,6 +677,7 @@ describe("ListadoServicios", () => {
     await waitFor(() => {
       expect(cancelarServicio).toHaveBeenCalledWith(41, "El cliente reprogramó");
       expect(refresh).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
 

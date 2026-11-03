@@ -1,4 +1,5 @@
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.domain.chofer import Chofer
@@ -67,10 +68,15 @@ class ChoferRepo:
             raise ChoferNoEncontrado(chofer.id)
         orm.nombre_completo = chofer.nombre_completo
         orm.telefono = chofer.telefono
+        orm.saldo_a_favor = chofer.saldo_a_favor
         orm.modificado_por_id = chofer.modificado_por_id
         # Forzado a mano: `onupdate` no dispara si ningún atributo cambia (lección H1/T047).
         orm.actualizado_en = func.now()
-        self._db.commit()
+        try:
+            self._db.commit()
+        except SQLAlchemyError:
+            self._db.rollback()
+            raise
         self._db.refresh(orm)
         return a_dominio(orm)
 

@@ -8,24 +8,34 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 import app.infrastructure.models  # noqa: F401 - Registra todas las tablas en Base.metadata
 from app.core.dependencias import get_db
 from app.infrastructure.db.base import Base
+from app.infrastructure.models.chofer import ChoferORM
+from app.infrastructure.models.servicio import ServicioORM
 from app.main import app
 
 
 @pytest.fixture
-def cliente_api() -> Generator[TestClient, None, None]:
+def engine() -> Generator[Engine, None, None]:
     engine: Engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
+
+@pytest.fixture
+def cliente_api(engine: Engine) -> Generator[TestClient, None, None]:
     def obtener_sesion() -> Generator[Session, None, None]:
         with Session(engine, expire_on_commit=False) as sesion:
             yield sesion
@@ -36,7 +46,6 @@ def cliente_api() -> Generator[TestClient, None, None]:
             yield cliente
     finally:
         app.dependency_overrides.pop(get_db, None)
-        engine.dispose()
 
 
 def _crear_tipo(cliente: TestClient) -> int:
@@ -210,6 +219,7 @@ def test_api_persiste_compensacion_chofer_en_cancelacion_tardia(
         json={"nombre_completo": "Chofer beneficiario", "telefono": "3515550101"},
     )
     assert chofer.status_code == 201
+    assert chofer.json()["saldo_a_favor"] == 0.0
 
     inicio_programado = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")) + timedelta(
         minutes=90
@@ -240,6 +250,69 @@ def test_api_persiste_compensacion_chofer_en_cancelacion_tardia(
     assert respuesta["id_chofer"] == chofer.json()["id"]
     assert Decimal(respuesta["precio_total"]) == Decimal("9000.00")
     assert Decimal(respuesta["compensacion_chofer"]) == Decimal("2700.00")
+    chofer_actualizado = cliente_api.get(
+        f"/api/choferes/{chofer.json()['id']}",
+        headers=admin,
+    )
+    assert chofer_actualizado.status_code == 200
+    assert Decimal(str(chofer_actualizado.json()["saldo_a_favor"])) == Decimal("2700.00")
+
+
+def test_api_revierte_cancelacion_si_falla_acreditacion_al_chofer(
+    cliente_api: TestClient,
+    engine: Engine,
+) -> None:
+    admin = {"X-Rol": "admin"}
+    tipo_id = _crear_tipo(cliente_api)
+    cliente_id = _crear_cliente(cliente_api)
+    chofer = cliente_api.post(
+        "/api/choferes",
+        headers=admin,
+        json={"nombre_completo": "Chofer con error", "telefono": "3515550102"},
+    )
+    assert chofer.status_code == 201
+
+    inicio_programado = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")) + timedelta(
+        minutes=90
+    )
+    alta = cliente_api.post(
+        "/api/servicios",
+        headers=admin,
+        json={
+            "id_cliente": cliente_id,
+            "id_tipo_vehiculo": tipo_id,
+            "id_chofer": chofer.json()["id"],
+            "fecha": inicio_programado.date().isoformat(),
+            "hora_inicio": inicio_programado.time().replace(second=0, microsecond=0).isoformat(),
+            "horas_estimadas": 2,
+            "distancia_ida_km": 15,
+        },
+    )
+    assert alta.status_code == 201
+
+    with engine.begin() as conexion:
+        conexion.exec_driver_sql(
+            "CREATE TRIGGER fallar_acreditacion "
+            "BEFORE UPDATE OF saldo_a_favor ON choferes "
+            "BEGIN SELECT RAISE(ABORT, 'fallo de prueba'); END"
+        )
+
+    with pytest.raises(IntegrityError):
+        cliente_api.patch(
+            f"/api/servicios/{alta.json()['id_servicio']}/cancelar",
+            headers=admin,
+            json={"motivo": "Forzar rollback de la operación"},
+        )
+
+    with Session(engine) as sesion:
+        servicio_persistido = sesion.get(ServicioORM, alta.json()["id_servicio"])
+        chofer_persistido = sesion.get(ChoferORM, chofer.json()["id"])
+
+    assert servicio_persistido is not None
+    assert servicio_persistido.estado == "pendiente"
+    assert servicio_persistido.compensacion_chofer == Decimal("0.00")
+    assert chofer_persistido is not None
+    assert chofer_persistido.saldo_a_favor == Decimal("0.00")
 
 
 def test_cambia_estado_siguiendo_la_maquina_y_requiere_admin(cliente_api: TestClient) -> None:

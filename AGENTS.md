@@ -207,7 +207,8 @@ el MVP, quedó documentado como `[Supuesto temporal]` en la spec respectiva:
   registrando automáticamente `hora_fin` del servidor. No se permite cancelar servicios `finalizado`,
   `cobrado` ni ya `cancelado` (`409 Conflict`).
 - **Ticket 013 — cancelación tardía (aprobado)**: si se cancela de 0 a 2 horas antes del inicio,
-  se persiste un snapshot del 30 % de `precio_total` a favor del chofer asignado. Se compara usando
+  se persiste un snapshot del 30 % de `precio_total` y se acredita el mismo importe al
+  `saldo_a_favor` del chofer asignado en la misma transacción. Se compara usando
   `America/Argentina/Buenos_Aires`; sin horario/chofer o si el inicio ya pasó, el snapshot es cero.
   No representa un pago ni movimiento de rendición. Ver `specs/013-cancelacion-tardia/`.
 - **Modo exacto de rendición y pagos**: la vista `/rendiciones` está maquetada en el frontend como

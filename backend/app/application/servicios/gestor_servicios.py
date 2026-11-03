@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
-from decimal import ROUND_CEILING, Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from app.application.cotizacion.calculadora import CalculadoraCotizacion, Cotizacion
@@ -21,6 +21,7 @@ from app.application.servicios.puertos import (
 from app.domain.cliente import Cliente
 from app.domain.errores import (
     ChoferInvalido,
+    ChoferNoEncontrado,
     ClienteInvalido,
     DatoInvalido,
     PermisoDenegado,
@@ -213,7 +214,7 @@ class GestorServicios:
         ahora: datetime | None = None,
         usuario_id: int | None = None,
     ) -> ServicioListadoItem:
-        actual = self._repo.obtener_por_id(id_servicio)
+        actual = self._repo.obtener_para_cancelar(id_servicio)
         if actual is None:
             raise ServicioNoEncontrado(id_servicio)
 
@@ -223,6 +224,21 @@ class GestorServicios:
             ahora=instante_cancelacion,
             modificado_por_id=usuario_id,
         )
+        if actual.servicio.compensacion_chofer > 0 and actual.servicio.id_chofer is not None:
+            chofer = self._choferes.obtener_por_id(actual.servicio.id_chofer)
+            if chofer is None:
+                raise ChoferNoEncontrado(actual.servicio.id_chofer)
+            chofer.saldo_a_favor = float(
+                (Decimal(str(chofer.saldo_a_favor)) + actual.servicio.compensacion_chofer).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+            )
+            self._repo.actualizar(actual.servicio, commit=False)
+            self._choferes.actualizar(chofer)
+            item_persistido = self._repo.obtener_por_id(id_servicio)
+            if item_persistido is None:
+                raise ServicioNoEncontrado(id_servicio)
+            return item_persistido
         return self._repo.actualizar(actual.servicio)
 
     def listar(
